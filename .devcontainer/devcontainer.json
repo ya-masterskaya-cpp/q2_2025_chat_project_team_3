@@ -1,0 +1,34 @@
+{
+  "name": "My Drogon App Dev",
+  "dockerComposeFile": "compose.yml",
+  "service": "app",
+  "workspaceFolder": "/workspace",
+  "features": {
+    "ghcr.io/msclock/features/vcpkg:2": {},
+    "ghcr.io/robbert229/devcontainer-features/postgresql-client:1": {}
+  },
+  "forwardPorts": [8848],
+
+  "containerEnv": {
+    "DISPLAY": "${env:DISPLAY}",
+    "XAUTHORITY": "/tmp/.Xauthority-container",
+    "ASAN_OPTIONS": "detect_leaks=1:halt_on_error=1:log_path=/tmp/asan.log",
+    "TSAN_OPTIONS": "halt_on_error=1:log_path=/tmp/tsan.log:report_atomic_races=0"
+  },
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "editorconfig.editorconfig",
+        "ms-vscode.cpptools-extension-pack",
+        "ms-vscode.cmake-tools"
+      ],
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "bash",
+        "cmake.configureOnOpen": false
+      }
+    }
+  },
+
+  "postCreateCommand": "/bin/bash .devcontainer/init.sh"
+}

@@ -1,0 +1,33 @@
+{
+  "listeners": [
+    {
+      "address": "0.0.0.0",
+      "port": 8848,
+      "https": false
+    }
+  ],
+
+  "db_clients": [
+    {
+      "name": "default",
+      "rdbms": "postgresql",
+      "host": "db",
+      "port": 5432,
+      "dbname": "drogon_test",
+      "user": "postgres",
+      "passwd": "postgres",
+      "character_set": "utf8",
+      "connection_number": 5
+    }
+  ],
+
+  "app": {
+    "session_timeout": 0,
+    "log": {
+        "log_path": "./logs",
+        "log_level": "TRACE"
+    },
+    "run_as_daemon": false,
+    "number_of_threads": 0
+  }
+}

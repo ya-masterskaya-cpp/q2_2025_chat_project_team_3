@@ -1,0 +1,11 @@
+{
+  "name": "mydrogonapp",
+  "version-string": "0.1.0",
+  "dependencies": [
+    {
+      "name": "drogon",
+      "features": ["ctl","orm","postgres"]
+    }
+  ],
+  "builtin-baseline": "3425f537d2f01c761d2d2cff59a7577eb4f568c0"
+}

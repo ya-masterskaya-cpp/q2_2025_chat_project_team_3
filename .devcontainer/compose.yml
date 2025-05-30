@@ -1,0 +1,41 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    volumes:
+      - ../:/workspace:cached
+      # For X11 applications
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - ${XAUTHORITY}:/tmp/.Xauthority-container:ro
+
+    command: sleep infinity
+
+    networks:
+      - internal_network
+      - external_network
+
+  db:
+    restart: unless-stopped
+    image: postgres:15-alpine
+    networks:
+      - internal_network
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: drogon_test
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"
+      interval: 5s
+      retries: 20
+
+volumes:
+  postgres-data:
+
+networks:
+  internal_network:
+    internal: true
+  external_network:

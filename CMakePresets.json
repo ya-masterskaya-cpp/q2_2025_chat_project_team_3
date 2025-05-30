@@ -1,0 +1,62 @@
+{
+  "version": 4,
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "installDir": "${sourceDir}/install/${presetName}",
+      "cacheVariables": {
+        "CMAKE_TOOLCHAIN_FILE": {
+          "type": "FILEPATH",
+          "value": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+        },
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      }
+    },
+    {
+      "name": "linux-debug",
+      "displayName": "Debug (Standard)",
+      "description": "Standard debug build, no sanitizers.",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "VCPKG_TARGET_TRIPLET": "x64-linux", 
+        "MYPROJECT_ENABLE_SANITIZERS": "OFF"
+      }
+    },
+    {
+      "name": "linux-release-asan",
+      "displayName": "Release (ASan+UBSan)",
+      "description": "Optimized release build with ASan+UBSan.",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "VCPKG_TARGET_TRIPLET": "x64-linux-release-sanitized",
+        "MYPROJECT_ENABLE_SANITIZERS": "ASAN_UBSAN"
+      }
+    },
+    {
+      "name": "linux-release-tsan",
+      "displayName": "Release (TSan)",
+      "description": "Optimized release build with TSan.",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "VCPKG_TARGET_TRIPLET": "x64-linux-release-tsan",
+        "MYPROJECT_ENABLE_SANITIZERS": "TSAN"
+      }
+    }
+  ],
+  "buildPresets": [
+    {"name": "debug", "configurePreset": "linux-debug", "targets": ["main"]},
+    {"name": "release-asan", "configurePreset": "linux-release-asan", "targets": ["main"]},
+    {"name": "release-tsan", "configurePreset": "linux-release-tsan", "targets": ["main"]}
+  ],
+  "testPresets": [
+    {"name": "debug-tests", "configurePreset": "linux-debug", "output": {"outputOnFailure": true}},
+    {"name": "release-asan-tests", "configurePreset": "linux-release-asan", "output": {"outputOnFailure": true}},
+    {"name": "release-tsan-tests", "configurePreset": "linux-release-tsan", "output": {"outputOnFailure": true}}
+  ]
+}
