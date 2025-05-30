@@ -4,7 +4,9 @@
   "service": "app",
   "workspaceFolder": "/workspace",
   "features": {
-    "ghcr.io/msclock/features/vcpkg:2": {},
+    "ghcr.io/msclock/features/vcpkg:2": {
+      "vcpkgversion": "2025.04.09"
+    },
     "ghcr.io/robbert229/devcontainer-features/postgresql-client:1": {}
   },
   "forwardPorts": [8848],

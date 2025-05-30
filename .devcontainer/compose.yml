@@ -8,7 +8,7 @@ services:
       - ../:/workspace:cached
       # For X11 applications
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
-      - ${XAUTHORITY}:/tmp/.Xauthority-container:ro
+      #- ${HOME}/.Xauthority:/tmp/.Xauthority-container:ro
 
     command: sleep infinity
 
