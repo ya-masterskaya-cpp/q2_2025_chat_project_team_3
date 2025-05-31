@@ -5,7 +5,7 @@
  *
  */
 
-#include <models/Migrations.h>
+#include <server/models/Migrations.h>
 #include <drogon/utils/Utilities.h>
 #include <string>
 

@@ -3,7 +3,7 @@
 #include <fstream>
 #include <filesystem>
 
-#include <models/Migrations.h>
+#include <server/models/Migrations.h>
 
 struct MigrationFile {
     uint64_t    timestamp;
@@ -100,7 +100,7 @@ applyMigrations(drogon::orm::DbClientPtr db, const std::vector<MigrationFile> &f
             });
 
         if (err) {
-            LOG_FATAL << "Migration failed [" << f.name << "]: " << (*err)["message"].asString();
+            LOG_FATAL << "Migration failed [" << f.name << "]: " << *err;
             drogon::app().quit();
             co_return;
         }

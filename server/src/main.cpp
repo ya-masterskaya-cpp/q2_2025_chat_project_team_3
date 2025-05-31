@@ -1,6 +1,6 @@
 #include <drogon/drogon.h>
-#include <chat/WsChat.h>
-#include <db/migrations.h>
+#include <server/chat/WsChat.h>
+#include <server/db/migrations.h>
 
 int main() {
     std::filesystem::create_directory("logs");

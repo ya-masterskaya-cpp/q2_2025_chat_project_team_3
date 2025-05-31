@@ -8,7 +8,7 @@ for file in ./src/models/*.cc; do
   name=$(basename "$file" .cc)
 
   # Replace the include string
-  sed -i "s|#include \"${name}.h\"|#include <models/${name}.h>|g" "$file"
+  sed -i "s|#include \"${name}.h\"|#include <server/models/${name}.h>|g" "$file"
 done
 
 # Move all .h files from ./src/models/ to ./include/models/ with overwrite

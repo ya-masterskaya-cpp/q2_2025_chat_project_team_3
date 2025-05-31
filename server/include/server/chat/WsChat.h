@@ -2,10 +2,10 @@
 
 #include <drogon/drogon.h>
 #include <drogon/WebSocketController.h>
-#include <utils/utils.h>
-#include <chat/WsRequestProcessor.h>
-#include <chat/WsData.h>
-#include <chat/UserConnectionRegistry.h>
+#include <server/utils/utils.h>
+#include <server/chat/WsRequestProcessor.h>
+#include <server/chat/WsData.h>
+#include <server/chat/UserConnectionRegistry.h>
 
 class WsChat : public drogon::WebSocketController<WsChat> {
 public:

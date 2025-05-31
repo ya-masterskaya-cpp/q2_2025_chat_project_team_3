@@ -17,17 +17,32 @@ inline std::expected<Json::Value, std::string> parseJsonMessage(const std::strin
     return std::unexpected(errs); 
 }
 
-inline Json::Value makeError(const std::string& errorMsg) {
+inline Json::Value makeError(const std::string& type, const std::string& errorMsg) {
     Json::Value err;
     err["channel"] = "server2client";
-    err["type"] = "error";
+    err["type"] = type;
+    err["data"]["success"] = false;
     err["data"]["message"] = errorMsg; 
     return err;
 }
 
-inline Json::Value makeOK() {
+inline Json::Value makeError(const Json::Value& in_msg, const std::string& errorMsg) {
+    return makeError(in_msg["type"].asString(), errorMsg);
+}
+
+inline Json::Value makeError(const std::string& errorMsg) {
+    return makeError(std::string("unknown"), errorMsg);
+}
+
+inline Json::Value makeOK(const Json::Value& in_msg, const Json::Value& additional_data) {
     Json::Value err;
     err["channel"] = "server2client";
-    err["type"] = "success";
+    err["type"] = in_msg["type"];
+    err["data"] = additional_data;
+    err["data"]["success"] = true;
     return err;
+}
+
+inline Json::Value makeOK(const Json::Value& in_msg) {
+    return makeOK(in_msg, Json::objectValue);
 }

@@ -1,9 +1,9 @@
 #pragma once
 
 #include <drogon/drogon.h> //needed only for logging
-#include <chat/WsData.h>
-#include <utils/utils.h>    
-#include <chat/MessageHandlers.h> 
+#include <server/chat/WsData.h>
+#include <server/utils/utils.h>    
+#include <server/chat/MessageHandlers.h> 
 
 class MessageHandlerService {
 public:
@@ -17,12 +17,12 @@ public:
         auto typeStr = j_msg["type"].asString();
 
         if (channel != "client2server") {
-             co_return makeError("Invalid message channel: " + channel);
+             co_return makeError(j_msg, "Invalid message channel: " + channel);
         }
 
         try {
             if (typeStr == "getUsers") {
-                co_return co_await MessageHandlers::handleGetUsers(std::move(wsData));
+                co_return co_await MessageHandlers::handleGetUsers(std::move(wsData), j_msg);
             } else if (typeStr == "register") {
                 co_return co_await MessageHandlers::handleRegister(j_msg);
             } else if (typeStr == "createRoom") {
@@ -30,15 +30,15 @@ public:
             } else if (typeStr == "auth") {
                 co_return co_await MessageHandlers::handleAuth(std::move(wsData), j_msg, notifier);
             } else if (typeStr == "getRooms") {
-                co_return co_await MessageHandlers::handleGetRooms(std::move(wsData));
+                co_return co_await MessageHandlers::handleGetRooms(std::move(wsData), j_msg);
             } else if (typeStr == "joinRoom") {
                 co_return co_await MessageHandlers::handleJoinRoom(std::move(wsData), j_msg);
             } else if (typeStr == "leaveRoom") {
-                co_return co_await MessageHandlers::handleLeaveRoom(std::move(wsData));
+                co_return co_await MessageHandlers::handleLeaveRoom(std::move(wsData), j_msg);
             } else if (typeStr == "sendMessage") {
                 co_return co_await MessageHandlers::handleSendMessage(std::move(wsData), j_msg);
             } else {
-                co_return makeError("Unknown message type: " + typeStr);
+                co_return makeError(j_msg, "Unknown message type: " + typeStr);
             }
         }
         catch (const std::exception &e) { 

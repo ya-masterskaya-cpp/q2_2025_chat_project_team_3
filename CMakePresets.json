@@ -1,5 +1,5 @@
 {
-  "version": 4,
+  "version": 8,
   "configurePresets": [
     {
       "name": "base",
@@ -8,55 +8,178 @@
       "binaryDir": "${sourceDir}/build/${presetName}",
       "installDir": "${sourceDir}/install/${presetName}",
       "cacheVariables": {
-        "CMAKE_TOOLCHAIN_FILE": {
-          "type": "FILEPATH",
-          "value": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
-        },
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
       }
     },
     {
-      "name": "linux-debug",
-      "displayName": "Debug (Standard)",
-      "description": "Standard debug build, no sanitizers.",
+      "name": "linux-base",
+      "hidden": true,
       "inherits": "base",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      },
+      "cacheVariables": {
+        "CMAKE_TOOLCHAIN_FILE": {
+          "type": "FILEPATH",
+          "value": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+        },
+        "VCPKG_TARGET_TRIPLET": "x64-linux"
+      }
+    },
+    {
+      "name": "windows-base",
+      "hidden": true,
+      "inherits": "base",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      },
+      "cacheVariables": {
+        "CMAKE_TOOLCHAIN_FILE": {
+          "type": "FILEPATH",
+          "value": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+        },
+        "VCPKG_TARGET_TRIPLET": "x64-windows"
+      }
+    },
+    {
+      "name": "linux-debug-server",
+      "displayName": "Linux Debug Server",
+      "description": "Build server only (Debug) on Linux. Requires VCPKG_ROOT.",
+      "inherits": "linux-base",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "VCPKG_TARGET_TRIPLET": "x64-linux", 
-        "MYPROJECT_ENABLE_SANITIZERS": "OFF"
+        "BUILD_SERVER": "ON",
+        "BUILD_CLIENT": "OFF",
+        "VCPKG_MANIFEST_FEATURES": ""
       }
     },
     {
-      "name": "linux-release-asan",
-      "displayName": "Release (ASan+UBSan)",
-      "description": "Optimized release build with ASan+UBSan.",
-      "inherits": "base",
+      "name": "linux-debug-client",
+      "displayName": "Linux Debug Client",
+      "description": "Build client only (Debug) on Linux with wxWidgets. Requires VCPKG_ROOT.",
+      "inherits": "linux-base",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release",
-        "VCPKG_TARGET_TRIPLET": "x64-linux-release-sanitized",
-        "MYPROJECT_ENABLE_SANITIZERS": "ASAN_UBSAN"
+        "CMAKE_BUILD_TYPE": "Debug",
+        "BUILD_SERVER": "OFF",
+        "BUILD_CLIENT": "ON",
+        "VCPKG_MANIFEST_FEATURES": "client"
       }
     },
     {
-      "name": "linux-release-tsan",
-      "displayName": "Release (TSan)",
-      "description": "Optimized release build with TSan.",
-      "inherits": "base",
+      "name": "linux-debug-all",
+      "displayName": "Linux Debug Server+Client",
+      "description": "Build server and client (Debug) on Linux with wxWidgets. Requires VCPKG_ROOT.",
+      "inherits": "linux-base",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release",
-        "VCPKG_TARGET_TRIPLET": "x64-linux-release-tsan",
-        "MYPROJECT_ENABLE_SANITIZERS": "TSAN"
+        "CMAKE_BUILD_TYPE": "Debug",
+        "BUILD_SERVER": "ON",
+        "BUILD_CLIENT": "ON",
+        "VCPKG_MANIFEST_FEATURES": "client"
+      }
+    },
+    {
+      "name": "windows-debug-server",
+      "displayName": "Windows Debug Server",
+      "description": "Build server only (Debug) on Windows. Requires VCPKG_ROOT.",
+      "inherits": "windows-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "BUILD_SERVER": "ON",
+        "BUILD_CLIENT": "OFF",
+        "VCPKG_MANIFEST_FEATURES": ""
+      }
+    },
+    {
+      "name": "windows-debug-client",
+      "displayName": "Windows Debug Client",
+      "description": "Build client only (Debug) on Windows with wxWidgets. Requires VCPKG_ROOT.",
+      "inherits": "windows-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "BUILD_SERVER": "OFF",
+        "BUILD_CLIENT": "ON",
+        "VCPKG_MANIFEST_FEATURES": "client"
+      }
+    },
+    {
+      "name": "windows-debug-all",
+      "displayName": "Windows Debug Server+Client",
+      "description": "Build server and client (Debug) on Windows with wxWidgets. Requires VCPKG_ROOT.",
+      "inherits": "windows-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "BUILD_SERVER": "ON",
+        "BUILD_CLIENT": "ON",
+        "VCPKG_MANIFEST_FEATURES": "client"
       }
     }
   ],
   "buildPresets": [
-    {"name": "debug", "configurePreset": "linux-debug", "targets": ["main"]},
-    {"name": "release-asan", "configurePreset": "linux-release-asan", "targets": ["main"]},
-    {"name": "release-tsan", "configurePreset": "linux-release-tsan", "targets": ["main"]}
+    {
+      "name": "build-linux-server",
+      "configurePreset": "linux-debug-server",
+      "targets": ["server_app"]
+    },
+    {
+      "name": "build-linux-client",
+      "configurePreset": "linux-debug-client",
+      "targets": ["client_app"]
+    },
+    {
+      "name": "build-linux-all",
+      "configurePreset": "linux-debug-all",
+      "targets": ["server_app", "client_app"]
+    },
+    {
+      "name": "build-windows-server",
+      "configurePreset": "windows-debug-server",
+      "targets": ["server_app"]
+    },
+    {
+      "name": "build-windows-client",
+      "configurePreset": "windows-debug-client",
+      "targets": ["client_app"]
+    },
+    {
+      "name": "build-windows-all",
+      "configurePreset": "windows-debug-all",
+      "targets": ["server_app", "client_app"]
+    }
   ],
   "testPresets": [
-    {"name": "debug-tests", "configurePreset": "linux-debug", "output": {"outputOnFailure": true}},
-    {"name": "release-asan-tests", "configurePreset": "linux-release-asan", "output": {"outputOnFailure": true}},
-    {"name": "release-tsan-tests", "configurePreset": "linux-release-tsan", "output": {"outputOnFailure": true}}
+    {
+      "name": "test-linux-server",
+      "configurePreset": "linux-debug-server",
+      "output": { "outputOnFailure": true }
+    },
+    {
+      "name": "test-linux-client",
+      "configurePreset": "linux-debug-client",
+      "output": { "outputOnFailure": true }
+    },
+    {
+      "name": "test-linux-all",
+      "configurePreset": "linux-debug-all",
+      "output": { "outputOnFailure": true }
+    },
+    {
+      "name": "test-windows-server",
+      "configurePreset": "windows-debug-server",
+      "output": { "outputOnFailure": true }
+    },
+    {
+      "name": "test-windows-client",
+      "configurePreset": "windows-debug-client",
+      "output": { "outputOnFailure": true }
+    },
+    {
+      "name": "test-windows-all",
+      "configurePreset": "windows-debug-all",
+      "output": { "outputOnFailure": true }
+    }
   ]
 }

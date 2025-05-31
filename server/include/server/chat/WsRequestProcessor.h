@@ -1,10 +1,10 @@
 #pragma once
 
 #include <drogon/drogon.h>
-#include <chat/WsData.h>
-#include <utils/utils.h>           
-#include <chat/MessageHandlerService.h> 
-#include <chat/WsAuthNotifierImpl.h>
+#include <server/chat/WsData.h>
+#include <server/utils/utils.h>           
+#include <server/chat/MessageHandlerService.h> 
+#include <server/chat/WsAuthNotifierImpl.h>
 
 class WsRequestProcessor {
 public:

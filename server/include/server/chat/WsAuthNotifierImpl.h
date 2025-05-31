@@ -1,7 +1,7 @@
 // WsAuthNotifier.h
 #pragma once
-#include <chat/IAuthNotifier.h>
-#include <chat/UserConnectionRegistry.h>
+#include <server/chat/IAuthNotifier.h>
+#include <server/chat/UserConnectionRegistry.h>
 #include <drogon/WebSocketConnection.h>
 
 class WsAuthNotifierImpl : public IAuthNotifier {
