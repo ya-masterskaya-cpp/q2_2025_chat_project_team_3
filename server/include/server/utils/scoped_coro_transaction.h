@@ -36,6 +36,7 @@ struct CommitAwaiter : public drogon::CallbackAwaiter<bool> {
 //if lambda returned empty optional - tries to commit
 //if commit failed - returns error message
 //otherwise - returns empty optional
+//NOTE: Drogon has no explicit commit for transactions, that's wh we need this
 inline drogon::Task<ScopedTransactionResult> WithTransaction(ScopedTransactionFunc userLambda) {
     std::shared_ptr<drogon::orm::Transaction> tx;
 
@@ -62,15 +63,13 @@ inline drogon::Task<ScopedTransactionResult> WithTransaction(ScopedTransactionFu
         }
 
         LOG_TRACE << "Transaction committed successfully";
-    }
-    catch (const drogon::orm::DrogonDbException &e) {
+    } catch (const drogon::orm::DrogonDbException &e) {
         LOG_ERROR << "DrogonDbException: " << e.base().what();
         if (tx) {
             tx->rollback();
         }
         co_return std::string("DB exception: ") + e.base().what();
-    }
-    catch (const std::exception &e) {
+    } catch (const std::exception &e) {
         LOG_ERROR << "std::exception during transaction: " << e.what();
         if (tx) {
             tx->rollback();

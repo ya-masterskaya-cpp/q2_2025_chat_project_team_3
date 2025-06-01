@@ -28,13 +28,17 @@ public:
 
     void bindUsername(const std::string &new_username,
                       const drogon::WebSocketConnectionPtr &conn_to_bind) {
-        if (!conn_to_bind || new_username.empty()) return;
+        if (!conn_to_bind || new_username.empty()) {
+            return;
+        }
         std::unique_lock lock(mutex_);
         usernameToConn_[new_username] = conn_to_bind;
     }
 
     bool sendToUser(const std::string &target_username, const Json::Value &message) {
-        if (target_username.empty()) return false;
+        if (target_username.empty()) {
+            return false;
+        }
         std::shared_lock lock(mutex_);
 
         auto it = usernameToConn_.find(target_username);

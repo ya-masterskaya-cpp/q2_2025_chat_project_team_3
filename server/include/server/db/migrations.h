@@ -12,7 +12,8 @@ struct MigrationFile {
     std::filesystem::path fullPath;
 };
 
-inline std::pair<std::string_view, std::string_view> parse_sql_filename(std::string_view input) noexcept {
+inline std::pair<std::string_view, std::string_view>
+parse_sql_filename(std::string_view input) noexcept {
     if (input.ends_with(".sql")) input.remove_suffix(4);
     if (auto pos = input.find('-'); pos != std::string_view::npos) {
         return { input.substr(0, pos), input.substr(pos+1) };
@@ -51,6 +52,7 @@ scanMigrationFiles(const std::filesystem::path &dir) {
 inline drogon::Task<>
 applyMigrations(drogon::orm::DbClientPtr db, const std::vector<MigrationFile> &files) {
     namespace models = drogon_model::drogon_test;
+    using namespace drogon::orm;
 
     auto rc = co_await db->execSqlCoro("SELECT to_regclass('public.migrations')");
     if (rc.empty() || rc[0][0].isNull()) {
@@ -66,8 +68,8 @@ applyMigrations(drogon::orm::DbClientPtr db, const std::vector<MigrationFile> &f
                                           std::istreambuf_iterator<char>()));
     }
 
-    auto latest = co_await drogon::orm::CoroMapper<models::Migrations>(db)
-                    .orderBy(models::Migrations::Cols::_timestamp, drogon::orm::SortOrder::DESC)
+    auto latest = co_await CoroMapper<models::Migrations>(db)
+                    .orderBy(models::Migrations::Cols::_timestamp, SortOrder::DESC)
                     .limit(1)
                     .findAll();
 
@@ -95,7 +97,7 @@ applyMigrations(drogon::orm::DbClientPtr db, const std::vector<MigrationFile> &f
                 models::Migrations m;
                 m.setTimestamp(f.timestamp);
                 m.setName(f.name);
-                co_await drogon::orm::CoroMapper<models::Migrations>(tx).insert(m);
+                co_await CoroMapper<models::Migrations>(tx).insert(m);
                 co_return std::nullopt;
             });
 

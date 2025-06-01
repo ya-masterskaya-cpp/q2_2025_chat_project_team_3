@@ -14,7 +14,6 @@ int main() {
     drogon::app().registerBeginningAdvice([]() {
         LOG_INFO << "Preparing to apply migrations...";
 
-        // Get the default database client (or a specific one if you use named clients)
         auto dbClient = drogon::app().getDbClient();
         if (!dbClient) {
             LOG_FATAL << "Failed to get DB client. Check your config.json. Aborting migrations.";
@@ -38,7 +37,7 @@ int main() {
         } catch (const std::exception &e) {
             LOG_FATAL << "Standard exception during migrations: " << e.what() << ". Aborting.";
             drogon::app().quit();
-        } catch (...) {
+        } catch (...) { //NOTE catch (...) is safe here cuz we will terminate afterwards, or is it not?
             LOG_FATAL << "Unknown error during migrations. Aborting.";
             drogon::app().quit();
         }

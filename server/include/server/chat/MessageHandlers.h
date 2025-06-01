@@ -62,7 +62,8 @@ public:
         }
     }
 
-    static drogon::Task<Json::Value> handleSendMessage(std::shared_ptr<WsData> wsData, const Json::Value &j) {
+    static drogon::Task<Json::Value>
+    handleSendMessage(std::shared_ptr<WsData> wsData, const Json::Value &j) {
         if (!wsData->authenticated) {
             co_return makeError(j, "User not authenticated.");
         }
@@ -95,16 +96,16 @@ public:
         co_return makeOK(j);
     }
 
-
-
     static drogon::Task<Json::Value>
     handleGetUsers(std::shared_ptr<WsData> wsData, const Json::Value &j) {
-        if (!wsData->authenticated)
+        if (!wsData->authenticated) {
             co_return makeError(j, "Not authenticated");
+        }
 
         auto db = drogon::app().getDbClient();
-        if (!db)
+        if (!db) {
             co_return makeError(j, "Server configuration error: DB not available.");
+        }
 
         try {
             auto users = co_await drogon::orm::CoroMapper<models::Users>(db).findAll();
@@ -124,8 +125,9 @@ public:
     static drogon::Task<Json::Value>
     handleRegister(Json::Value j) {
         auto db = drogon::app().getDbClient();
-        if (!db)
+        if (!db) {
             co_return makeError(j, "Server configuration error: DB not available.");
+        }
 
         auto &data = j["data"];
         if (!data.isObject() ||
@@ -148,8 +150,7 @@ public:
                         u.setPassword(password);
                         co_await drogon::orm::CoroMapper<models::Users>(tx).insert(u);
                         co_return std::nullopt;
-                    }
-                    catch (const drogon::orm::DrogonDbException &e) {
+                    } catch (const drogon::orm::DrogonDbException &e) {
                         const std::string w = e.base().what();
                         LOG_ERROR << "User insert error: " << w;
                         if (w.find("duplicate key") != std::string::npos ||
@@ -165,8 +166,7 @@ public:
             }
 
             co_return makeOK(j);
-        }
-        catch (const std::exception &e) {
+        } catch (const std::exception &e) {
             LOG_ERROR << "Register error: " << e.what();
             co_return makeError(std::string("Registration failed: ") + e.what());
         }
@@ -254,8 +254,9 @@ public:
 
     static drogon::Task<Json::Value>
     handleCreateRoom(std::shared_ptr<WsData> wsData, Json::Value j) {
-        if (!wsData->authenticated)
+        if (!wsData->authenticated) {
             co_return makeError(j, "Not authenticated");
+        }
 
         auto db = drogon::app().getDbClient();
         if (!db) {

@@ -40,8 +40,7 @@ public:
             } else {
                 co_return makeError(j_msg, "Unknown message type: " + typeStr);
             }
-        }
-        catch (const std::exception &e) { 
+        } catch (const std::exception &e) { 
             std::string type_info = j_msg.isMember("type") ? j_msg["type"].asString() : "unknown_type"; 
             LOG_ERROR << "Unexpected std::exception during message processing (" << type_info << "): " << e.what();
             co_return makeError(std::string("Unexpected server error: ") + e.what());

@@ -26,12 +26,13 @@ public:
                           const drogon::WebSocketMessageType &type) override {
 
         //TODO handle keepalive
+        //actually it seems like it's handled automagically, we just need to ignore anything that's not WebSocketMessageType::Text
         if (type != drogon::WebSocketMessageType::Text) {
-            LOG_WARN << "Non-text WS message received from " << conn->peerAddr().toIpPort() << ". Ignoring.";
+            LOG_TRACE << "Non-text WS message received from " << conn->peerAddr().toIpPort() << ". Ignoring.";
             return;
         }
 
-        //move heavy work off IO pool
+        //move heavy work off IO pool as fast as possible
         drogon::app().getLoop()->queueInLoop([wsConn = conn, message_content = std::move(msg_str)]() {
             auto parsedJsonResult = parseJsonMessage(message_content);
             
@@ -44,6 +45,8 @@ public:
                 return;
             }
 
+            //TODO investigate drogon::async_run behaviour more closely, does it launch an async task?
+            //quick glance at source is inconlusive
             drogon::async_run(
                 [captured_conn = wsConn, json_to_process = std::move(*parsedJsonResult)]() mutable -> drogon::Task<> {
                     co_await WsRequestProcessor::handleIncomingMessage(captured_conn, std::move(json_to_process)); 

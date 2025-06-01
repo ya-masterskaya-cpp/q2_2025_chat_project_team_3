@@ -27,8 +27,9 @@ void WebSocketClient::start() {
     client->setMessageHandler([this](const std::string &message,
                                      const drogon::WebSocketClientPtr &,
                                      const drogon::WebSocketMessageType &type) {
-        if (type == drogon::WebSocketMessageType::Text)
+        if (type == drogon::WebSocketMessageType::Text) {
             this->handleMessage(message);
+        }
     });
 
     client->setConnectionClosedHandler([this](const drogon::WebSocketClientPtr &) {
@@ -56,8 +57,6 @@ void WebSocketClient::start() {
     );
 }
 
-// --- other methods same as before ---
-
 void WebSocketClient::registerUser(const std::string& username, const std::string& password) {
     if (!connected) {
         wxTheApp->CallAfter([this]{ ui->ShowPopup("Not connected to server!", wxICON_ERROR); });
@@ -70,6 +69,7 @@ void WebSocketClient::registerUser(const std::string& username, const std::strin
     j["data"]["password"] = password;
     sendJson(j);
 }
+
 void WebSocketClient::loginUser(const std::string& username, const std::string& password) {
     if (!connected) {
         wxTheApp->CallAfter([this]{ ui->ShowPopup("Not connected to server!", wxICON_ERROR); });
@@ -82,6 +82,7 @@ void WebSocketClient::loginUser(const std::string& username, const std::string& 
     j["data"]["password"] = password;
     sendJson(j);
 }
+
 void WebSocketClient::getRooms() {
     if (!connected) return;
     Json::Value j;
@@ -89,6 +90,7 @@ void WebSocketClient::getRooms() {
     j["type"] = "getRooms";
     sendJson(j);
 }
+
 void WebSocketClient::createRoom(const std::string& roomName) {
     if (!connected) return;
     Json::Value j;
@@ -97,6 +99,7 @@ void WebSocketClient::createRoom(const std::string& roomName) {
     j["data"]["roomName"] = roomName;
     sendJson(j);
 }
+
 void WebSocketClient::joinRoom(const std::string& roomName) {
     if (!connected) return;
     Json::Value j;
@@ -105,6 +108,7 @@ void WebSocketClient::joinRoom(const std::string& roomName) {
     j["data"]["room"] = roomName;
     sendJson(j);
 }
+
 void WebSocketClient::leaveRoom() {
     if (!connected) return;
     Json::Value j;
@@ -112,6 +116,7 @@ void WebSocketClient::leaveRoom() {
     j["type"] = "leaveRoom";
     sendJson(j);
 }
+
 void WebSocketClient::sendMessage(const std::string& message) {
     if (!connected) return;
     Json::Value j;
@@ -135,6 +140,7 @@ void WebSocketClient::scheduleRoomListRefresh() {
         }
     }).detach();
 }
+
 void WebSocketClient::requestRoomList() {
     getRooms();
     scheduleRoomListRefresh();
