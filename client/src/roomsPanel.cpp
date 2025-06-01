@@ -30,13 +30,13 @@ void RoomsPanel::UpdateRoomList(const std::vector<std::string>& rooms) {
 
 void RoomsPanel::OnJoin(wxCommandEvent&) {
     int sel = roomList->GetSelection();
-    if (sel != wxNOT_FOUND)
+    if(sel != wxNOT_FOUND)
         mainWin->wsClient->joinRoom(roomList->GetString(sel).ToStdString());
 }
 
 void RoomsPanel::OnCreate(wxCommandEvent&) {
     wxTextEntryDialog dlg(this, "Room name?", "Create Room");
-    if (dlg.ShowModal() == wxID_OK) {
+    if(dlg.ShowModal() == wxID_OK) {
         mainWin->wsClient->createRoom(std::string(dlg.GetValue().ToUTF8()));
     }
 }

@@ -31,7 +31,7 @@ void ChatPanel::AppendMessage(const wxString& msg) {
 }
 
 void ChatPanel::OnSend(wxCommandEvent&) {
-    if (mainWin->wsClient && !messageInput->IsEmpty()) {
+    if(mainWin->wsClient && !messageInput->IsEmpty()) {
         mainWin->wsClient->sendMessage(std::string(messageInput->GetValue().ToUTF8()));
         messageInput->Clear();
     }

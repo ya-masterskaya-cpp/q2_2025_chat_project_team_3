@@ -14,8 +14,8 @@ struct MigrationFile {
 
 inline std::pair<std::string_view, std::string_view>
 parse_sql_filename(std::string_view input) noexcept {
-    if (input.ends_with(".sql")) input.remove_suffix(4);
-    if (auto pos = input.find('-'); pos != std::string_view::npos) {
+    if(input.ends_with(".sql")) input.remove_suffix(4);
+    if(auto pos = input.find('-'); pos != std::string_view::npos) {
         return { input.substr(0, pos), input.substr(pos+1) };
     }
     return {};
@@ -31,16 +31,16 @@ parseTimestamp(std::string_view s) {
 inline std::vector<MigrationFile>
 scanMigrationFiles(const std::filesystem::path &dir) {
     std::vector<MigrationFile> out;
-    if (!std::filesystem::exists(dir) || !std::filesystem::is_directory(dir)) {
+    if(!std::filesystem::exists(dir) || !std::filesystem::is_directory(dir)) {
         LOG_ERROR << "Migrations dir missing: " << dir;
         return out;
     }
     for (auto &e: std::filesystem::directory_iterator(dir)) {
-        if (!e.is_regular_file()) continue;
+        if(!e.is_regular_file()) continue;
         auto fn = e.path().filename().string();
         auto [tsStr,nameStr] = parse_sql_filename(fn);
-        if (tsStr.empty() || nameStr.empty()) continue;
-        if (auto ts = parseTimestamp(tsStr)) {
+        if(tsStr.empty() || nameStr.empty()) continue;
+        if(auto ts = parseTimestamp(tsStr)) {
             out.push_back({*ts, std::string{nameStr}, fn, e.path()});
         }
     }
@@ -55,11 +55,11 @@ applyMigrations(drogon::orm::DbClientPtr db, const std::vector<MigrationFile> &f
     using namespace drogon::orm;
 
     auto rc = co_await db->execSqlCoro("SELECT to_regclass('public.migrations')");
-    if (rc.empty() || rc[0][0].isNull()) {
+    if(rc.empty() || rc[0][0].isNull()) {
         LOG_INFO << "No migrations table; running main.sql";
 
         std::ifstream mf("db/main.sql");
-        if (!mf) {
+        if(!mf) {
             LOG_FATAL << "Cannot open db/main.sql";
             drogon::app().quit();
             co_return;
@@ -76,7 +76,7 @@ applyMigrations(drogon::orm::DbClientPtr db, const std::vector<MigrationFile> &f
     uint64_t lastTs = latest.empty() ? 0 : latest[0].getValueOfTimestamp();
 
     for (auto &f : files) {
-        if (f.timestamp <= lastTs) {
+        if(f.timestamp <= lastTs) {
             LOG_DEBUG << "Skipping: " << f.filename;
             continue;
         }
@@ -84,7 +84,7 @@ applyMigrations(drogon::orm::DbClientPtr db, const std::vector<MigrationFile> &f
         LOG_INFO << "Applying: " << f.filename;
 
         std::ifstream sf(f.fullPath);
-        if (!sf) {
+        if(!sf) {
             LOG_FATAL << "Cannot open " << f.fullPath;
             drogon::app().quit();
             co_return;
@@ -101,7 +101,7 @@ applyMigrations(drogon::orm::DbClientPtr db, const std::vector<MigrationFile> &f
                 co_return std::nullopt;
             });
 
-        if (err) {
+        if(err) {
             LOG_FATAL << "Migration failed [" << f.name << "]: " << *err;
             drogon::app().quit();
             co_return;

@@ -27,7 +27,7 @@ void WebSocketClient::start() {
     client->setMessageHandler([this](const std::string &message,
                                      const drogon::WebSocketClientPtr &,
                                      const drogon::WebSocketMessageType &type) {
-        if (type == drogon::WebSocketMessageType::Text) {
+        if(type == drogon::WebSocketMessageType::Text) {
             this->handleMessage(message);
         }
     });
@@ -42,7 +42,7 @@ void WebSocketClient::start() {
     client->connectToServer(
         req,
         [this](drogon::ReqResult r, const drogon::HttpResponsePtr &, const drogon::WebSocketClientPtr &wsPtr) {
-            if (r != drogon::ReqResult::Ok) {
+            if(r != drogon::ReqResult::Ok) {
                 this->connected = false;
                 wxTheApp->CallAfter([this]{ ui->authPanel->SetButtonsEnabled(false); });
                 wxTheApp->CallAfter([this]{ ui->ShowPopup("Connection failed!", wxICON_ERROR); });
@@ -50,18 +50,11 @@ void WebSocketClient::start() {
                 return;
             }
             this->conn = wsPtr->getConnection();
-            this->connected = true;
-            wxTheApp->CallAfter([this]{ ui->authPanel->SetButtonsEnabled(true); });
-            wxTheApp->CallAfter([this]{ ui->ShowPopup("Connected!", wxICON_INFORMATION); });
         }
     );
 }
 
 void WebSocketClient::registerUser(const std::string& username, const std::string& password) {
-    if (!connected) {
-        wxTheApp->CallAfter([this]{ ui->ShowPopup("Not connected to server!", wxICON_ERROR); });
-        return;
-    }
     Json::Value j;
     j["channel"] = "client2server";
     j["type"] = "register";
@@ -71,10 +64,6 @@ void WebSocketClient::registerUser(const std::string& username, const std::strin
 }
 
 void WebSocketClient::loginUser(const std::string& username, const std::string& password) {
-    if (!connected) {
-        wxTheApp->CallAfter([this]{ ui->ShowPopup("Not connected to server!", wxICON_ERROR); });
-        return;
-    }
     Json::Value j;
     j["channel"] = "client2server";
     j["type"] = "auth";
@@ -84,7 +73,6 @@ void WebSocketClient::loginUser(const std::string& username, const std::string& 
 }
 
 void WebSocketClient::getRooms() {
-    if (!connected) return;
     Json::Value j;
     j["channel"] = "client2server";
     j["type"] = "getRooms";
@@ -92,7 +80,6 @@ void WebSocketClient::getRooms() {
 }
 
 void WebSocketClient::createRoom(const std::string& roomName) {
-    if (!connected) return;
     Json::Value j;
     j["channel"] = "client2server";
     j["type"] = "createRoom";
@@ -101,7 +88,6 @@ void WebSocketClient::createRoom(const std::string& roomName) {
 }
 
 void WebSocketClient::joinRoom(const std::string& roomName) {
-    if (!connected) return;
     Json::Value j;
     j["channel"] = "client2server";
     j["type"] = "joinRoom";
@@ -110,7 +96,6 @@ void WebSocketClient::joinRoom(const std::string& roomName) {
 }
 
 void WebSocketClient::leaveRoom() {
-    if (!connected) return;
     Json::Value j;
     j["channel"] = "client2server";
     j["type"] = "leaveRoom";
@@ -118,7 +103,6 @@ void WebSocketClient::leaveRoom() {
 }
 
 void WebSocketClient::sendMessage(const std::string& message) {
-    if (!connected) return;
     Json::Value j;
     j["channel"] = "client2server";
     j["type"] = "sendMessage";
@@ -127,8 +111,10 @@ void WebSocketClient::sendMessage(const std::string& message) {
 }
 
 void WebSocketClient::sendJson(const Json::Value& val) {
-    if (this->conn && this->conn->connected()) {
+    if(this->conn && this->conn->connected()) {
         this->conn->send(val.toStyledString());
+    } else {
+        wxTheApp->CallAfter([this]{ ui->ShowPopup("Not connected to server!", wxICON_ERROR); });
     }
 }
 
@@ -151,18 +137,25 @@ void WebSocketClient::handleMessage(const std::string& msg) {
     Json::Value root;
     std::string errs;
     std::istringstream iss(msg);
-    if (!Json::parseFromStream(rbuilder, iss, &root, &errs)) {
+    if(!Json::parseFromStream(rbuilder, iss, &root, &errs)) {
         wxTheApp->CallAfter([this]{ ui->ShowPopup("Invalid JSON received!", wxICON_ERROR); });
         return;
     }
     std::string type = root.get("type", "").asString();
     std::string channel = root.get("channel", "").asString();
 
-    if (channel != "server2client") {
+    if(channel != "server2client") {
         return;
     }
 
-    if (type == "roomMessage") {
+    if(type == "serverHello") {
+        this->connected = true;
+        wxTheApp->CallAfter([this]{ ui->authPanel->SetButtonsEnabled(true); });
+        wxTheApp->CallAfter([this]{ ui->ShowPopup("Connected!", wxICON_INFORMATION); });
+        return;
+    }
+
+    if(type == "roomMessage") {
         std::string user = root["data"]["username"].asString();
         std::string text = root["data"]["message"].asString();
         wxTheApp->CallAfter([this, user, text] {
@@ -178,21 +171,21 @@ void WebSocketClient::handleMessage(const std::string& msg) {
             ui->ShowPopup("Operation failed!", wxICON_ERROR);
         });
     } else {
-        if (type == "getRooms") {
+        if(type == "getRooms") {
             std::vector<std::string> rooms;
             for (const auto& r : root["data"]["rooms"]) rooms.push_back(r.asString());
             wxTheApp->CallAfter([this, rooms] {
                 ui->roomsPanel->UpdateRoomList(rooms);
             });
-        } else if (type == "joinRoom") {
+        } else if(type == "joinRoom") {
             wxTheApp->CallAfter([this] { ui->ShowChat(); });
-        } else if (type == "leaveRoom") {
+        } else if(type == "leaveRoom") {
             wxTheApp->CallAfter([this] { ui->ShowRooms(); });
-        } else if (type == "register") {
+        } else if(type == "register") {
             wxTheApp->CallAfter([this] {
                 ui->ShowPopup("Registration successful!", wxICON_INFORMATION);
             });
-        } else if (type == "auth") {
+        } else if(type == "auth") {
             wxTheApp->CallAfter([this] {
                 ui->ShowPopup("Login successful!", wxICON_INFORMATION);
                 ui->ShowRooms();

@@ -22,7 +22,7 @@ public:
     }
     virtual int OnExit() override {
         drogon::app().quit();
-        if (drogonThread.joinable()) drogonThread.join();
+        if(drogonThread.joinable()) drogonThread.join();
         return 0;
     }
 };

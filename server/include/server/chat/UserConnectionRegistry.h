@@ -14,21 +14,21 @@ public:
     }
 
     void removeConnection(const drogon::WebSocketConnectionPtr &conn_to_remove) {
-        if (!conn_to_remove) return;
+        if(!conn_to_remove) return;
 
         auto &ws_data = conn_to_remove->getContextRef<WsData>();
         std::string username_being_removed = ws_data.username; 
 
         std::unique_lock lock(mutex_);
 
-        if (auto it = usernameToConn_.find(username_being_removed); it != usernameToConn_.end()) {
+        if(auto it = usernameToConn_.find(username_being_removed); it != usernameToConn_.end()) {
             usernameToConn_.erase(it);
         }
     }
 
     void bindUsername(const std::string &new_username,
                       const drogon::WebSocketConnectionPtr &conn_to_bind) {
-        if (!conn_to_bind || new_username.empty()) {
+        if(!conn_to_bind || new_username.empty()) {
             return;
         }
         std::unique_lock lock(mutex_);
@@ -36,15 +36,15 @@ public:
     }
 
     bool sendToUser(const std::string &target_username, const Json::Value &message) {
-        if (target_username.empty()) {
+        if(target_username.empty()) {
             return false;
         }
         std::shared_lock lock(mutex_);
 
         auto it = usernameToConn_.find(target_username);
-        if (it != usernameToConn_.end()) {
+        if(it != usernameToConn_.end()) {
             const auto &conn = it->second;
-            if (conn && conn->connected()) {
+            if(conn && conn->connected()) {
                 conn->send(message.toStyledString());
                 return true;
             }

@@ -15,14 +15,14 @@ int main() {
         LOG_INFO << "Preparing to apply migrations...";
 
         auto dbClient = drogon::app().getDbClient();
-        if (!dbClient) {
+        if(!dbClient) {
             LOG_FATAL << "Failed to get DB client. Check your config.json. Aborting migrations.";
             drogon::app().quit(); // Quit if DB client is not available
             return;
         }
 
         auto migrationFiles = scanMigrationFiles("db/migrations");
-        if (migrationFiles.empty()) {
+        if(migrationFiles.empty()) {
              LOG_INFO << "No migration .sql files found";
         } else {
             LOG_INFO << "Found " << migrationFiles.size() << " migration files";
@@ -31,13 +31,13 @@ int main() {
         try {
             drogon::sync_wait(applyMigrations(dbClient, migrationFiles));
             LOG_INFO << "Migrations check/apply process completed.";
-        } catch (const drogon::orm::DrogonDbException &e) {
+        } catch(const drogon::orm::DrogonDbException &e) {
             LOG_FATAL << "Database exception during migrations: " << e.base().what() << ". Aborting.";
             drogon::app().quit();
-        } catch (const std::exception &e) {
+        } catch(const std::exception &e) {
             LOG_FATAL << "Standard exception during migrations: " << e.what() << ". Aborting.";
             drogon::app().quit();
-        } catch (...) { //NOTE catch (...) is safe here cuz we will terminate afterwards, or is it not?
+        } catch(...) { //NOTE catch(...) is safe here cuz we will terminate afterwards, or is it not?
             LOG_FATAL << "Unknown error during migrations. Aborting.";
             drogon::app().quit();
         }

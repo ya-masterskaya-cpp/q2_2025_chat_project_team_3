@@ -12,7 +12,7 @@ parseJsonMessage(const std::string& msg_str) {
     Json::Value root;
     JSONCPP_STRING errs; 
     
-    if (reader->parse(msg_str.data(), msg_str.data() + msg_str.size(), &root, &errs)) {
+    if(reader->parse(msg_str.data(), msg_str.data() + msg_str.size(), &root, &errs)) {
         return root; 
     }
     return std::unexpected(errs); 

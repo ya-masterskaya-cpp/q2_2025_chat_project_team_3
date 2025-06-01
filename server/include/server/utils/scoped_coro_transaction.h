@@ -42,7 +42,7 @@ inline drogon::Task<ScopedTransactionResult> WithTransaction(ScopedTransactionFu
 
     try {
         auto db = drogon::app().getDbClient();
-        if (!db) {
+        if(!db) {
             LOG_ERROR << "DB client not available";
             co_return "Internal: DB client unavailable";
         }
@@ -50,28 +50,28 @@ inline drogon::Task<ScopedTransactionResult> WithTransaction(ScopedTransactionFu
         tx = co_await db->newTransactionCoro();
         LOG_TRACE << "Transaction started";
 
-        if (auto err = co_await userLambda(tx)) {
+        if(auto err = co_await userLambda(tx)) {
             LOG_DEBUG << "User lambda returned error, rolling back";
             tx->rollback();
             co_return err;
         }
 
         CommitAwaiter waiter{std::move(tx)};
-        if (!co_await waiter) {
+        if(!co_await waiter) {
             LOG_ERROR << "Commit failed via callback";
             co_return "Transaction commit failed";
         }
 
         LOG_TRACE << "Transaction committed successfully";
-    } catch (const drogon::orm::DrogonDbException &e) {
+    } catch(const drogon::orm::DrogonDbException &e) {
         LOG_ERROR << "DrogonDbException: " << e.base().what();
-        if (tx) {
+        if(tx) {
             tx->rollback();
         }
         co_return std::string("DB exception: ") + e.base().what();
-    } catch (const std::exception &e) {
+    } catch(const std::exception &e) {
         LOG_ERROR << "std::exception during transaction: " << e.what();
-        if (tx) {
+        if(tx) {
             tx->rollback();
         }
         co_return std::string("Unexpected error: ") + e.what();

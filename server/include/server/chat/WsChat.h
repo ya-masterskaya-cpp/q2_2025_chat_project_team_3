@@ -27,7 +27,7 @@ public:
 
         //TODO handle keepalive
         //actually it seems like it's handled automagically, we just need to ignore anything that's not WebSocketMessageType::Text
-        if (type != drogon::WebSocketMessageType::Text) {
+        if(type != drogon::WebSocketMessageType::Text) {
             LOG_TRACE << "Non-text WS message received from " << conn->peerAddr().toIpPort() << ". Ignoring.";
             return;
         }
@@ -36,10 +36,10 @@ public:
         drogon::app().getLoop()->queueInLoop([wsConn = conn, message_content = std::move(msg_str)]() {
             auto parsedJsonResult = parseJsonMessage(message_content);
             
-            if (!parsedJsonResult.has_value()) {
+            if(!parsedJsonResult.has_value()) {
                 LOG_WARN << "Failed to parse JSON from " 
                          << wsConn->peerAddr().toIpPort() << ": " << parsedJsonResult.error();
-                if (wsConn->connected()) {
+                if(wsConn->connected()) {
                     wsConn->send(makeError("Invalid JSON: " + parsedJsonResult.error()).toStyledString()); 
                 }
                 return;
