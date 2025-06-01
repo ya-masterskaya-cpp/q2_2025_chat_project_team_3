@@ -1,0 +1,13 @@
+{
+  "rdbms": "postgresql", 
+  "host": "db",
+  "port": 5432,
+  "dbname": "drogon_test",
+  "user": "postgres",
+  "passwd": "postgres",
+  "tables": [], 
+  "relationships": {
+      "enabled": true,
+      "items": []
+  }
+}
