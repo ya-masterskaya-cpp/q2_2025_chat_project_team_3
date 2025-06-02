@@ -1,49 +1,53 @@
 #pragma once
 
-#include <drogon/drogon.h> //needed only for logging
+#include <drogon/drogon.h> // needed only for logging
 #include <server/chat/WsData.h>
-#include <server/utils/utils.h>    
-#include <server/chat/MessageHandlers.h> 
+#include <server/utils/utils.h>
+#include <server/chat/MessageHandlers.h>
+#include <common/proto/chat.pb.h>
 
 class MessageHandlerService {
 public:
-    static drogon::Task<Json::Value>
-    processMessage(std::shared_ptr<WsData> wsData, Json::Value j_msg, IAuthNotifier& notifier) {
-        if(!j_msg.isMember("channel") || !j_msg["channel"].isString() ||
-            !j_msg.isMember("type")    || !j_msg["type"].isString()) {
-            co_return makeError("Missing or invalid 'channel'/'type' fields");
-        }
-        auto channel = j_msg["channel"].asString();
-        auto typeStr = j_msg["type"].asString();
-
-        if(channel != "client2server") {
-             co_return makeError(j_msg, "Invalid message channel: " + channel);
-        }
-
-        try {
-            if(typeStr == "getUsers") {
-                co_return co_await MessageHandlers::handleGetUsers(std::move(wsData), j_msg);
-            } else if(typeStr == "register") {
-                co_return co_await MessageHandlers::handleRegister(j_msg);
-            } else if(typeStr == "createRoom") {
-                co_return co_await MessageHandlers::handleCreateRoom(std::move(wsData), j_msg);
-            } else if(typeStr == "auth") {
-                co_return co_await MessageHandlers::handleAuth(std::move(wsData), j_msg, notifier);
-            } else if(typeStr == "getRooms") {
-                co_return co_await MessageHandlers::handleGetRooms(std::move(wsData), j_msg);
-            } else if(typeStr == "joinRoom") {
-                co_return co_await MessageHandlers::handleJoinRoom(std::move(wsData), j_msg);
-            } else if(typeStr == "leaveRoom") {
-                co_return co_await MessageHandlers::handleLeaveRoom(std::move(wsData), j_msg);
-            } else if(typeStr == "sendMessage") {
-                co_return co_await MessageHandlers::handleSendMessage(std::move(wsData), j_msg);
-            } else {
-                co_return makeError(j_msg, "Unknown message type: " + typeStr);
+    static drogon::Task<chat::Envelope> processMessage(std::shared_ptr<WsData> wsData, const chat::Envelope& env, IAuthNotifier& notifier) {
+        chat::Envelope respEnv;
+        switch(env.payload_case()) {
+            case chat::Envelope::kAuthRequest: {
+                *respEnv.mutable_auth_response() = co_await MessageHandlers::handleAuth(wsData, env.auth_request(), notifier);
+                break;
             }
-        } catch(const std::exception &e) { 
-            std::string type_info = j_msg.isMember("type") ? j_msg["type"].asString() : "unknown_type"; 
-            LOG_ERROR << "Unexpected std::exception during message processing (" << type_info << "): " << e.what();
-            co_return makeError(std::string("Unexpected server error: ") + e.what());
+            case chat::Envelope::kRegisterRequest: {
+                *respEnv.mutable_register_response() = co_await MessageHandlers::handleRegister(env.register_request());
+                break;
+            }
+            case chat::Envelope::kSendMessageRequest: {
+                *respEnv.mutable_send_message_response() = co_await MessageHandlers::handleSendMessage(wsData, env.send_message_request());
+                break;
+            }
+            case chat::Envelope::kGetUsersRequest: {
+                *respEnv.mutable_get_users_response() = co_await MessageHandlers::handleGetUsers(wsData, env.get_users_request());
+                break;
+            }
+            case chat::Envelope::kJoinRoomRequest: {
+                *respEnv.mutable_join_room_response() = co_await MessageHandlers::handleJoinRoom(wsData, env.join_room_request());
+                break;
+            }
+            case chat::Envelope::kLeaveRoomRequest: {
+                *respEnv.mutable_leave_room_response() = co_await MessageHandlers::handleLeaveRoom(wsData, env.leave_room_request());
+                break;
+            }
+            case chat::Envelope::kGetRoomsRequest: {
+                *respEnv.mutable_get_rooms_response() = co_await MessageHandlers::handleGetRooms(wsData, env.get_rooms_request());
+                break;
+            }
+            case chat::Envelope::kCreateRoomRequest: {
+                *respEnv.mutable_create_room_response() = co_await MessageHandlers::handleCreateRoom(wsData, env.create_room_request());
+                break;
+            }
+            default: {
+                respEnv = makeGenericErrorEnvelope("Unknown or empty payload");
+                break;
+            }
         }
+        co_return respEnv;
     }
 };

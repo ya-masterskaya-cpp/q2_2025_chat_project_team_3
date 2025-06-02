@@ -1,0 +1,110 @@
+syntax = "proto3";
+package chat;
+
+enum StatusCode {
+    STATUS_UNKNOWN = 0;
+    STATUS_SUCCESS = 1;
+    STATUS_FAILURE = 2;
+    STATUS_UNAUTHORIZED = 3;
+    STATUS_NOT_FOUND = 4;
+}
+
+message Status {
+    StatusCode code = 1;
+    string message = 2;
+}
+
+message AuthRequest {
+    string username = 1;
+    string password = 2;
+}
+message AuthResponse {
+    Status status = 1;
+    string token = 2;
+}
+
+message RegisterRequest {
+    string username = 1;
+    string password = 2;
+}
+message RegisterResponse {
+    Status status = 1;
+}
+
+message SendMessageRequest {
+    string message = 1;
+}
+message SendMessageResponse {
+    Status status = 1;
+}
+
+message GetUsersRequest {
+}
+message GetUsersResponse {
+    Status status = 1;
+    repeated string users = 2;
+}
+
+message JoinRoomRequest {
+    string room = 1;
+}
+message JoinRoomResponse {
+    Status status = 1;
+}
+
+message LeaveRoomRequest {
+}
+message LeaveRoomResponse {
+    Status status = 1;
+}
+
+message GetRoomsRequest {
+}
+message GetRoomsResponse {
+    Status status = 1;
+    repeated string rooms = 2;
+}
+
+message CreateRoomRequest {
+    string room_name = 1;
+}
+message CreateRoomResponse {
+    Status status = 1;
+}
+
+message RoomMessage {
+    string username = 1;
+    string message = 2;
+}
+
+message GenericError {
+    Status status = 1;
+}
+
+message ServerHello {
+    string message = 1;
+}
+
+message Envelope {
+    oneof payload {
+        AuthRequest auth_request = 1;
+        AuthResponse auth_response = 2;
+        RegisterRequest register_request = 3;
+        RegisterResponse register_response = 4;
+        SendMessageRequest send_message_request = 5;
+        SendMessageResponse send_message_response = 6;
+        GetUsersRequest get_users_request = 7;
+        GetUsersResponse get_users_response = 8;
+        JoinRoomRequest join_room_request = 9;
+        JoinRoomResponse join_room_response = 10;
+        LeaveRoomRequest leave_room_request = 11;
+        LeaveRoomResponse leave_room_response = 12;
+        GetRoomsRequest get_rooms_request = 13;
+        GetRoomsResponse get_rooms_response = 14;
+        CreateRoomRequest create_room_request = 15;
+        CreateRoomResponse create_room_response = 16;
+        RoomMessage room_message = 17;
+        GenericError generic_error = 18;
+        ServerHello server_hello = 19;
+    }
+}

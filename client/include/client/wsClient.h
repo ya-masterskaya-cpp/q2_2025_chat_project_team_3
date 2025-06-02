@@ -1,10 +1,9 @@
 #pragma once
+#include <wx/string.h>
 #include <drogon/WebSocketClient.h>
-#include <json/json.h>
-#include <mutex>
-#include <vector>
+#include <common/proto/chat.pb.h>
+#include <memory>
 #include <string>
-#include <atomic>
 
 class MainWidget;
 
@@ -13,7 +12,6 @@ public:
     explicit WebSocketClient(MainWidget* ui);
 
     void start();
-
     void registerUser(const std::string& username, const std::string& password);
     void loginUser(const std::string& username, const std::string& password);
     void getRooms();
@@ -21,17 +19,23 @@ public:
     void joinRoom(const std::string& roomName);
     void leaveRoom();
     void sendMessage(const std::string& message);
-
     void requestRoomList();
-
-    std::atomic<bool> connected{false};
-
-private:
-    void handleMessage(const std::string& msg);
-    void sendJson(const Json::Value& val);
     void scheduleRoomListRefresh();
 
-    drogon::WebSocketClientPtr client;
-    drogon::WebSocketConnectionPtr conn;
+private:
+    void sendEnvelope(const chat::Envelope& env);
+    void handleMessage(const std::string& msg);
+
+    // UI helpers
+    void showError(const wxString& msg);
+    void showInfo(const wxString& msg);
+    void updateRoomsPanel(const std::vector<std::string>& rooms);
+    void showChat();
+    void showRooms();
+    void showRoomMessage(const chat::RoomMessage& rm);
+
     MainWidget* ui;
+    std::shared_ptr<drogon::WebSocketConnection> conn;
+    drogon::WebSocketClientPtr client;
+    bool connected = false;
 };

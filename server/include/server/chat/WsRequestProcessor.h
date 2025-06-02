@@ -2,29 +2,25 @@
 
 #include <drogon/drogon.h>
 #include <server/chat/WsData.h>
-#include <server/utils/utils.h>           
-#include <server/chat/MessageHandlerService.h> 
+#include <server/utils/utils.h>
+#include <server/chat/MessageHandlerService.h>
 #include <server/chat/WsAuthNotifierImpl.h>
 
 class WsRequestProcessor {
 public:
-    static drogon::Task<> handleIncomingMessage(const drogon::WebSocketConnectionPtr &conn,
-                          Json::Value j_msg) {
+    static drogon::Task<> handleIncomingMessage(const drogon::WebSocketConnectionPtr& conn, const std::string& bytes) {
         try {
+            chat::Envelope env;
+            if(!env.ParseFromString(bytes)) {
+                sendEnvelope(conn, makeGenericErrorEnvelope("Malformed protobuf message"));
+                co_return;
+            }
             WsAuthNotifierImpl notifier{conn};
-            Json::Value responseJson = co_await MessageHandlerService::processMessage(conn->getContext<WsData>(), std::move(j_msg), notifier);
-
-            if(conn && conn->connected()) {
-                conn->send(responseJson.toStyledString());
-            } else {
-                LOG_WARN << "WS connection closed before response could be sent for message type: "
-                         << (responseJson.isMember("type") ? responseJson["type"].asString() : "unknown");
-            }
-        } catch(const std::exception &e) {
+            sendEnvelope(conn, co_await MessageHandlerService::processMessage(conn->getContext<WsData>(), env, notifier));
+        } catch(const std::exception& e) {
             LOG_ERROR << "Critical error in WsRequestProcessor::handleIncomingMessage: " << e.what();
-            if(conn && conn->connected()) {
-                 conn->send(makeError("Critical server error during message handling.").toStyledString());
-            }
+            sendEnvelope(conn, makeGenericErrorEnvelope("Critical server error during message handling."));
+            co_return;
         }
     }
 };
