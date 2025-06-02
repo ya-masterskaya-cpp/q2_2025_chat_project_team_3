@@ -3,126 +3,113 @@
 #include <client/authPanel.h>
 #include <client/roomsPanel.h>
 #include <client/chatPanel.h>
-#include <drogon/WebSocketClient.h>
 #include <drogon/HttpRequest.h>
 #include <drogon/HttpAppFramework.h>
-#include <json/json.h>
-#include <mutex>
-#include <thread>
 #include <chrono>
+#include <thread>
 
 WebSocketClient::WebSocketClient(MainWidget* ui_) : ui(ui_) {}
 
 void WebSocketClient::start() {
-
     LOG_INFO << "WebSocketClient::start()";
-
     std::string server = "ws://localhost:8848";
     std::string path = "/ws";
-
     client = drogon::WebSocketClient::newWebSocketClient(server);
     auto req = drogon::HttpRequest::newHttpRequest();
     req->setPath(path);
 
-    client->setMessageHandler([this](const std::string &message,
-                                     const drogon::WebSocketClientPtr &,
-                                     const drogon::WebSocketMessageType &type) {
-        if(type == drogon::WebSocketMessageType::Text) {
-            this->handleMessage(message);
+    client->setMessageHandler([this](const std::string& message,
+                                     const drogon::WebSocketClientPtr&,
+                                     const drogon::WebSocketMessageType& type) {
+        if(type == drogon::WebSocketMessageType::Binary) {
+            handleMessage(message);
         }
     });
 
-    client->setConnectionClosedHandler([this](const drogon::WebSocketClientPtr &) {
-        this->connected = false;
-        wxTheApp->CallAfter([this]{ ui->authPanel->SetButtonsEnabled(false); });
-        wxTheApp->CallAfter([this]{ ui->ShowPopup("Disconnected!", wxICON_ERROR); });
+    client->setConnectionClosedHandler([this](const drogon::WebSocketClientPtr&) {
+        connected = false;
+        wxTheApp->CallAfter([this] { ui->authPanel->SetButtonsEnabled(false); });
+        showError("Disconnected!");
     });
 
     LOG_INFO << "Connecting to WebSocket at " << server;
     client->connectToServer(
         req,
-        [this](drogon::ReqResult r, const drogon::HttpResponsePtr &, const drogon::WebSocketClientPtr &wsPtr) {
+        [this](drogon::ReqResult r, const drogon::HttpResponsePtr&, const drogon::WebSocketClientPtr& wsPtr) {
             if(r != drogon::ReqResult::Ok) {
-                this->connected = false;
-                wxTheApp->CallAfter([this]{ ui->authPanel->SetButtonsEnabled(false); });
-                wxTheApp->CallAfter([this]{ ui->ShowPopup("Connection failed!", wxICON_ERROR); });
-                this->conn.reset();
+                connected = false;
+                wxTheApp->CallAfter([this] { ui->authPanel->SetButtonsEnabled(false); });
+                showError("Connection failed!");
+                conn.reset();
                 return;
             }
-            this->conn = wsPtr->getConnection();
+            conn = wsPtr->getConnection();
         }
     );
 }
 
 void WebSocketClient::registerUser(const std::string& username, const std::string& password) {
-    Json::Value j;
-    j["channel"] = "client2server";
-    j["type"] = "register";
-    j["data"]["username"] = username;
-    j["data"]["password"] = password;
-    sendJson(j);
+    chat::Envelope env;
+    env.mutable_register_request()->set_username(username);
+    env.mutable_register_request()->set_password(password);
+    sendEnvelope(env);
 }
 
 void WebSocketClient::loginUser(const std::string& username, const std::string& password) {
-    Json::Value j;
-    j["channel"] = "client2server";
-    j["type"] = "auth";
-    j["data"]["username"] = username;
-    j["data"]["password"] = password;
-    sendJson(j);
+    chat::Envelope env;
+    env.mutable_auth_request()->set_username(username);
+    env.mutable_auth_request()->set_password(password);
+    sendEnvelope(env);
 }
 
 void WebSocketClient::getRooms() {
-    Json::Value j;
-    j["channel"] = "client2server";
-    j["type"] = "getRooms";
-    sendJson(j);
+    chat::Envelope env;
+    env.mutable_get_rooms_request();
+    sendEnvelope(env);
 }
 
 void WebSocketClient::createRoom(const std::string& roomName) {
-    Json::Value j;
-    j["channel"] = "client2server";
-    j["type"] = "createRoom";
-    j["data"]["roomName"] = roomName;
-    sendJson(j);
+    chat::Envelope env;
+    env.mutable_create_room_request()->set_room_name(roomName);
+    sendEnvelope(env);
 }
 
 void WebSocketClient::joinRoom(const std::string& roomName) {
-    Json::Value j;
-    j["channel"] = "client2server";
-    j["type"] = "joinRoom";
-    j["data"]["room"] = roomName;
-    sendJson(j);
+    chat::Envelope env;
+    env.mutable_join_room_request()->set_room(roomName);
+    sendEnvelope(env);
 }
 
 void WebSocketClient::leaveRoom() {
-    Json::Value j;
-    j["channel"] = "client2server";
-    j["type"] = "leaveRoom";
-    sendJson(j);
+    chat::Envelope env;
+    env.mutable_leave_room_request();
+    sendEnvelope(env);
 }
 
 void WebSocketClient::sendMessage(const std::string& message) {
-    Json::Value j;
-    j["channel"] = "client2server";
-    j["type"] = "sendMessage";
-    j["data"]["message"] = message;
-    sendJson(j);
+    chat::Envelope env;
+    env.mutable_send_message_request()->set_message(message);
+    sendEnvelope(env);
 }
 
-void WebSocketClient::sendJson(const Json::Value& val) {
-    if(this->conn && this->conn->connected()) {
-        this->conn->send(val.toStyledString());
+void WebSocketClient::sendEnvelope(const chat::Envelope& env) {
+    if(conn && conn->connected()) {
+        std::string out;
+        if(env.SerializeToString(&out)) {
+            conn->send(out, drogon::WebSocketMessageType::Binary);
+        } else {
+            showError("Failed to serialize message!");
+        }
     } else {
-        wxTheApp->CallAfter([this]{ ui->ShowPopup("Not connected to server!", wxICON_ERROR); });
+        showError("Not connected to server!");
     }
 }
 
 void WebSocketClient::scheduleRoomListRefresh() {
     std::thread([this]() {
-        while (ui->roomsPanel->IsShown()) {
+        while(ui->roomsPanel->IsShown()) {
             std::this_thread::sleep_for(std::chrono::seconds(5));
-            this->getRooms();
+            getRooms();
         }
     }).detach();
 }
@@ -133,64 +120,110 @@ void WebSocketClient::requestRoomList() {
 }
 
 void WebSocketClient::handleMessage(const std::string& msg) {
-    Json::CharReaderBuilder rbuilder;
-    Json::Value root;
-    std::string errs;
-    std::istringstream iss(msg);
-    if(!Json::parseFromStream(rbuilder, iss, &root, &errs)) {
-        wxTheApp->CallAfter([this]{ ui->ShowPopup("Invalid JSON received!", wxICON_ERROR); });
+    chat::Envelope env;
+    if(!env.ParseFromString(msg)) {
+        showError("Invalid protobuf message received!");
         return;
     }
-    std::string type = root.get("type", "").asString();
-    std::string channel = root.get("channel", "").asString();
+    using SC = chat::StatusCode;
+    auto statusOk = [](const chat::Status& s) { return s.code() == SC::STATUS_SUCCESS; };
 
-    if(channel != "server2client") {
-        return;
-    }
-
-    if(type == "serverHello") {
-        this->connected = true;
-        wxTheApp->CallAfter([this]{ ui->authPanel->SetButtonsEnabled(true); });
-        wxTheApp->CallAfter([this]{ ui->ShowPopup("Connected!", wxICON_INFORMATION); });
-        return;
-    }
-
-    if(type == "roomMessage") {
-        std::string user = root["data"]["username"].asString();
-        std::string text = root["data"]["message"].asString();
-        wxTheApp->CallAfter([this, user, text] {
-            ui->chatPanel->AppendMessage(wxString::Format("%s: %s",
-                wxString(user.c_str(), wxConvUTF8),
-                wxString(text.c_str(), wxConvUTF8)));
-        });
-        return;
-    }
-
-    if(!root["data"]["success"].asBool()) {
-        wxTheApp->CallAfter([this] {
-            ui->ShowPopup("Operation failed!", wxICON_ERROR);
-        });
-    } else {
-        if(type == "getRooms") {
-            std::vector<std::string> rooms;
-            for (const auto& r : root["data"]["rooms"]) rooms.push_back(r.asString());
-            wxTheApp->CallAfter([this, rooms] {
-                ui->roomsPanel->UpdateRoomList(rooms);
-            });
-        } else if(type == "joinRoom") {
-            wxTheApp->CallAfter([this] { ui->ShowChat(); });
-        } else if(type == "leaveRoom") {
-            wxTheApp->CallAfter([this] { ui->ShowRooms(); });
-        } else if(type == "register") {
-            wxTheApp->CallAfter([this] {
-                ui->ShowPopup("Registration successful!", wxICON_INFORMATION);
-            });
-        } else if(type == "auth") {
-            wxTheApp->CallAfter([this] {
-                ui->ShowPopup("Login successful!", wxICON_INFORMATION);
-                ui->ShowRooms();
-            });
+    switch(env.payload_case()) {
+        case chat::Envelope::kServerHello: {
+            connected = true;
+            wxTheApp->CallAfter([this] { ui->authPanel->SetButtonsEnabled(true); });
+            showInfo("Connected!");
+            break;
+        }
+        case chat::Envelope::kRoomMessage: {
+            showRoomMessage(env.room_message());
+            break;
+        }
+        case chat::Envelope::kGetRoomsResponse: {
+            if(statusOk(env.get_rooms_response().status())) {
+                std::vector<std::string> rooms(env.get_rooms_response().rooms().begin(),
+                                               env.get_rooms_response().rooms().end());
+                updateRoomsPanel(rooms);
+            } else {
+                showError("Failed to get rooms.");
+            }
+            break;
+        }
+        case chat::Envelope::kJoinRoomResponse: {
+            if(statusOk(env.join_room_response().status())) {
+                showChat();
+            } else {
+                showError("Failed to join room.");
+            }
+            break;
+        }
+        case chat::Envelope::kLeaveRoomResponse: {
+            if(statusOk(env.leave_room_response().status())) {
+                showRooms();
+            } else {
+                showError("Failed to leave room.");
+            }
+            break;
+        }
+        case chat::Envelope::kRegisterResponse: {
+            if(statusOk(env.register_response().status())) {
+                showInfo("Registration successful!");
+            } else {
+                showError("Registration failed!");
+            }
+            break;
+        }
+        case chat::Envelope::kAuthResponse: {
+            if(statusOk(env.auth_response().status())) {
+                showInfo("Login successful!");
+                showRooms();
+            } else {
+                showError("Login failed!");
+            }
+            break;
+        }
+        case chat::Envelope::kSendMessageResponse: {
+            if(!statusOk(env.send_message_response().status())) {
+                showError("Failed to send message!");
+            }
+            break;
+        }
+        case chat::Envelope::kGenericError: {
+            showError(wxString::Format("Server error: %s",
+                wxString(env.generic_error().status().message().c_str(), wxConvUTF8)));
+            break;
+        }
+        default: {
+            showError("Unknown message received from server!");
+            break;
         }
     }
+}
 
+void WebSocketClient::showError(const wxString& msg) {
+    wxTheApp->CallAfter([this, msg] { ui->ShowPopup(msg, wxICON_ERROR); });
+}
+
+void WebSocketClient::showInfo(const wxString& msg) {
+    wxTheApp->CallAfter([this, msg] { ui->ShowPopup(msg, wxICON_INFORMATION); });
+}
+
+void WebSocketClient::updateRoomsPanel(const std::vector<std::string>& rooms) {
+    wxTheApp->CallAfter([this, rooms] { ui->roomsPanel->UpdateRoomList(rooms); });
+}
+
+void WebSocketClient::showChat() {
+    wxTheApp->CallAfter([this] { ui->ShowChat(); });
+}
+
+void WebSocketClient::showRooms() {
+    wxTheApp->CallAfter([this] { ui->ShowRooms(); });
+}
+
+void WebSocketClient::showRoomMessage(const chat::RoomMessage& rm) {
+    wxTheApp->CallAfter([this, user = rm.username(), text = rm.message()] {
+        ui->chatPanel->AppendMessage(wxString::Format("%s: %s",
+            wxString(user.c_str(), wxConvUTF8),
+            wxString(text.c_str(), wxConvUTF8)));
+    });
 }

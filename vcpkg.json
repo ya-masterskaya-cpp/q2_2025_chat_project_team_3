@@ -5,7 +5,8 @@
     {
       "name": "drogon",
       "features": ["ctl","orm","postgres"]
-    }
+    },
+    "protobuf"
   ],
   "features": {
     "client": {

@@ -35,7 +35,7 @@ public:
         usernameToConn_[new_username] = conn_to_bind;
     }
 
-    bool sendToUser(const std::string &target_username, const Json::Value &message) {
+    bool sendToUser(const std::string &target_username, const chat::Envelope &message) {
         if(target_username.empty()) {
             return false;
         }
@@ -45,8 +45,11 @@ public:
         if(it != usernameToConn_.end()) {
             const auto &conn = it->second;
             if(conn && conn->connected()) {
-                conn->send(message.toStyledString());
-                return true;
+                std::string out;
+                if (message.SerializeToString(&out)) {
+                    conn->send(out, drogon::WebSocketMessageType::Binary);
+                    return true;
+                }
             }
         }
         return false;

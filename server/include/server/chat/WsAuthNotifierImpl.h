@@ -6,13 +6,13 @@
 
 class WsAuthNotifierImpl : public IAuthNotifier {
 public:
-    explicit WsAuthNotifierImpl(drogon::WebSocketConnectionPtr conn)
-        : conn_(std::move(conn)) {}
+    explicit WsAuthNotifierImpl(const drogon::WebSocketConnectionPtr& conn)
+        : conn_{conn} {}
 
     void onUserAuthenticated(const std::string &username) override {
         UserConnectionRegistry::instance().bindUsername(username, conn_);
     }
 
 private:
-    drogon::WebSocketConnectionPtr conn_;
+    const drogon::WebSocketConnectionPtr& conn_;
 };
