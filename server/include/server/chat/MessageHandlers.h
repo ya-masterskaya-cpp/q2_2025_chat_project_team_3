@@ -98,7 +98,7 @@ public:
             co_return resp;
         }
         if(req.message().empty()) {
-            setStatus(resp, chat::STATUS_FAILURE, "Missing or empty 'message' field.");
+            setStatus(resp, chat::STATUS_FAILURE, "Empty 'message' field.");
             co_return resp;
         }
         std::string room = *wsData->currentRoom;
