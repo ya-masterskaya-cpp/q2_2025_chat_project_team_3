@@ -6,10 +6,8 @@
 #include <server/chat/UserConnectionRegistry.h>
 #include <server/chat/IAuthNotifier.h>
 #include <server/chat/UserRoomRegistry.h>
-
 #include <drogon/drogon.h> // needed for logging
 #include <drogon/orm/CoroMapper.h> // needed for ORM
-
 #include <server/models/Users.h>
 #include <server/models/Rooms.h>
 #include <common/proto/chat.pb.h>
@@ -51,31 +49,39 @@ public:
 
     static drogon::Task<chat::RegisterResponse> handleRegister(const chat::RegisterRequest& req) {
         chat::RegisterResponse resp;
-        auto db = drogon::app().getDbClient();
-        if(!db) {
-            setStatus(resp, chat::STATUS_FAILURE, "Server configuration error: DB not available.");
-            co_return resp;
-        }
         if(req.username().empty() || req.password().empty()) {
             setStatus(resp, chat::STATUS_FAILURE, "Empty username or password.");
             co_return resp;
         }
         try {
-            models::Users u;
-            u.setUsername(req.username());
-            u.setPassword(req.password());
-            co_await drogon::orm::CoroMapper<models::Users>(db).insert(u);
+            // Use a transaction to guarantee atomicity and handle duplicate usernames gracefully
+            auto err = co_await WithTransaction(
+                [&](auto tx) -> drogon::Task<ScopedTransactionResult> {
+                    try {
+                        models::Users u;
+                        u.setUsername(req.username());
+                        u.setPassword(req.password());
+                        co_await drogon::orm::CoroMapper<models::Users>(tx).insert(u);
+                        co_return std::nullopt;
+                    } catch(const drogon::orm::DrogonDbException& e) {
+                        const std::string w = e.base().what();
+                        LOG_ERROR << "User insert error: " << w;
+                        if(w.find("duplicate key") != std::string::npos || w.find("UNIQUE constraint failed") != std::string::npos) {
+                            co_return "Username already exists.";
+                        }
+                        co_return "Database error during user insertion.";
+                    }
+                });
+
+            if(err) {
+                setStatus(resp, chat::STATUS_FAILURE, *err);
+                co_return resp;
+            }
+
             setStatus(resp, chat::STATUS_SUCCESS, "Registered!");
             co_return resp;
-        } catch(const drogon::orm::DrogonDbException& e) {
-            const std::string w = e.base().what();
-            if(w.find("duplicate key") != std::string::npos || w.find("UNIQUE constraint failed") != std::string::npos) {
-                setStatus(resp, chat::STATUS_FAILURE, "Username already exists.");
-            } else {
-                setStatus(resp, chat::STATUS_FAILURE, "Database error during user insertion.");
-            }
-            co_return resp;
         } catch(const std::exception& e) {
+            LOG_ERROR << "Register error: " << e.what();
             setStatus(resp, chat::STATUS_FAILURE, std::string("Registration failed: ") + e.what());
             co_return resp;
         }
@@ -220,26 +226,33 @@ public:
             setStatus(resp, chat::STATUS_FAILURE, "Empty room name.");
             co_return resp;
         }
-        auto db = drogon::app().getDbClient();
-        if(!db) {
-            setStatus(resp, chat::STATUS_FAILURE, "Server configuration error: DB not available.");
-            co_return resp;
-        }
         try {
-            models::Rooms r;
-            r.setRoomName(req.room_name());
-            co_await drogon::orm::CoroMapper<models::Rooms>(db).insert(r);
+            auto err = co_await WithTransaction(
+                [&](auto tx) -> drogon::Task<ScopedTransactionResult> {
+                    try {
+                        models::Rooms r;
+                        r.setRoomName(req.room_name());
+                        co_await drogon::orm::CoroMapper<models::Rooms>(tx).insert(r);
+                        co_return std::nullopt;
+                    } catch(const drogon::orm::DrogonDbException& e) {
+                        const std::string w = e.base().what();
+                        LOG_ERROR << "Room insert error: " << w;
+                        if(w.find("duplicate key") != std::string::npos || w.find("UNIQUE constraint failed") != std::string::npos) {
+                            co_return "Room name already exists.";
+                        }
+                        co_return "Database error during room creation.";
+                    }
+                });
+
+            if(err) {
+                setStatus(resp, chat::STATUS_FAILURE, *err);
+                co_return resp;
+            }
+
             setStatus(resp, chat::STATUS_SUCCESS, "Created room");
             co_return resp;
-        } catch(const drogon::orm::DrogonDbException& e) {
-            const std::string w = e.base().what();
-            if(w.find("duplicate key") != std::string::npos || w.find("UNIQUE constraint failed") != std::string::npos) {
-                setStatus(resp, chat::STATUS_FAILURE, "Room name already exists.");
-            } else {
-                setStatus(resp, chat::STATUS_FAILURE, "Database error during room creation.");
-            }
-            co_return resp;
         } catch(const std::exception& e) {
+            LOG_ERROR << "Create room error: " << e.what();
             setStatus(resp, chat::STATUS_FAILURE, std::string("Create room failed: ") + e.what());
             co_return resp;
         }
