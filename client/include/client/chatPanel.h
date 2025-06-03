@@ -4,6 +4,11 @@ class MainWidget;
 
 constexpr int LAST_MESSAGES = 50;
 
+struct Message{
+    std::string from;
+    std::string message;
+};
+
 class ChatPanel : public wxPanel {
 public:
     ChatPanel(MainWidget* parent);

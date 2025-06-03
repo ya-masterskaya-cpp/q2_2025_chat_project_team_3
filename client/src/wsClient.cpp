@@ -108,14 +108,18 @@ void WebSocketClient::sendEnvelope(const chat::Envelope& env) {
 void WebSocketClient::scheduleRoomListRefresh() {
     std::thread([this]() {
         while(ui->roomsPanel->IsShown()) {
-            std::this_thread::sleep_for(std::chrono::seconds(5));
+            std::this_thread::sleep_for(std::chrono::seconds(5)); // TODO: create method
             getRooms();
         }
     }).detach();
 }
 
 void WebSocketClient::getMessages(int limit, int offset){
-
+chat::Envelope env;
+    auto* request = env.mutable_get_messages_request();
+    request->set_limit(limit);
+    request->set_offset(offset);
+    sendEnvelope(env);
 }
 
 void WebSocketClient::requestRoomList()
@@ -158,8 +162,8 @@ void WebSocketClient::handleMessage(const std::string& msg) {
         }
         case chat::Envelope::kJoinRoomResponse: {
             if(statusOk(env.join_room_response().status())) {
-                showChat();
                 getMessages(LAST_MESSAGES, 0);
+                showChat();
             } else {
                 showError("Failed to join room.");
             }
@@ -170,6 +174,12 @@ void WebSocketClient::handleMessage(const std::string& msg) {
                 showRooms();
             } else {
                 showError("Failed to leave room.");
+            }
+            break;
+        }
+        case chat::Envelope::kCreateRoomResponse: {
+            if (!statusOk(env.create_room_response().status())) {
+                showError("Failed to create room");
             }
             break;
         }
@@ -199,6 +209,17 @@ void WebSocketClient::handleMessage(const std::string& msg) {
         case chat::Envelope::kGenericError: {
             showError(wxString::Format("Server error: %s",
                 wxString(env.generic_error().status().message().c_str(), wxConvUTF8)));
+            break;
+        }
+        case chat::Envelope::kGetMessagesResponse: {
+            if (!statusOk(env.get_messages_response().status())){
+                showError("Failed to get messages!");
+            }
+            std::vector<Message> messages;
+            for (const auto& proto_message : env.get_messages_response().message()){
+                messages.emplace_back(Message{proto_message.from(), proto_message.message()});
+            }
+            showMessageHistory(messages);
             break;
         }
         default: {
@@ -233,5 +254,16 @@ void WebSocketClient::showRoomMessage(const chat::RoomMessage& rm) {
         ui->chatPanel->AppendMessage(wxString::Format("%s: %s",
             wxString(user.c_str(), wxConvUTF8),
             wxString(text.c_str(), wxConvUTF8)));
+    });
+}
+
+void WebSocketClient::showMessageHistory(const std::vector<Message> &messages) {
+    // TODO: add timestamp to Message and parse here
+    wxTheApp->CallAfter([this, messages] {
+        for (const auto& message : messages) {
+        ui->chatPanel->AppendMessage(wxString::Format("%s: %s",
+            wxString(message.from.c_str(), wxConvUTF8),
+            wxString(message.message.c_str(), wxConvUTF8)));
+        }
     });
 }

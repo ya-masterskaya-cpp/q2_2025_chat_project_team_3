@@ -4,9 +4,11 @@
 #include <common/proto/chat.pb.h>
 #include <memory>
 #include <string>
+#include <vector>
 
 class MainWidget;
 struct Room;
+struct Message;
 
 class WebSocketClient {
 public:
@@ -35,6 +37,7 @@ private:
     void showChat();
     void showRooms();
     void showRoomMessage(const chat::RoomMessage& rm);
+    void showMessageHistory(const std::vector<Message>& messages);
 
     MainWidget* ui;
     std::shared_ptr<drogon::WebSocketConnection> conn;
