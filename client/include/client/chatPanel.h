@@ -2,6 +2,8 @@
 #include <wx/wx.h>
 class MainWidget;
 
+constexpr int LAST_MESSAGES = 50;
+
 class ChatPanel : public wxPanel {
 public:
     ChatPanel(MainWidget* parent);

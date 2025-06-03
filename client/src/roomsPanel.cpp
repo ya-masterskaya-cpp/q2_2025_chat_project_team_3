@@ -23,15 +23,19 @@ RoomsPanel::RoomsPanel(MainWidget* parent) : wxPanel(parent), mainWin(parent) {
     SetSizer(sizer);
 }
 
-void RoomsPanel::UpdateRoomList(const std::vector<std::string>& rooms) {
+void RoomsPanel::UpdateRoomList(const std::vector<Room>& rooms) {
     roomList->Clear();
-    for (const auto& r : rooms) roomList->Append(r);
+    room_list_index_to_id_.clear();
+    for (const Room& room : rooms){
+        int room_list_index = roomList->Append(room.room_name);
+        room_list_index_to_id_[room_list_index] = room.room_id;
+    }
 }
 
 void RoomsPanel::OnJoin(wxCommandEvent&) {
     int sel = roomList->GetSelection();
     if(sel != wxNOT_FOUND)
-        mainWin->wsClient->joinRoom(roomList->GetString(sel).ToStdString());
+        mainWin->wsClient->joinRoom(room_list_index_to_id_.at(sel));
 }
 
 void RoomsPanel::OnCreate(wxCommandEvent&) {

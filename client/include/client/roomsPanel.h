@@ -2,17 +2,25 @@
 #include <wx/wx.h>
 #include <vector>
 #include <string>
+#include <cstdint>
+#include <unordered_map>
 class MainWidget;
+
+struct Room {
+    uint32_t room_id;
+    std::string room_name;
+};
 
 class RoomsPanel : public wxPanel {
 public:
     RoomsPanel(MainWidget* parent);
-    void UpdateRoomList(const std::vector<std::string>& rooms);
+    void UpdateRoomList(const std::vector<Room>& rooms);
 
     wxListBox* roomList;
     wxButton* joinButton;
     wxButton* createButton;
 private:
+    std::unordered_map<int, uint32_t> room_list_index_to_id_;
     void OnJoin(wxCommandEvent&);
     void OnCreate(wxCommandEvent&);
     MainWidget* mainWin;

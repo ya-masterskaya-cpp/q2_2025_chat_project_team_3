@@ -74,9 +74,9 @@ void WebSocketClient::createRoom(const std::string& roomName) {
     sendEnvelope(env);
 }
 
-void WebSocketClient::joinRoom(const std::string& roomName) {
+void WebSocketClient::joinRoom(uint32_t room_id) {
     chat::Envelope env;
-    env.mutable_join_room_request()->set_room(roomName);
+    env.mutable_join_room_request()->set_room_id(room_id);
     sendEnvelope(env);
 }
 
@@ -114,7 +114,12 @@ void WebSocketClient::scheduleRoomListRefresh() {
     }).detach();
 }
 
-void WebSocketClient::requestRoomList() {
+void WebSocketClient::getMessages(int limit, int offset){
+
+}
+
+void WebSocketClient::requestRoomList()
+{
     getRooms();
     scheduleRoomListRefresh();
 }
@@ -141,8 +146,10 @@ void WebSocketClient::handleMessage(const std::string& msg) {
         }
         case chat::Envelope::kGetRoomsResponse: {
             if(statusOk(env.get_rooms_response().status())) {
-                std::vector<std::string> rooms(env.get_rooms_response().rooms().begin(),
-                                               env.get_rooms_response().rooms().end());
+                std::vector<Room> rooms;
+                for (const auto& proto_room : env.get_rooms_response().rooms()){
+                    rooms.emplace_back(Room{proto_room.room_id(), proto_room.room_name()});
+                }
                 updateRoomsPanel(rooms);
             } else {
                 showError("Failed to get rooms.");
@@ -152,6 +159,7 @@ void WebSocketClient::handleMessage(const std::string& msg) {
         case chat::Envelope::kJoinRoomResponse: {
             if(statusOk(env.join_room_response().status())) {
                 showChat();
+                getMessages(LAST_MESSAGES, 0);
             } else {
                 showError("Failed to join room.");
             }
@@ -208,7 +216,7 @@ void WebSocketClient::showInfo(const wxString& msg) {
     wxTheApp->CallAfter([this, msg] { ui->ShowPopup(msg, wxICON_INFORMATION); });
 }
 
-void WebSocketClient::updateRoomsPanel(const std::vector<std::string>& rooms) {
+void WebSocketClient::updateRoomsPanel(const std::vector<Room>& rooms) {
     wxTheApp->CallAfter([this, rooms] { ui->roomsPanel->UpdateRoomList(rooms); });
 }
 
