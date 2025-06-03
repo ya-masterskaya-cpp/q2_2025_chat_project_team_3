@@ -6,6 +6,7 @@ services:
 
     volumes:
       - ../:/workspace:cached
+      - vcpkg-binary-archive:/home/vscode/.cache/vcpkg/archives
       # For X11 applications
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
       #- ${HOME}/.Xauthority:/tmp/.Xauthority-container:ro
@@ -34,6 +35,7 @@ services:
 
 volumes:
   postgres-data:
+  vcpkg-binary-archive:
 
 networks:
   internal_network:
