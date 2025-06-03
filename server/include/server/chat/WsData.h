@@ -7,4 +7,5 @@ struct WsData {
     bool authenticated{false};
     std::string username;
     std::optional<uint32_t> currentRoomId;
+    uint32_t user_id;
 };

@@ -10,6 +10,7 @@
 #include <drogon/orm/CoroMapper.h> // needed for ORM
 #include <server/models/Users.h>
 #include <server/models/Rooms.h>
+#include <server/models/Messages.h>
 #include <common/proto/chat.pb.h>
 
 namespace models = drogon_model::drogon_test;
@@ -37,6 +38,7 @@ public:
             }
             wsData->authenticated = true;
             wsData->username = req.username();
+            wsData->user_id = *users.front().getUserId();
             notifier.onUserAuthenticated(req.username());
             setStatus(resp, chat::STATUS_SUCCESS, "OK");
             resp.set_token("dummy_token");
@@ -116,23 +118,20 @@ public:
             co_return resp;
         }
 
-        /*
         try {
             auto err = co_await WithTransaction(
                 [&](auto tx) -> drogon::Task<ScopedTransactionResult> {
                     try {
-                        models::
-                        r.setRoomName(req.room_name());
-                        r = co_await drogon::orm::CoroMapper<models::Rooms>(tx).insert(r);
-                        room_id = *r.getRoomId();
+                        models::Messages m;
+                        m.setMessageText(req.message());
+                        m.setRoomId(*wsData->currentRoomId);
+                        m.setUserId(wsData->user_id);
+                        co_await drogon::orm::CoroMapper<models::Messages>(tx).insert(m);
                         co_return std::nullopt;
                     } catch(const drogon::orm::DrogonDbException& e) {
                         const std::string w = e.base().what();
-                        LOG_ERROR << "Room insert error: " << w;
-                        if(w.find("duplicate key") != std::string::npos || w.find("UNIQUE constraint failed") != std::string::npos) {
-                            co_return "Room name already exists.";
-                        }
-                        co_return "Database error during room creation.";
+                        LOG_ERROR << "Message insert error: " << w;
+                        co_return "Database error during message insertion.";
                     }
                 });
 
@@ -140,10 +139,11 @@ public:
                 setStatus(resp, chat::STATUS_FAILURE, *err);
                 co_return resp;
             }
-
-
-        */
-
+            } catch(const std::exception& e) {
+            LOG_ERROR << "Inser message error: " << e.what();
+            setStatus(resp, chat::STATUS_FAILURE, std::string("Insert message failed: ") + e.what());
+            co_return resp;
+        }
         for(const auto& user : UserRoomRegistry::instance().getUsersInRoom(room_id)) {
             UserConnectionRegistry::instance().sendToUser(user, msgEnv);
         }
@@ -275,9 +275,6 @@ public:
                     } catch(const drogon::orm::DrogonDbException& e) {
                         const std::string w = e.base().what();
                         LOG_ERROR << "Room insert error: " << w;
-                        if(w.find("duplicate key") != std::string::npos || w.find("UNIQUE constraint failed") != std::string::npos) {
-                            co_return "Room name already exists.";
-                        }
                         co_return "Database error during room creation.";
                     }
                 });
@@ -295,11 +292,17 @@ public:
             co_return resp;
         }
     }
-/*
+
+
+
     static drogon::Task<chat::GetMessagesResponse> handleGetMessages(std::shared_ptr<WsData> wsData, const chat::GetMessagesRequest& req) {
         chat::GetMessagesResponse resp;
         if(!wsData->authenticated) {
             setStatus(resp, chat::STATUS_UNAUTHORIZED, "User not authenticated.");
+            co_return resp;
+        }
+        if(!wsData->currentRoomId) {
+            setStatus(resp, chat::STATUS_FAILURE, "User is not in any room.");
             co_return resp;
         }
         auto db = drogon::app().getDbClient();
@@ -308,20 +311,22 @@ public:
             co_return resp;
         }
         try {
-            auto messages = co_await drogon::orm::CoroMapper<models::Messages>(db)
-                .findBy(Criteria(models::Messages::Cols::_room_id, CompareOperator::EQ, *wsData->currentRoomId));
-            for(const auto& message : messages) {
-                chat::MessageInfo* message_info = resp.add_message();
-                message_info->set_from(message.getusername);
-                message_info->set_message(message.get
+            using namespace drogon::orm;
+            auto mapper = drogon::orm::CoroMapper<models::Messages>(db);
+            auto messages = co_await mapper
+            .orderBy(models::Messages::Cols::_created_at, SortOrder::DESC)
+            .limit(req.limit())
+            .findBy(Criteria(models::Messages::Cols::_room_id, CompareOperator::EQ, *wsData->currentRoomId));
+                for(const auto& message : messages) {
+                    chat::MessageInfo* message_info = resp.add_message();
+                    message_info->set_message(*message.getMessageText());
+                    message_info->set_from(*message.getUser(db).getUsername());
             }
-            setStatus(resp, chat::STATUS_SUCCESS, "Fetched rooms");
+            setStatus(resp, chat::STATUS_SUCCESS, "Messsage history");
             co_return resp;
         } catch(const std::exception& e) {
-            setStatus(resp, chat::STATUS_FAILURE, "Failed to retrieve rooms: " + std::string(e.what()));
+            setStatus(resp, chat::STATUS_FAILURE, "Failed to retrieve messages: " + std::string(e.what()));
             co_return resp;
         }
     }
-    }
-*/
 };
