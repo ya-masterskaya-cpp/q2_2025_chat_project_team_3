@@ -2,13 +2,17 @@
 
 ./build/linux-debug-server/vcpkg_installed/x64-linux/tools/drogon/drogon_ctl create model server/src/models "$@"
 
-# Loop over all .cc files in .server/src/models/
-for file in ./server/src/models/*.cc; do
-  # Get the filename excluding .cc
-  name=$(basename "$file" .cc)
+# Loop over all .h files in ./server/src/models/
+for header in ./server/src/models/*.h; do
+  # Get the basename, e.g., "Rooms.h"
+  header_file=$(basename "$header")
+  # Get the stem, e.g., "Rooms"
+  header_stem="${header_file%.h}"
 
-  # Replace the include string
-  sed -i "s|#include \"${name}.h\"|#include <server/models/${name}.h>|g" "$file"
+  # For all .cc files, replace #include "HeaderFile.h" with #include <server/models/HeaderFile.h>
+  for ccfile in ./server/src/models/*.cc; do
+    sed -i "s|#include \"${header_file}\"|#include <server/models/${header_file}>|g" "$ccfile"
+  done
 done
 
 # Move all .h files from .server/src/models/ to .server/include/server/models/ with overwrite
