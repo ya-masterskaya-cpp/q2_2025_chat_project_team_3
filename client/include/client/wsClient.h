@@ -1,5 +1,7 @@
 #pragma once
 #include <wx/string.h>
+#include <wx/datetime.h>
+#include <wx/longlong.h>
 #include <drogon/WebSocketClient.h>
 #include <common/proto/chat.pb.h>
 #include <memory>
@@ -36,8 +38,9 @@ private:
     void updateRoomsPanel(const std::vector<Room>& rooms);
     void showChat();
     void showRooms();
-    void showRoomMessage(const chat::RoomMessage& rm);
+    void showRoomMessage(const chat::MessageInfo& mi);
     void showMessageHistory(const std::vector<Message>& messages);
+    std::string formatMessageTimestamp(uint64_t timestamp);
 
     MainWidget* ui;
     std::shared_ptr<drogon::WebSocketConnection> conn;
