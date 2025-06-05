@@ -105,12 +105,15 @@ public:
         }
         uint32_t room_id = *wsData->currentRoomId;
         std::string username = wsData->username;
+        uint64_t time = trantor::Date::now().microSecondsSinceEpoch();
 
         // Build and broadcast RoomMessage
         chat::Envelope msgEnv;
         auto* msg = msgEnv.mutable_room_message();
-        msg->set_username(username);
-        msg->set_message(req.message());
+        auto* message_info = msg->mutable_message();
+        message_info->set_from(username);
+        message_info->set_message(req.message());
+        message_info->set_timestamp(time);
 
         auto db = drogon::app().getDbClient();
         if(!db) {
@@ -293,8 +296,6 @@ public:
         }
     }
 
-
-
     static drogon::Task<chat::GetMessagesResponse> handleGetMessages(std::shared_ptr<WsData> wsData, const chat::GetMessagesRequest& req) {
         chat::GetMessagesResponse resp;
         if(!wsData->authenticated) {
@@ -321,6 +322,7 @@ public:
                     chat::MessageInfo* message_info = resp.add_message();
                     message_info->set_message(*message.getMessageText());
                     message_info->set_from(*message.getUser(db).getUsername());
+                    message_info->set_timestamp(message.getCreatedAt()->microSecondsSinceEpoch());
             }
             setStatus(resp, chat::STATUS_SUCCESS, "Messsage history");
             co_return resp;

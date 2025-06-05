@@ -145,7 +145,7 @@ void WebSocketClient::handleMessage(const std::string& msg) {
             break;
         }
         case chat::Envelope::kRoomMessage: {
-            showRoomMessage(env.room_message());
+            showRoomMessage(env.room_message().message());
             break;
         }
         case chat::Envelope::kGetRoomsResponse: {
@@ -217,7 +217,9 @@ void WebSocketClient::handleMessage(const std::string& msg) {
             }
             std::vector<Message> messages;
             for (const auto& proto_message : env.get_messages_response().message()){
-                messages.emplace_back(Message{proto_message.from(), proto_message.message()});
+                messages.emplace_back(Message{proto_message.from()
+                    , proto_message.message()
+                    , proto_message.timestamp()});
             }
             showMessageHistory(messages);
             break;
@@ -249,21 +251,59 @@ void WebSocketClient::showRooms() {
     wxTheApp->CallAfter([this] { ui->ShowRooms(); });
 }
 
-void WebSocketClient::showRoomMessage(const chat::RoomMessage& rm) {
-    wxTheApp->CallAfter([this, user = rm.username(), text = rm.message()] {
-        ui->chatPanel->AppendMessage(wxString::Format("%s: %s",
+void WebSocketClient::showRoomMessage(const chat::MessageInfo& mi) {
+    wxTheApp->CallAfter([this, user = mi.from(), text = mi.message(), time = mi.timestamp()] {
+        std::string timeStr = formatMessageTimestamp(time);
+        ui->chatPanel->AppendMessage(wxString::Format("%s %s: %s",
+            wxString(timeStr.c_str(), wxConvUTF8),
             wxString(user.c_str(), wxConvUTF8),
             wxString(text.c_str(), wxConvUTF8)));
     });
 }
 
 void WebSocketClient::showMessageHistory(const std::vector<Message> &messages) {
-    // TODO: add timestamp to Message and parse here
-    wxTheApp->CallAfter([this, messages] {
-        for (const auto& message : messages) {
-        ui->chatPanel->AppendMessage(wxString::Format("%s: %s",
-            wxString(message.from.c_str(), wxConvUTF8),
-            wxString(message.message.c_str(), wxConvUTF8)));
+    std::vector<Message> sorted_messages = messages;
+    std::sort(sorted_messages.begin(), sorted_messages.end(),
+        [](const Message &lhs, const Message &rhs) {
+            return lhs.timestamp < rhs.timestamp;
+        });
+
+    wxTheApp->CallAfter([this, sorted_messages] {
+        for (const auto& message : sorted_messages) {
+            std::string timeStr = formatMessageTimestamp(message.timestamp);
+            ui->chatPanel->AppendMessage(wxString::Format("%s %s: %s",
+                wxString(timeStr.c_str(), wxConvUTF8),
+                wxString(message.from.c_str(), wxConvUTF8),
+                wxString(message.message.c_str(), wxConvUTF8)));
         }
     });
+}
+
+std::string WebSocketClient::formatMessageTimestamp(uint64_t timestamp) {
+    trantor::Date msgDate(timestamp);
+    auto now = trantor::Date::now();
+    auto zeroTime = [](const trantor::Date& dt) {
+        time_t t = dt.microSecondsSinceEpoch() / 1000000ULL;
+        struct tm local_tm{};
+        localtime_r(&t, &local_tm);
+        local_tm.tm_hour = 0;
+        local_tm.tm_min = 0;
+        local_tm.tm_sec = 0;
+        time_t zero_t = mktime(&local_tm);
+        return trantor::Date(static_cast<uint64_t>(zero_t) * 1000000ULL);
+    };
+    trantor::Date todayZero = zeroTime(now);
+    trantor::Date msgZero = zeroTime(msgDate);
+
+    if (msgZero == todayZero) {
+        return "[" + msgDate.toCustomFormattedStringLocal("%H:%M") + "]";
+    }
+    int msgYear = std::stoi(msgDate.toCustomFormattedStringLocal("%Y"));
+    int nowYear = std::stoi(now.toCustomFormattedStringLocal("%Y"));
+    if (msgYear == nowYear) {
+        return "[" + msgDate.toCustomFormattedStringLocal("%d.%m %H:%M") + "]";
+    }
+    else {
+        return "[" + msgDate.toCustomFormattedStringLocal("%d.%m.%Y %H:%M") + "]";
+    }
 }
