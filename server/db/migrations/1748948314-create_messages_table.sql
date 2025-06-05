@@ -1,0 +1,7 @@
+CREATE TABLE IF NOT EXISTS messages (
+    message_id SERIAL PRIMARY KEY,
+    room_id INTEGER NOT NULL REFERENCES rooms(room_id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    message_text TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);

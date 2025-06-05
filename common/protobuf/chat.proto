@@ -40,14 +40,16 @@ message SendMessageResponse {
 
 message GetUsersRequest {
 }
+
 message GetUsersResponse {
     Status status = 1;
     repeated string users = 2;
 }
 
 message JoinRoomRequest {
-    string room = 1;
+    optional uint32 room_id = 1;
 }
+
 message JoinRoomResponse {
     Status status = 1;
 }
@@ -60,16 +62,24 @@ message LeaveRoomResponse {
 
 message GetRoomsRequest {
 }
+
+message RoomInfo {
+    uint32 room_id = 1;
+    string room_name = 2;
+}
+
 message GetRoomsResponse {
     Status status = 1;
-    repeated string rooms = 2;
+    repeated RoomInfo rooms = 2;
 }
 
 message CreateRoomRequest {
     string room_name = 1;
 }
+
 message CreateRoomResponse {
     Status status = 1;
+    optional uint32 room_id = 2;
 }
 
 message RoomMessage {
@@ -83,6 +93,21 @@ message GenericError {
 
 message ServerHello {
     string message = 1;
+}
+
+message GetMessagesRequest{
+    uint32 limit = 1;
+    uint32 offset = 2;
+}
+
+message MessageInfo {
+    string from = 1;
+    string message = 2;
+}
+
+message GetMessagesResponse{
+    Status status = 1;
+    repeated MessageInfo message = 2;
 }
 
 message Envelope {
@@ -106,5 +131,7 @@ message Envelope {
         RoomMessage room_message = 17;
         GenericError generic_error = 18;
         ServerHello server_hello = 19;
+        GetMessagesRequest get_messages_request = 20;
+        GetMessagesResponse get_messages_response = 21;
     }
 }

@@ -74,9 +74,9 @@ void WebSocketClient::createRoom(const std::string& roomName) {
     sendEnvelope(env);
 }
 
-void WebSocketClient::joinRoom(const std::string& roomName) {
+void WebSocketClient::joinRoom(uint32_t room_id) {
     chat::Envelope env;
-    env.mutable_join_room_request()->set_room(roomName);
+    env.mutable_join_room_request()->set_room_id(room_id);
     sendEnvelope(env);
 }
 
@@ -108,13 +108,22 @@ void WebSocketClient::sendEnvelope(const chat::Envelope& env) {
 void WebSocketClient::scheduleRoomListRefresh() {
     std::thread([this]() {
         while(ui->roomsPanel->IsShown()) {
-            std::this_thread::sleep_for(std::chrono::seconds(5));
+            std::this_thread::sleep_for(std::chrono::seconds(5)); // TODO: create method
             getRooms();
         }
     }).detach();
 }
 
-void WebSocketClient::requestRoomList() {
+void WebSocketClient::getMessages(int limit, int offset){
+chat::Envelope env;
+    auto* request = env.mutable_get_messages_request();
+    request->set_limit(limit);
+    request->set_offset(offset);
+    sendEnvelope(env);
+}
+
+void WebSocketClient::requestRoomList()
+{
     getRooms();
     scheduleRoomListRefresh();
 }
@@ -141,8 +150,10 @@ void WebSocketClient::handleMessage(const std::string& msg) {
         }
         case chat::Envelope::kGetRoomsResponse: {
             if(statusOk(env.get_rooms_response().status())) {
-                std::vector<std::string> rooms(env.get_rooms_response().rooms().begin(),
-                                               env.get_rooms_response().rooms().end());
+                std::vector<Room> rooms;
+                for (const auto& proto_room : env.get_rooms_response().rooms()){
+                    rooms.emplace_back(Room{proto_room.room_id(), proto_room.room_name()});
+                }
                 updateRoomsPanel(rooms);
             } else {
                 showError("Failed to get rooms.");
@@ -151,6 +162,7 @@ void WebSocketClient::handleMessage(const std::string& msg) {
         }
         case chat::Envelope::kJoinRoomResponse: {
             if(statusOk(env.join_room_response().status())) {
+                getMessages(LAST_MESSAGES, 0);
                 showChat();
             } else {
                 showError("Failed to join room.");
@@ -162,6 +174,12 @@ void WebSocketClient::handleMessage(const std::string& msg) {
                 showRooms();
             } else {
                 showError("Failed to leave room.");
+            }
+            break;
+        }
+        case chat::Envelope::kCreateRoomResponse: {
+            if (!statusOk(env.create_room_response().status())) {
+                showError("Failed to create room");
             }
             break;
         }
@@ -193,6 +211,17 @@ void WebSocketClient::handleMessage(const std::string& msg) {
                 wxString(env.generic_error().status().message().c_str(), wxConvUTF8)));
             break;
         }
+        case chat::Envelope::kGetMessagesResponse: {
+            if (!statusOk(env.get_messages_response().status())){
+                showError("Failed to get messages!");
+            }
+            std::vector<Message> messages;
+            for (const auto& proto_message : env.get_messages_response().message()){
+                messages.emplace_back(Message{proto_message.from(), proto_message.message()});
+            }
+            showMessageHistory(messages);
+            break;
+        }
         default: {
             showError("Unknown message received from server!");
             break;
@@ -208,7 +237,7 @@ void WebSocketClient::showInfo(const wxString& msg) {
     wxTheApp->CallAfter([this, msg] { ui->ShowPopup(msg, wxICON_INFORMATION); });
 }
 
-void WebSocketClient::updateRoomsPanel(const std::vector<std::string>& rooms) {
+void WebSocketClient::updateRoomsPanel(const std::vector<Room>& rooms) {
     wxTheApp->CallAfter([this, rooms] { ui->roomsPanel->UpdateRoomList(rooms); });
 }
 
@@ -225,5 +254,16 @@ void WebSocketClient::showRoomMessage(const chat::RoomMessage& rm) {
         ui->chatPanel->AppendMessage(wxString::Format("%s: %s",
             wxString(user.c_str(), wxConvUTF8),
             wxString(text.c_str(), wxConvUTF8)));
+    });
+}
+
+void WebSocketClient::showMessageHistory(const std::vector<Message> &messages) {
+    // TODO: add timestamp to Message and parse here
+    wxTheApp->CallAfter([this, messages] {
+        for (const auto& message : messages) {
+        ui->chatPanel->AppendMessage(wxString::Format("%s: %s",
+            wxString(message.from.c_str(), wxConvUTF8),
+            wxString(message.message.c_str(), wxConvUTF8)));
+        }
     });
 }

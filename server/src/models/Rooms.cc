@@ -6,6 +6,7 @@
  */
 
 #include <server/models/Rooms.h>
+#include <server/models/Messages.h>
 #include <drogon/utils/Utilities.h>
 #include <string>
 
@@ -741,4 +742,40 @@ bool Rooms::validJsonOfField(size_t index,
             return false;
     }
     return true;
+}
+std::vector<Messages> Rooms::getMessages(const DbClientPtr &clientPtr) const {
+    static const std::string sql = "select * from messages where room_id = $1";
+    Result r(nullptr);
+    {
+        auto binder = *clientPtr << sql;
+        binder << *roomId_ << Mode::Blocking >>
+            [&r](const Result &result) { r = result; };
+        binder.exec();
+    }
+    std::vector<Messages> ret;
+    ret.reserve(r.size());
+    for (auto const &row : r)
+    {
+        ret.emplace_back(Messages(row));
+    }
+    return ret;
+}
+
+void Rooms::getMessages(const DbClientPtr &clientPtr,
+                        const std::function<void(std::vector<Messages>)> &rcb,
+                        const ExceptionCallback &ecb) const
+{
+    static const std::string sql = "select * from messages where room_id = $1";
+    *clientPtr << sql
+               << *roomId_
+               >> [rcb = std::move(rcb)](const Result &r){
+                   std::vector<Messages> ret;
+                   ret.reserve(r.size());
+                   for (auto const &row : r)
+                   {
+                       ret.emplace_back(Messages(row));
+                   }
+                   rcb(ret);
+               }
+               >> ecb;
 }

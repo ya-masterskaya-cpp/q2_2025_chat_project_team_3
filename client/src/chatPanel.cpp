@@ -30,12 +30,14 @@ void ChatPanel::AppendMessage(const wxString& msg) {
     chatBox->AppendText(msg + "\n");
 }
 
-void ChatPanel::OnSend(wxCommandEvent&) {
+void ChatPanel::OnSend(wxCommandEvent &)
+{
     if(mainWin->wsClient && !messageInput->IsEmpty()) {
         mainWin->wsClient->sendMessage(std::string(messageInput->GetValue().ToUTF8()));
         messageInput->Clear();
     }
 }
 void ChatPanel::OnLeave(wxCommandEvent&) {
+    chatBox->Clear();
     mainWin->wsClient->leaveRoom();
 }

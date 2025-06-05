@@ -6,6 +6,7 @@ add_executable(server_app
     src/models/Migrations.cc
     src/models/Users.cc
     src/models/Rooms.cc
+    src/models/Messages.cc
 )
 
 target_include_directories(server_app PRIVATE
