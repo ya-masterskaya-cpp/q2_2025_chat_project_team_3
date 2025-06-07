@@ -254,10 +254,10 @@ void WebSocketClient::showRooms() {
 void WebSocketClient::showRoomMessage(const chat::MessageInfo& mi) {
     wxTheApp->CallAfter([this, user = mi.from(), text = mi.message(), time = mi.timestamp()] {
         std::string timeStr = formatMessageTimestamp(time);
-        ui->chatPanel->AppendMessage(wxString::Format("%s %s: %s",
+        ui->chatPanel->AppendMessage(
             wxString(timeStr.c_str(), wxConvUTF8),
             wxString(user.c_str(), wxConvUTF8),
-            wxString(text.c_str(), wxConvUTF8)));
+            wxString(text.c_str(), wxConvUTF8));
     });
 }
 
@@ -271,10 +271,10 @@ void WebSocketClient::showMessageHistory(const std::vector<Message> &messages) {
     wxTheApp->CallAfter([this, sorted_messages] {
         for (const auto& message : sorted_messages) {
             std::string timeStr = formatMessageTimestamp(message.timestamp);
-            ui->chatPanel->AppendMessage(wxString::Format("%s %s: %s",
+            ui->chatPanel->AppendMessage(
                 wxString(timeStr.c_str(), wxConvUTF8),
                 wxString(message.from.c_str(), wxConvUTF8),
-                wxString(message.message.c_str(), wxConvUTF8)));
+                wxString(message.message.c_str(), wxConvUTF8));
         }
     });
 }
