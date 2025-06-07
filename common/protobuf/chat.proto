@@ -20,7 +20,6 @@ message AuthRequest {
 }
 message AuthResponse {
     Status status = 1;
-    string token = 2;
 }
 
 message RegisterRequest {
