@@ -41,7 +41,6 @@ public:
             wsData->user_id = *users.front().getUserId();
             notifier.onUserAuthenticated(req.username());
             setStatus(resp, chat::STATUS_SUCCESS);
-            resp.set_token("dummy_token");
             co_return resp;
         } catch(const std::exception& e) {
             setStatus(resp, chat::STATUS_FAILURE, std::string("Auth failed: ") + e.what());
