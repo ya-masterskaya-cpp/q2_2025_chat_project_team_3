@@ -11,7 +11,7 @@ enum StatusCode {
 
 message Status {
     StatusCode code = 1;
-    string message = 2;
+    optional string message = 2;
 }
 
 message AuthRequest {

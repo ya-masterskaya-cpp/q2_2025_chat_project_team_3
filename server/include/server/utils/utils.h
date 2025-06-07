@@ -5,6 +5,11 @@
 #include <common/proto/chat.pb.h>
 
 template <typename Response>
+void setStatus(Response& resp, chat::StatusCode code) {
+    resp.mutable_status()->set_code(code);
+}
+
+template <typename Response>
 void setStatus(Response& resp, chat::StatusCode code, const std::string& msg) {
     resp.mutable_status()->set_code(code);
     resp.mutable_status()->set_message(msg);
