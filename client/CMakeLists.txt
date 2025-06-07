@@ -10,6 +10,9 @@ add_executable(client_app
     src/roomsPanel.cpp
     src/mainWidget.cpp
     src/wsClient.cpp
+    src/messageWidget.cpp
+    src/userListPanel.cpp
+    src/textUtil.cpp
 )
 
 target_include_directories(client_app PRIVATE
