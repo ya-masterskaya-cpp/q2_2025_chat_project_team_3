@@ -40,7 +40,7 @@ public:
             wsData->username = req.username();
             wsData->user_id = *users.front().getUserId();
             notifier.onUserAuthenticated(req.username());
-            setStatus(resp, chat::STATUS_SUCCESS, "OK");
+            setStatus(resp, chat::STATUS_SUCCESS);
             resp.set_token("dummy_token");
             co_return resp;
         } catch(const std::exception& e) {
@@ -80,7 +80,7 @@ public:
                 co_return resp;
             }
 
-            setStatus(resp, chat::STATUS_SUCCESS, "Registered!");
+            setStatus(resp, chat::STATUS_SUCCESS);
             co_return resp;
         } catch(const std::exception& e) {
             LOG_ERROR << "Register error: " << e.what();
@@ -151,7 +151,7 @@ public:
             UserConnectionRegistry::instance().sendToUser(user, msgEnv);
         }
 
-        setStatus(resp, chat::STATUS_SUCCESS, "Message sent");
+        setStatus(resp, chat::STATUS_SUCCESS);
         co_return resp;
     }
 
@@ -171,7 +171,7 @@ public:
             for(auto& u : users) {
                 resp.add_users(u.getValueOfUsername());
             }
-            setStatus(resp, chat::STATUS_SUCCESS, "Fetched users");
+            setStatus(resp, chat::STATUS_SUCCESS);
             co_return resp;
         } catch(const std::exception& e) {
             setStatus(resp, chat::STATUS_FAILURE, "Database error while fetching users.");
@@ -204,7 +204,7 @@ public:
             }
             wsData->currentRoomId = req.room_id();
             UserRoomRegistry::instance().addUserToRoom(wsData->username, req.room_id());
-            setStatus(resp, chat::STATUS_SUCCESS, "Joined room");
+            setStatus(resp, chat::STATUS_SUCCESS);
             co_return resp;
         } catch(const std::exception& e) {
             setStatus(resp, chat::STATUS_FAILURE, "Failed to join room: " + std::string(e.what()));
@@ -225,7 +225,7 @@ public:
         uint32_t leftRoomId = *wsData->currentRoomId;
         wsData->currentRoomId.reset();
         UserRoomRegistry::instance().removeUser(wsData->username);
-        setStatus(resp, chat::STATUS_SUCCESS, "Left room");
+        setStatus(resp, chat::STATUS_SUCCESS);
         co_return resp;
     }
 
@@ -247,7 +247,7 @@ public:
                 room_info->set_room_id(room.getValueOfRoomId());
                 room_info->set_room_name(room.getValueOfRoomName());
             }
-            setStatus(resp, chat::STATUS_SUCCESS, "Fetched rooms");
+            setStatus(resp, chat::STATUS_SUCCESS);
             co_return resp;
         } catch(const std::exception& e) {
             setStatus(resp, chat::STATUS_FAILURE, "Failed to retrieve rooms: " + std::string(e.what()));
@@ -287,7 +287,7 @@ public:
                 co_return resp;
             }
             resp.set_room_id(room_id);
-            setStatus(resp, chat::STATUS_SUCCESS, "Created room");
+            setStatus(resp, chat::STATUS_SUCCESS);
             co_return resp;
         } catch(const std::exception& e) {
             LOG_ERROR << "Create room error: " << e.what();
@@ -324,7 +324,7 @@ public:
                     message_info->set_from(*message.getUser(db).getUsername());
                     message_info->set_timestamp(message.getCreatedAt()->microSecondsSinceEpoch());
             }
-            setStatus(resp, chat::STATUS_SUCCESS, "Messsage history");
+            setStatus(resp, chat::STATUS_SUCCESS);
             co_return resp;
         } catch(const std::exception& e) {
             setStatus(resp, chat::STATUS_FAILURE, "Failed to retrieve messages: " + std::string(e.what()));
