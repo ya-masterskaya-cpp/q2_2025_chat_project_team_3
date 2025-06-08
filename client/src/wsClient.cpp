@@ -3,6 +3,7 @@
 #include <client/authPanel.h>
 #include <client/roomsPanel.h>
 #include <client/chatPanel.h>
+#include <client/message.h>
 #include <drogon/HttpRequest.h>
 #include <drogon/HttpAppFramework.h>
 #include <chrono>
@@ -212,13 +213,13 @@ void WebSocketClient::handleMessage(const std::string& msg) {
             break;
         }
         case chat::Envelope::kGetMessagesResponse: {
-            if (!statusOk(env.get_messages_response().status())){
+            if(!statusOk(env.get_messages_response().status())) {
                 showError("Failed to get messages!");
             }
             std::vector<Message> messages;
-            for (const auto& proto_message : env.get_messages_response().message()){
-                messages.emplace_back(Message{proto_message.from()
-                    , proto_message.message()
+            for(const auto& proto_message : env.get_messages_response().message()) {
+                messages.emplace_back(Message{wxString::FromUTF8(proto_message.from())
+                    , wxString::FromUTF8(proto_message.message())
                     , proto_message.timestamp()});
             }
             showMessageHistory(messages);
@@ -268,14 +269,10 @@ void WebSocketClient::showMessageHistory(const std::vector<Message> &messages) {
             return lhs.timestamp < rhs.timestamp;
         });
 
-    wxTheApp->CallAfter([this, sorted_messages] {
-        for (const auto& message : sorted_messages) {
-            std::string timeStr = formatMessageTimestamp(message.timestamp);
-            ui->chatPanel->AppendMessage(
-                wxString(timeStr.c_str(), wxConvUTF8),
-                wxString(message.from.c_str(), wxConvUTF8),
-                wxString(message.message.c_str(), wxConvUTF8));
-        }
+    wxTheApp->CallAfter([this, sorted_messages = std::move(sorted_messages)] {
+        LOG_DEBUG << "Stared bulk add";
+        ui->chatPanel->AppendMessages(sorted_messages);
+        LOG_DEBUG << "Finished bulk add";
     });
 }
 

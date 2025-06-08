@@ -7,7 +7,7 @@
 class MainWidget;
 
 struct Room {
-    uint32_t room_id;
+    int32_t room_id;
     std::string room_name;
 };
 
