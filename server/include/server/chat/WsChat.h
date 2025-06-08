@@ -32,8 +32,8 @@ public:
     void handleConnectionClosed(const drogon::WebSocketConnectionPtr& conn) override {
         LOG_TRACE << "WS closed: " << conn->peerAddr().toIpPort();
         UserConnectionRegistry::instance().removeConnection(conn);
-        auto ctx = conn->getContext<WsData>();
-        UserRoomRegistry::instance().removeUser(ctx->username);
+        auto& ctx = conn->getContextRef<WsData>();
+        UserRoomRegistry::instance().removeUser(ctx.user->name);
     }
 
     WS_PATH_LIST_BEGIN

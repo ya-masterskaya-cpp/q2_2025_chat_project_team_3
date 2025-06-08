@@ -1,6 +1,7 @@
 #pragma once
 #include <wx/wx.h>
 #include <stdint.h>
+#include <client/user.h>
 
 class MainWidget;
 class UserListPanel;
@@ -17,7 +18,8 @@ class ChatPanel : public wxPanel {
 public:
     ChatPanel(MainWidget* parent);
     void AppendMessage(const wxString& timestamp, const wxString& user, const wxString& msg);
-    void UpdateUserList(const std::vector<wxString>& users);
+
+    UserListPanel* m_userListPanel = nullptr;
 
 private:
     MainWidget* m_parent = nullptr;
@@ -26,8 +28,6 @@ private:
     wxBoxSizer* m_chatSizer = nullptr;         // Vertical sizer for messages and input area
     wxScrolledWindow* m_messageContainer = nullptr; // Scrolled window that holds all message widgets
     wxBoxSizer* m_messageSizer = nullptr;      // Sizer within m_messageContainer to manage MessageWidgets
-
-    UserListPanel* m_userListPanel = nullptr;
 
     void OnSend(wxCommandEvent& event);
     void OnLeave(wxCommandEvent& event);
