@@ -23,10 +23,6 @@ public:
                 *respEnv.mutable_send_message_response() = co_await MessageHandlers::handleSendMessage(wsData, env.send_message_request());
                 break;
             }
-            case chat::Envelope::kGetUsersRequest: {
-                *respEnv.mutable_get_users_response() = co_await MessageHandlers::handleGetUsers(wsData, env.get_users_request());
-                break;
-            }
             case chat::Envelope::kJoinRoomRequest: {
                 *respEnv.mutable_join_room_response() = co_await MessageHandlers::handleJoinRoom(wsData, env.join_room_request());
                 break;

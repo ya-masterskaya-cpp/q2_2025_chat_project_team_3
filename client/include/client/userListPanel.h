@@ -1,12 +1,18 @@
+#pragma once
+
 #include <wx/wx.h>
-#include <wx/listbox.h>
+#include <vector>
+#include <client/user.h>
 
 class UserListPanel : public wxPanel {
 public:
     UserListPanel(wxWindow* parent);
-    void UpdateUserList(const std::vector<wxString>& users);
-    
+
+    void SetUserList(const std::vector<User>& users);
+    void AddUser(const User& user);
+    void RemoveUser(int32_t userId);
+
 private:
-    wxListBox* userListBox;
-    void OnRightClick(wxMouseEvent& event);
+    wxScrolledWindow* m_userContainer;
+    wxBoxSizer* m_userSizer;
 };

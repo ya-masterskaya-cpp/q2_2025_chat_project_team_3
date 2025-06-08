@@ -18,7 +18,7 @@ public:
             return;
         }
         auto& ws_data = conn_to_remove->getContextRef<WsData>();
-        std::string username_being_removed = ws_data.username;
+        std::string& username_being_removed = ws_data.user->name;
 
         std::unique_lock lock(mutex_);
         if(auto it = usernameToConn_.find(username_being_removed); it != usernameToConn_.end()) {

@@ -100,10 +100,6 @@ void ChatPanel::AppendMessage(const wxString& timestamp, const wxString& user, c
     m_messageContainer->Scroll(0, m_messageContainer->GetVirtualSize().y);
 }
 
-void ChatPanel::UpdateUserList(const std::vector<wxString>& users) {
-    m_userListPanel->UpdateUserList(users);
-}
-
 // Event handler for when the message container (wxScrolledWindow) changes size.
 void ChatPanel::OnChatPanelSize(wxSizeEvent& event) {
     // Get the current visible client width of the scrolled window.

@@ -3,6 +3,7 @@
 #include <client/roomsPanel.h>
 #include <client/chatPanel.h>
 #include <client/wsClient.h>
+#include <client/userListPanel.h>
 
 MainWidget::MainWidget() : wxFrame(NULL, wxID_ANY, "Drogon wxWidgets Chat Client", wxDefaultPosition, wxSize(450, 600)) {
     wsClient = new WebSocketClient(this);
@@ -44,6 +45,6 @@ void MainWidget::ShowChat() {
     authPanel->Hide();
     roomsPanel->Hide();
     chatPanel->Show();
-    chatPanel->UpdateUserList({"user1", "user2", "user3"});
+    chatPanel->m_userListPanel->SetUserList({{0, "user1", UserRole::Regular}, {1, "user2", UserRole::Regular}, {2, "user3", UserRole::Regular}});
     Layout();
 }

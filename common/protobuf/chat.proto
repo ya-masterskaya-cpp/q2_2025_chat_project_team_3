@@ -14,6 +14,39 @@ message Status {
     optional string message = 2;
 }
 
+enum UserRights {
+    ADMIN = 0;
+    OWNER = 1;
+    MODERATOR = 2;
+    REGULAR = 3;
+}
+
+message UserInfo {
+    int32 user_id = 1;
+    string user_name = 2;
+    optional UserRights user_room_rights = 3;
+}
+
+message MessageInfo {
+    string from = 1;
+    string message = 2;
+    uint64 timestamp = 3;
+}
+
+message RoomInfo {
+    int32 room_id = 1;
+    string room_name = 2;
+    optional UserInfo owner = 3;
+}
+
+message GenericError {
+    Status status = 1;
+}
+
+message ServerHello {
+    string message = 1;
+}
+
 message AuthRequest {
     string username = 1;
     string password = 2;
@@ -33,25 +66,16 @@ message RegisterResponse {
 message SendMessageRequest {
     string message = 1;
 }
-
 message SendMessageResponse {
     Status status = 1;
 }
 
-message GetUsersRequest {
-}
-
-message GetUsersResponse {
-    Status status = 1;
-    repeated string users = 2;
-}
-
 message JoinRoomRequest {
-    optional uint32 room_id = 1;
+    int32 room_id = 1;
 }
-
 message JoinRoomResponse {
     Status status = 1;
+    repeated UserInfo users = 2;
 }
 
 message LeaveRoomRequest {
@@ -62,12 +86,6 @@ message LeaveRoomResponse {
 
 message GetRoomsRequest {
 }
-
-message RoomInfo {
-    uint32 room_id = 1;
-    string room_name = 2;
-}
-
 message GetRoomsResponse {
     Status status = 1;
     repeated RoomInfo rooms = 2;
@@ -76,35 +94,19 @@ message GetRoomsResponse {
 message CreateRoomRequest {
     string room_name = 1;
 }
-
 message CreateRoomResponse {
     Status status = 1;
-    optional uint32 room_id = 2;
-}
-
-message MessageInfo {
-    string from = 1;
-    string message = 2;
-    uint64 timestamp = 3;
+    RoomInfo info = 2;
 }
 
 message RoomMessage {
     MessageInfo message = 1;
 }
 
-message GenericError {
-    Status status = 1;
-}
-
-message ServerHello {
-    string message = 1;
-}
-
 message GetMessagesRequest{
     uint32 limit = 1;
     uint32 offset = 2;
 }
-
 message GetMessagesResponse{
     Status status = 1;
     repeated MessageInfo message = 2;
@@ -112,26 +114,24 @@ message GetMessagesResponse{
 
 message Envelope {
     oneof payload {
-        AuthRequest auth_request = 1;
-        AuthResponse auth_response = 2;
-        RegisterRequest register_request = 3;
-        RegisterResponse register_response = 4;
-        SendMessageRequest send_message_request = 5;
-        SendMessageResponse send_message_response = 6;
-        GetUsersRequest get_users_request = 7;
-        GetUsersResponse get_users_response = 8;
-        JoinRoomRequest join_room_request = 9;
-        JoinRoomResponse join_room_response = 10;
-        LeaveRoomRequest leave_room_request = 11;
-        LeaveRoomResponse leave_room_response = 12;
-        GetRoomsRequest get_rooms_request = 13;
-        GetRoomsResponse get_rooms_response = 14;
-        CreateRoomRequest create_room_request = 15;
-        CreateRoomResponse create_room_response = 16;
-        RoomMessage room_message = 17;
-        GenericError generic_error = 18;
-        ServerHello server_hello = 19;
-        GetMessagesRequest get_messages_request = 20;
-        GetMessagesResponse get_messages_response = 21;
+        ServerHello server_hello = 1;
+        AuthRequest auth_request = 2;
+        AuthResponse auth_response = 3;
+        RegisterRequest register_request = 4;
+        RegisterResponse register_response = 5;
+        SendMessageRequest send_message_request = 6;
+        SendMessageResponse send_message_response = 7;
+        JoinRoomRequest join_room_request = 8;
+        JoinRoomResponse join_room_response = 9;
+        LeaveRoomRequest leave_room_request = 10;
+        LeaveRoomResponse leave_room_response = 11;
+        GetRoomsRequest get_rooms_request = 12;
+        GetRoomsResponse get_rooms_response = 13;
+        CreateRoomRequest create_room_request = 14;
+        CreateRoomResponse create_room_response = 15;
+        RoomMessage room_message = 16;
+        GetMessagesRequest get_messages_request = 17;
+        GetMessagesResponse get_messages_response = 18;
+        GenericError generic_error = 19;
     }
 }
