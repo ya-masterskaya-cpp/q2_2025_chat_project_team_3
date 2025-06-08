@@ -5,7 +5,7 @@
 #include <server/utils/utils.h>
 #include <server/chat/WsRequestProcessor.h>
 #include <server/chat/WsData.h>
-#include <server/chat/UserConnectionRegistry.h>
+#include <server/chat/ChatRoomManager.h>
 
 class WsChat : public drogon::WebSocketController<WsChat> {
 public:
@@ -22,18 +22,13 @@ public:
             LOG_TRACE << "Non-binary WS message received from " << conn->peerAddr().toIpPort() << ". Ignoring.";
             return;
         }
-        drogon::async_run(
-            [captured_conn = conn, bytes = std::move(msg_str)]() mutable -> drogon::Task<> {
-                co_await WsRequestProcessor::handleIncomingMessage(std::move(captured_conn), std::move(bytes));
-            }
-        );
+
+        drogon::async_run(std::bind(WsRequestProcessor::handleIncomingMessage, std::move(conn), std::move(msg_str)));
     }
 
     void handleConnectionClosed(const drogon::WebSocketConnectionPtr& conn) override {
         LOG_TRACE << "WS closed: " << conn->peerAddr().toIpPort();
-        UserConnectionRegistry::instance().removeConnection(conn);
-        auto& ctx = conn->getContextRef<WsData>();
-        UserRoomRegistry::instance().removeUser(ctx.user->name);
+        ChatRoomManager::instance().unregisterConnection(conn);
     }
 
     WS_PATH_LIST_BEGIN

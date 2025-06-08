@@ -8,12 +8,15 @@ enum {
 
 MessageWidget::MessageWidget(wxWindow* parent,
                              const wxString& sender,
-                             const wxString& message, // Original message passed here initially
-                             const wxString& timestamp)
+                             const wxString& message,
+                             const wxString& timestamp,
+                             int lastKnownWrapWidth)
     : wxPanel(parent, wxID_ANY),
       m_originalMessage(message), // Store the original message directly in constructor
       m_messageStaticText(nullptr) // Initialize pointer to null
 {
+    Freeze();
+
     SetBackgroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW));
 
     auto* mainSizer = new wxBoxSizer(wxVERTICAL);
@@ -41,8 +44,10 @@ MessageWidget::MessageWidget(wxWindow* parent,
 
     mainSizer->Add(headerSizer, 0, wxEXPAND | wxBOTTOM, FromDIP(2));
 
-    // Message text (initially set with the original, unwrapped message)
-    m_messageStaticText = new wxStaticText(this, wxID_ANY, message,
+    // Wrap the original message using our utility function
+    wxString wrapped = TextUtil::WrapText(this, m_originalMessage, lastKnownWrapWidth, wxSystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT));
+
+    m_messageStaticText = new wxStaticText(this, wxID_ANY, wrapped,
                                           wxDefaultPosition, wxDefaultSize,
                                           wxALIGN_LEFT); // Ensure left alignment
     //m_messageStaticText->SetBackgroundColour(*wxYELLOW); // For debugging the text control width
@@ -52,11 +57,7 @@ MessageWidget::MessageWidget(wxWindow* parent,
     mainSizer->Add(m_messageStaticText, 1, wxALL | wxEXPAND, FromDIP(5));
 
     SetSizer(mainSizer); // Set the sizer for the panel
-    //mainSizer->Layout(); // Ensure it calculates its initial size
-    // Do NOT call SetSizerAndFit here, as that might cause issues with initial sizing
-    // in the parent sizer. Let the parent's sizer manage fitting.
 
-    // Bind event handlers (keep your existing implementations)
     Bind(wxEVT_RIGHT_DOWN, &MessageWidget::OnRightClick, this);
     userText->Bind(wxEVT_RIGHT_DOWN, &MessageWidget::OnRightClick, this);
     timeText->Bind(wxEVT_RIGHT_DOWN, &MessageWidget::OnRightClick, this);
@@ -64,16 +65,8 @@ MessageWidget::MessageWidget(wxWindow* parent,
 
     Bind(wxEVT_ENTER_WINDOW, &MessageWidget::OnMouseEnter, this);
     Bind(wxEVT_LEAVE_WINDOW, &MessageWidget::OnMouseLeave, this);
-}
 
-// Method to store the original, unwrapped message string.
-// This is useful if the MessageWidget is reused or if you pass the message later.
-void MessageWidget::SetOriginalMessage(const wxString& message) {
-    m_originalMessage = message;
-    // Set the label initially with the original message (it will be wrapped later by SetWrappedMessage)
-    if (m_messageStaticText) {
-        m_messageStaticText->SetLabel(m_originalMessage);
-    }
+    Thaw();
 }
 
 // Method to set the wrapped message based on a given width
@@ -90,11 +83,6 @@ void MessageWidget::SetWrappedMessage(int wrapWidth) {
     // This prevents unnecessary redraws and layout passes.
     if (m_messageStaticText->GetLabel() != wrapped) {
         m_messageStaticText->SetLabel(wrapped);
-        // After changing the label, force the MessageWidget's internal sizer to re-layout.
-        // This recalculates the MessageWidget's height based on the new wrapped text.
-        //if (GetSizer()) {
-        //    GetSizer()->Layout();
-        //}
     }
 }
 

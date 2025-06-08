@@ -3,6 +3,8 @@ project(MyProjectServerSubproject LANGUAGES CXX)
 
 add_executable(server_app
     src/main.cpp
+    src/chat/ChatRoomManager.cpp
+    src/chat/DrogonRoomService.cpp
     src/models/Migrations.cc
     src/models/Users.cc
     src/models/Rooms.cc

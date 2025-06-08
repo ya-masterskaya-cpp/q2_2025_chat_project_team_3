@@ -3,6 +3,7 @@
 #include <client/messageWidget.h>
 #include <client/userListPanel.h>
 #include <client/wsClient.h>
+#include <client/message.h>
 
 enum { ID_SEND = wxID_HIGHEST+30, ID_LEAVE, ID_RESIZE_TIMER };
 
@@ -64,12 +65,28 @@ ChatPanel::ChatPanel(MainWidget* parent)
     m_mainSizer->Layout();
 }
 
-void ChatPanel::AppendMessage(const wxString& timestamp, const wxString& user, const wxString& msg) {
+void ChatPanel::AppendMessages(const std::vector<Message>& messages) {
     // Freeze the scrolled window to prevent immediate redraws and layout recalculations
     m_messageContainer->Freeze();
 
+    for(const auto& m : messages) {
+        // Create a new MessageWidget instance within the scrolled window.
+        auto* msgWidget = new MessageWidget(m_messageContainer, m.user, m.msg, wxString::FromUTF8(WebSocketClient::formatMessageTimestamp(m.timestamp)), m_lastKnownWrapWidth);
+ 
+        // Add the new message widget to the message sizer.
+        // Use wxEXPAND to ensure it takes full horizontal width. Proportion 0 as it shouldn't grow vertically itself.
+        m_messageSizer->Add(msgWidget, 0, wxEXPAND | wxALL, FromDIP(3));
+    }
+
+    m_messageContainer->Thaw();
+}
+
+void ChatPanel::AppendMessage(const wxString& timestamp, const wxString& user, const wxString& msg) {
+    // Freeze the scrolled window to prevent immediate redraws and layout recalculations
+    //m_messageContainer->Freeze();
+
     // Create a new MessageWidget instance within the scrolled window.
-    auto* msgWidget = new MessageWidget(m_messageContainer, user, msg, timestamp);
+    auto* msgWidget = new MessageWidget(m_messageContainer, user, msg, timestamp, m_lastKnownWrapWidth);
 
     // Add the new message widget to the message sizer.
     // Use wxEXPAND to ensure it takes full horizontal width. Proportion 0 as it shouldn't grow vertically itself.
@@ -79,22 +96,22 @@ void ChatPanel::AppendMessage(const wxString& timestamp, const wxString& user, c
     // If m_lastKnownWrapWidth is -1, it means this is likely the first message
     // or the window hasn't been properly sized yet.
     // Manually trigger the resize logic to ensure the first message gets wrapped correctly.
-    if (m_lastKnownWrapWidth == -1) {
-        wxSizeEvent dummyEvent(m_messageContainer->GetSize(), wxEVT_SIZE); // Create a dummy size event
-        OnChatPanelSize(dummyEvent); // Call the handler to initiate the debounced wrap
-    } else {
-        // If we already have a known accurate wrap width, apply it immediately to the new message.
-        // This ensures new messages are wrapped correctly without waiting for a resize event.
-        msgWidget->SetWrappedMessage(m_lastKnownWrapWidth);
-    }
+    // if (m_lastKnownWrapWidth == -1) {
+    //     wxSizeEvent dummyEvent(m_messageContainer->GetSize(), wxEVT_SIZE); // Create a dummy size event
+    //     OnChatPanelSize(dummyEvent); // Call the handler to initiate the debounced wrap
+    // } else {
+    //     // If we already have a known accurate wrap width, apply it immediately to the new message.
+    //     // This ensures new messages are wrapped correctly without waiting for a resize event.
+    //     msgWidget->SetWrappedMessage(m_lastKnownWrapWidth);
+    // }
 
     // Force the message sizer to re-layout its children (including the new message).
-    m_messageSizer->Layout();
+    //m_messageSizer->Layout();
     // Update the wxScrolledWindow's virtual size based on the sizer's new minimum size.
-    m_messageContainer->SetVirtualSize(m_messageSizer->GetMinSize());
+    //m_messageContainer->SetVirtualSize(m_messageSizer->GetMinSize());
 
     // Thaw the scrolled window to allow it to redraw with the new content.
-    m_messageContainer->Thaw();
+    //m_messageContainer->Thaw();
 
     // Scroll to the bottom to show the newest message.
     m_messageContainer->Scroll(0, m_messageContainer->GetVirtualSize().y);
@@ -132,6 +149,7 @@ void ChatPanel::OnResizeTimerTick(wxTimerEvent& event) {
     // The timer has fired, meaning resizing has stopped (or paused) for 200ms.
     // Now, perform the re-wrapping for all messages using the last known accurate width.
     if (m_lastKnownWrapWidth > 20) {
+        LOG_DEBUG << "Rewrapped all";
         ReWrapAllMessages(m_lastKnownWrapWidth);
     }
 }
@@ -141,6 +159,8 @@ void ChatPanel::ReWrapAllMessages(int wrapWidth) {
     if (wrapWidth <= 0) {
         return;
     }
+
+    LOG_DEBUG << "Rewrapping text";
 
     // Iterate through all items (MessageWidgets) in the messageSizer.
     for (auto* item : m_messageSizer->GetChildren()) {

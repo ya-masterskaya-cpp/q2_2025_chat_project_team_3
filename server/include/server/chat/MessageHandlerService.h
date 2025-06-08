@@ -4,15 +4,16 @@
 #include <server/chat/WsData.h>
 #include <server/utils/utils.h>
 #include <server/chat/MessageHandlers.h>
+#include <server/chat/IRoomService.h>
 #include <common/proto/chat.pb.h>
 
 class MessageHandlerService {
 public:
-    static drogon::Task<chat::Envelope> processMessage(std::shared_ptr<WsData> wsData, const chat::Envelope& env, IAuthNotifier& notifier) {
+    static drogon::Task<chat::Envelope> processMessage(const std::shared_ptr<WsData>& wsData, const chat::Envelope& env, IRoomService& room_service) {
         chat::Envelope respEnv;
         switch(env.payload_case()) {
             case chat::Envelope::kAuthRequest: {
-                *respEnv.mutable_auth_response() = co_await MessageHandlers::handleAuth(wsData, env.auth_request(), notifier);
+                *respEnv.mutable_auth_response() = co_await MessageHandlers::handleAuth(wsData, env.auth_request());
                 break;
             }
             case chat::Envelope::kRegisterRequest: {
@@ -24,11 +25,11 @@ public:
                 break;
             }
             case chat::Envelope::kJoinRoomRequest: {
-                *respEnv.mutable_join_room_response() = co_await MessageHandlers::handleJoinRoom(wsData, env.join_room_request());
+                *respEnv.mutable_join_room_response() = co_await MessageHandlers::handleJoinRoom(wsData, env.join_room_request(), room_service);
                 break;
             }
             case chat::Envelope::kLeaveRoomRequest: {
-                *respEnv.mutable_leave_room_response() = co_await MessageHandlers::handleLeaveRoom(wsData, env.leave_room_request());
+                *respEnv.mutable_leave_room_response() = co_await MessageHandlers::handleLeaveRoom(wsData, env.leave_room_request(), room_service);
                 break;
             }
             case chat::Envelope::kGetRoomsRequest: {

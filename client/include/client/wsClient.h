@@ -28,6 +28,8 @@ public:
     void scheduleRoomListRefresh();
     void getMessages(int limit, int offset);
 
+    static std::string formatMessageTimestamp(uint64_t timestamp);
+
 private:
     void sendEnvelope(const chat::Envelope& env);
     void handleMessage(const std::string& msg);
@@ -40,7 +42,7 @@ private:
     void showRooms();
     void showRoomMessage(const chat::MessageInfo& mi);
     void showMessageHistory(const std::vector<Message>& messages);
-    std::string formatMessageTimestamp(uint64_t timestamp);
+
 
     MainWidget* ui;
     std::shared_ptr<drogon::WebSocketConnection> conn;
