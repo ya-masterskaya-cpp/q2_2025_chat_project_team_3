@@ -1,7 +1,4 @@
 #pragma once
-#include <string>
-#include <optional>
-#include <common/proto/chat.pb.h>
 
 struct User {
     int32_t id;

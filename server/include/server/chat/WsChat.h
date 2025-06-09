@@ -1,6 +1,5 @@
 #pragma once
 
-#include <drogon/drogon.h>
 #include <drogon/WebSocketController.h>
 #include <server/utils/utils.h>
 #include <server/chat/WsRequestProcessor.h>

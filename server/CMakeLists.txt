@@ -19,6 +19,10 @@ target_link_libraries(server_app PRIVATE
     common_lib
 )
 
+target_precompile_headers(server_app PRIVATE
+    "${CMAKE_SOURCE_DIR}/common/include/pch.h"
+)
+
 add_custom_command(TARGET server_app POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "${CMAKE_CURRENT_SOURCE_DIR}/config.json"

@@ -63,58 +63,202 @@ ChatPanel::ChatPanel(MainWidget* parent)
 
     // Final layout of the main sizer for the ChatPanel
     m_mainSizer->Layout();
+
+    m_messageContainer->Bind(wxEVT_SCROLLWIN_LINEUP,      &ChatPanel::OnScroll, this);
+    m_messageContainer->Bind(wxEVT_SCROLLWIN_LINEDOWN,    &ChatPanel::OnScroll, this);
+    m_messageContainer->Bind(wxEVT_SCROLLWIN_PAGEUP,      &ChatPanel::OnScroll, this);
+    m_messageContainer->Bind(wxEVT_SCROLLWIN_PAGEDOWN,    &ChatPanel::OnScroll, this);
+    m_messageContainer->Bind(wxEVT_SCROLLWIN_THUMBTRACK,  &ChatPanel::OnScroll, this);
+    m_messageContainer->Bind(wxEVT_SCROLLWIN_THUMBRELEASE,&ChatPanel::OnScroll, this);
+    //m_messageContainer->Bind(wxEVT_MOUSEWHEEL,            &ChatPanel::OnScroll, this);
 }
 
-void ChatPanel::AppendMessages(const std::vector<Message>& messages) {
-    // Freeze the scrolled window to prevent immediate redraws and layout recalculations
+void ChatPanel::AppendMessages(const std::vector<Message>& messages, bool isHistoryResponse) {
+    if(messages.empty()) {
+        m_loadingOlder = false;
+        m_loadingNewer = false;
+        return;
+    }
+
     m_messageContainer->Freeze();
 
-    for(const auto& m : messages) {
-        // Create a new MessageWidget instance within the scrolled window.
-        auto* msgWidget = new MessageWidget(m_messageContainer, m.user, m.msg, wxString::FromUTF8(WebSocketClient::formatMessageTimestamp(m.timestamp)), m_lastKnownWrapWidth);
- 
-        // Add the new message widget to the message sizer.
-        // Use wxEXPAND to ensure it takes full horizontal width. Proportion 0 as it shouldn't grow vertically itself.
-        m_messageSizer->Add(msgWidget, 0, wxEXPAND | wxALL, FromDIP(3));
+    if(!isHistoryResponse) {
+        int ppuX, ppuY;
+        m_messageContainer->GetScrollPixelsPerUnit(&ppuX, &ppuY);
+        
+        bool wasAtBottom = (m_messageContainer->GetViewStart().y * ppuY + m_messageContainer->GetClientSize().y) >= m_messageContainer->GetVirtualSize().y - 5;
+        
+        for(const auto& m : messages) {
+            AddMessageInternal(m, false);
+        }
+
+        int overflow = m_messageSizer->GetItemCount() - MAX_MESSAGES;
+
+        if(overflow > 0) {
+            RemoveMessages(overflow, true);
+        }
+
+        if(wasAtBottom) {
+            ScrollToBottom();
+        }
+
+    } else {
+        int currentScrollPosInUnits = m_messageContainer->GetScrollPos(wxVERTICAL);
+        int ppuX, pixelsPerUnit;
+        m_messageContainer->GetScrollPixelsPerUnit(&ppuX, &pixelsPerUnit);
+        if(pixelsPerUnit == 0) {
+            pixelsPerUnit = 1;
+        }
+
+        bool was_empty = m_messageSizer->GetChildren().empty();
+
+        if(m_loadingOlder) {
+            // --- Process as OLDER messages (scrolling UP) ---
+            int addedHeight = 0;
+            for(auto it = messages.begin(); it != messages.end(); ++it) {
+                AddMessageInternal(*it, true);
+            }
+            
+            m_messageSizer->Layout();
+            for(size_t i = 0; i < messages.size(); ++i) {
+                addedHeight += m_messageSizer->GetItem((size_t)i)->GetSize().y;
+            }
+            
+            int overflow = m_messageSizer->GetItemCount() - MAX_MESSAGES;
+            if(overflow > 0) {
+                RemoveMessages(overflow, false);
+            }
+            
+            m_messageSizer->Layout();
+            m_messageContainer->FitInside();
+            
+            if(!was_empty) {
+                int scrollAdjustmentInUnits = addedHeight / pixelsPerUnit;
+                m_messageContainer->Scroll(-1, currentScrollPosInUnits + scrollAdjustmentInUnits);
+            } else {
+                ScrollToBottom();
+            }
+            m_loadingOlder = false;
+
+        } else if(m_loadingNewer) {
+            // --- LOGIC for NEWER messages (scrolling DOWN) ---
+            
+            // First, append the new messages.
+            for(const auto& m : messages) {
+                AddMessageInternal(m, false);
+            }
+            
+            // Now, determine if we are over the limit.
+            int overflow = m_messageSizer->GetItemCount() - MAX_MESSAGES;
+            int removedHeight = 0;
+
+            if(overflow > 0) {
+                // If we are over, measure the height of the items we are about to remove from the top.
+                for (size_t i = 0; i < (size_t)overflow; ++i) {
+                    removedHeight += m_messageSizer->GetItem(i)->GetSize().y;
+                }
+                // Now, remove that exact number of overflowing items from the top.
+                RemoveMessages(overflow, true);
+            }
+            
+            m_messageSizer->Layout();
+            m_messageContainer->FitInside();
+            
+            // Only adjust the scroll position if we actually removed items.
+            if(removedHeight > 0) {
+                int scrollAdjustmentInUnits = removedHeight / pixelsPerUnit;
+                m_messageContainer->Scroll(-1, currentScrollPosInUnits - scrollAdjustmentInUnits);
+            }
+            
+            m_loadingNewer = false;
+        }
     }
 
     m_messageContainer->Thaw();
 }
 
-void ChatPanel::AppendMessage(const wxString& timestamp, const wxString& user, const wxString& msg) {
-    // Freeze the scrolled window to prevent immediate redraws and layout recalculations
-    //m_messageContainer->Freeze();
+void ChatPanel::AppendMessage(const wxString& timestamp, const wxString& user, const wxString& msg, int64_t timestamp_val) {
+    Message live_msg = { user, msg, timestamp_val };
+    AppendMessages({live_msg}, false);
+}
 
-    // Create a new MessageWidget instance within the scrolled window.
-    auto* msgWidget = new MessageWidget(m_messageContainer, user, msg, timestamp, m_lastKnownWrapWidth);
+void ChatPanel::LoadOlderMessages() {
+    LOG_DEBUG << "LoadOlderMessages()";
+    if (m_loadingOlder || m_loadingNewer || m_messageSizer->GetChildren().empty()) {
+        return;
+    }
+    m_loadingOlder = true;
+    auto* firstWidget = static_cast<MessageWidget*>(m_messageSizer->GetItem((size_t)0)->GetWindow());
+    m_parent->wsClient->getMessages(CHUNK_SIZE, firstWidget->GetTimestampValue());
+}
 
-    // Add the new message widget to the message sizer.
-    // Use wxEXPAND to ensure it takes full horizontal width. Proportion 0 as it shouldn't grow vertically itself.
-    m_messageSizer->Add(msgWidget, 0, wxEXPAND | wxALL, FromDIP(3));
+void ChatPanel::LoadNewerMessages() {
+    LOG_DEBUG << "LoadNewerMessages()";
 
-    // --- Initial Wrapping Trigger (Important for first message) ---
-    // If m_lastKnownWrapWidth is -1, it means this is likely the first message
-    // or the window hasn't been properly sized yet.
-    // Manually trigger the resize logic to ensure the first message gets wrapped correctly.
-    // if (m_lastKnownWrapWidth == -1) {
-    //     wxSizeEvent dummyEvent(m_messageContainer->GetSize(), wxEVT_SIZE); // Create a dummy size event
-    //     OnChatPanelSize(dummyEvent); // Call the handler to initiate the debounced wrap
-    // } else {
-    //     // If we already have a known accurate wrap width, apply it immediately to the new message.
-    //     // This ensures new messages are wrapped correctly without waiting for a resize event.
-    //     msgWidget->SetWrappedMessage(m_lastKnownWrapWidth);
-    // }
+    if(m_loadingOlder || m_loadingNewer || m_messageSizer->GetChildren().empty()) {
+        return;
+    }
+    
+    int ppuX, ppuY;
+    m_messageContainer->GetScrollPixelsPerUnit(&ppuX, &ppuY);
+    if((m_messageContainer->GetViewStart().y * ppuY + m_messageContainer->GetClientSize().y) >= m_messageContainer->GetVirtualSize().y - 5) {
+        return;
+    } 
+    
+    m_loadingNewer = true;
+    auto* lastWidget = static_cast<MessageWidget*>(m_messageSizer->GetItem(m_messageSizer->GetItemCount() - 1)->GetWindow());
+    m_parent->wsClient->getMessages(-CHUNK_SIZE, lastWidget->GetTimestampValue());
+}
 
-    // Force the message sizer to re-layout its children (including the new message).
-    //m_messageSizer->Layout();
-    // Update the wxScrolledWindow's virtual size based on the sizer's new minimum size.
-    //m_messageContainer->SetVirtualSize(m_messageSizer->GetMinSize());
+void ChatPanel::ScrollToBottom() {
+    LOG_DEBUG << "ScrollToBottom()";
+    wxTheApp->CallAfter([this]() {
+        if (this && m_messageContainer) {
+            m_messageSizer->Layout();
+            m_messageContainer->FitInside();
+            int range = m_messageContainer->GetScrollRange(wxVERTICAL);
+            m_messageContainer->Scroll(-1, range + 1);
+        }
+    });
+}
 
-    // Thaw the scrolled window to allow it to redraw with the new content.
-    //m_messageContainer->Thaw();
+void ChatPanel::AddMessageInternal(const Message& msg, bool prepend) {
+    wxString timestamp_str = wxString::FromUTF8(WebSocketClient::formatMessageTimestamp(msg.timestamp));
+    auto* msgWidget = new MessageWidget(m_messageContainer, msg.user, msg.msg,
+                                        timestamp_str, msg.timestamp, m_lastKnownWrapWidth);
+    m_messageSizer->Insert(prepend ? 0 : m_messageSizer->GetItemCount(),
+                           msgWidget, 0, wxEXPAND | wxALL, FromDIP(3));
+}
 
-    // Scroll to the bottom to show the newest message.
-    m_messageContainer->Scroll(0, m_messageContainer->GetVirtualSize().y);
+void ChatPanel::RemoveMessages(int count, bool fromTop) {
+    for (int i = 0; i < count && !m_messageSizer->GetChildren().empty(); ++i) {
+        size_t index = fromTop ? 0 : m_messageSizer->GetItemCount() - 1;
+        wxSizerItem* item = m_messageSizer->GetItem(index);
+        wxWindow* window = item->GetWindow();
+        m_messageSizer->Detach(index);
+        window->Destroy();
+    }
+}
+
+void ChatPanel::LoadInitialMessages() {
+    LOG_DEBUG << "LoadInitialMessages()";
+    m_loadingOlder = true;
+
+    m_parent->wsClient->getMessages(CHUNK_SIZE * 2, std::numeric_limits<int64_t>::max());
+}
+
+void ChatPanel::OnScroll(wxScrollWinEvent& event) {
+    event.Skip();
+
+    int ppuX, pixelsPerUnit;
+    m_messageContainer->GetScrollPixelsPerUnit(&ppuX, &pixelsPerUnit);
+    
+    int viewStartPixels = m_messageContainer->GetViewStart().y * pixelsPerUnit;
+    int clientHeightPixels = m_messageContainer->GetClientSize().y;
+    int virtualHeightPixels = m_messageContainer->GetVirtualSize().y;
+    
+    if (viewStartPixels < LOAD_THRESHOLD) LoadOlderMessages();
+    else if (viewStartPixels + clientHeightPixels > virtualHeightPixels - LOAD_THRESHOLD) LoadNewerMessages();
 }
 
 // Event handler for when the message container (wxScrolledWindow) changes size.

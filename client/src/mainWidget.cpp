@@ -46,5 +46,6 @@ void MainWidget::ShowChat() {
     roomsPanel->Hide();
     chatPanel->Show();
     chatPanel->m_userListPanel->SetUserList({{0, "user1", UserRole::Regular}, {1, "user2", UserRole::Regular}, {2, "user3", UserRole::Regular}});
+    chatPanel->LoadInitialMessages();
     Layout();
 }

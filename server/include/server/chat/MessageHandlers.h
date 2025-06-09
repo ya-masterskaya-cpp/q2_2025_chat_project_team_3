@@ -1,9 +1,7 @@
 #pragma once
 
-#include <drogon/drogon.h>
 #include <drogon/orm/CoroMapper.h>
 
-#include <common/proto/chat.pb.h>
 #include <server/chat/WsData.h>
 #include <server/chat/IRoomService.h>
 #include <server/chat/ChatRoomManager.h>
@@ -100,9 +98,6 @@ public:
             setStatus(resp, chat::STATUS_FAILURE, "Empty 'message' field.");
             co_return resp;
         }
-        int32_t room_id = wsData->room->id;
-        std::string& username = wsData->user->name;
-        uint64_t time = trantor::Date::now().microSecondsSinceEpoch();
 
         auto db = drogon::app().getDbClient();
         if(!db) {
@@ -141,11 +136,15 @@ public:
         chat::Envelope msgEnv;
         auto* msg = msgEnv.mutable_room_message();
         auto* message_info = msg->mutable_message();
-        message_info->set_from(username);
-        message_info->set_message(req.message());
-        message_info->set_timestamp(time);
+        auto* user_info = message_info->mutable_from();
 
-        ChatRoomManager::instance().sendToRoom(room_id, msgEnv);
+        message_info->set_message(req.message());
+        message_info->set_timestamp(trantor::Date::now().microSecondsSinceEpoch());
+
+        user_info->set_user_id(wsData->user->id);
+        user_info->set_user_name(wsData->user->name);
+
+        ChatRoomManager::instance().sendToRoom(wsData->room->id, msgEnv);
 
         setStatus(resp, chat::STATUS_SUCCESS);
         co_return resp;
@@ -285,15 +284,34 @@ public:
         try {
             using namespace drogon::orm;
             auto mapper = drogon::orm::CoroMapper<models::Messages>(db);
+
+            auto limit = req.limit();
+
+            LOG_DEBUG << "Limit: " + std::to_string(limit);
+            LOG_DEBUG << "Ts: " + std::to_string(req.offset_ts());
+
+            auto criteria = Criteria(models::Messages::Cols::_created_at, 
+                                    limit > 0 ? CompareOperator::LT : CompareOperator::GT, 
+                                    trantor::Date(req.offset_ts()));
+            auto order = limit > 0 ? SortOrder::DESC : SortOrder::ASC;
+            limit = std::abs(limit);
+
             auto messages = co_await mapper
-            .orderBy(models::Messages::Cols::_created_at, SortOrder::DESC)
-            .limit(req.limit())
-            .findBy(Criteria(models::Messages::Cols::_room_id, CompareOperator::EQ, wsData->room->id));
-                for(const auto& message : messages) {
-                    chat::MessageInfo* message_info = resp.add_message();
-                    message_info->set_message(*message.getMessageText());
-                    message_info->set_from(*message.getUser(db).getUsername());
-                    message_info->set_timestamp(message.getCreatedAt()->microSecondsSinceEpoch());
+                .orderBy(models::Messages::Cols::_created_at, order)
+                .limit(limit)
+                .findBy(Criteria(models::Messages::Cols::_room_id, CompareOperator::EQ, wsData->room->id) && criteria);
+
+            for(const auto& message : messages) {
+                auto* message_info = resp.add_message();
+                message_info->set_message(message.getValueOfMessageText());
+                LOG_DEBUG << std::string("Message text \"") + message.getValueOfMessageText() + "\"";
+                message_info->set_timestamp(message.getValueOfCreatedAt().microSecondsSinceEpoch());
+                LOG_DEBUG << std::string("Message timestamp \"") + std::to_string(message.getValueOfCreatedAt().microSecondsSinceEpoch()) + "\"";
+                auto* user_info = message_info->mutable_from();
+                auto user = message.getUser(db); //TODO this is blocking
+
+                user_info->set_user_id(user.getValueOfUserId());
+                user_info->set_user_name(user.getValueOfUsername());
             }
             setStatus(resp, chat::STATUS_SUCCESS);
             co_return resp;

@@ -1,21 +1,20 @@
 #pragma once
+
 #include <wx/wx.h>
-#include <stdint.h>
 #include <client/user.h>
 
 class MainWidget;
 class UserListPanel;
 class Message;
 
-constexpr int LAST_MESSAGES = 50;
-
 class ChatPanel : public wxPanel {
 public:
     ChatPanel(MainWidget* parent);
-    void AppendMessage(const wxString& timestamp, const wxString& user, const wxString& msg);
-    void AppendMessages(const std::vector<Message>& messages);
-    UserListPanel* m_userListPanel = nullptr;
+    void AppendMessage(const wxString& timestamp, const wxString& user, const wxString& msg, int64_t timestamp_val);
+    void AppendMessages(const std::vector<Message>& messages, bool isHistoryResponse);
+    void LoadInitialMessages();
 
+    UserListPanel* m_userListPanel = nullptr;
 private:
     MainWidget* m_parent = nullptr;
     wxTextCtrl* m_input_ctrl = nullptr;
@@ -39,8 +38,19 @@ private:
     // Helper function to re-wrap and re-layout all messages.
     void ReWrapAllMessages(int wrapWidth);
 
+    void AddMessageInternal(const Message& msg, bool prepend);
+    void RemoveMessages(int count, bool fromTop);
+    void LoadOlderMessages();
+    void LoadNewerMessages();
+    void OnScroll(wxScrollWinEvent& event);
+    void ScrollToBottom();
+
+    bool m_loadingOlder = false;
+    bool m_loadingNewer = false;
+
+    static const int MAX_MESSAGES = 50;
+    static const int LOAD_THRESHOLD = 300;
+    static const int CHUNK_SIZE = 20;
+
     wxDECLARE_EVENT_TABLE();
 };
-
-
-

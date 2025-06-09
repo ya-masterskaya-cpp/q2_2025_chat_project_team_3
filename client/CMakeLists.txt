@@ -26,6 +26,10 @@ target_link_libraries(client_app PRIVATE
     wx::base
 )
 
+target_precompile_headers(client_app PRIVATE
+    "${CMAKE_SOURCE_DIR}/common/include/pch.h"
+)
+
 install(TARGETS client_app
     DESTINATION client
 )

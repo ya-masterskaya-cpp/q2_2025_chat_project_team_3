@@ -1,7 +1,7 @@
 #pragma once
 
 #include <wx/wx.h>
-#include <vector>
+
 #include <client/user.h>
 
 class UserListPanel : public wxPanel {

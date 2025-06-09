@@ -1,9 +1,7 @@
 #pragma once
+
 #include <wx/wx.h>
-#include <vector>
-#include <string>
-#include <cstdint>
-#include <unordered_map>
+
 class MainWidget;
 
 struct Room {
