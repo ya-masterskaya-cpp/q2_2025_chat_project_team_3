@@ -87,7 +87,7 @@
       "description": "Build server and client (Release) on Windows.",
       "inherits": "windows-base",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_BUILD_TYPE": "Release",
         "BUILD_SERVER": "ON",
         "BUILD_CLIENT": "ON",
         "VCPKG_MANIFEST_FEATURES": "client"
