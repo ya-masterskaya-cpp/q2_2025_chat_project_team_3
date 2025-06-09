@@ -6,8 +6,6 @@
 #include <client/message.h>
 #include <drogon/HttpRequest.h>
 #include <drogon/HttpAppFramework.h>
-#include <chrono>
-#include <thread>
 
 WebSocketClient::WebSocketClient(MainWidget* ui_) : ui(ui_) {}
 
@@ -75,7 +73,7 @@ void WebSocketClient::createRoom(const std::string& roomName) {
     sendEnvelope(env);
 }
 
-void WebSocketClient::joinRoom(uint32_t room_id) {
+void WebSocketClient::joinRoom(int32_t room_id) {
     chat::Envelope env;
     env.mutable_join_room_request()->set_room_id(room_id);
     sendEnvelope(env);
@@ -115,16 +113,15 @@ void WebSocketClient::scheduleRoomListRefresh() {
     }).detach();
 }
 
-void WebSocketClient::getMessages(int limit, int offset){
-chat::Envelope env;
+void WebSocketClient::getMessages(int32_t limit, int64_t offset_ts) {
+    chat::Envelope env;
     auto* request = env.mutable_get_messages_request();
     request->set_limit(limit);
-    request->set_offset(offset);
+    request->set_offset_ts(offset_ts);
     sendEnvelope(env);
 }
 
-void WebSocketClient::requestRoomList()
-{
+void WebSocketClient::requestRoomList() {
     getRooms();
     scheduleRoomListRefresh();
 }
@@ -163,7 +160,6 @@ void WebSocketClient::handleMessage(const std::string& msg) {
         }
         case chat::Envelope::kJoinRoomResponse: {
             if(statusOk(env.join_room_response().status())) {
-                getMessages(LAST_MESSAGES, 0);
                 showChat();
             } else {
                 showError("Failed to join room.");
@@ -179,7 +175,7 @@ void WebSocketClient::handleMessage(const std::string& msg) {
             break;
         }
         case chat::Envelope::kCreateRoomResponse: {
-            if (!statusOk(env.create_room_response().status())) {
+            if(!statusOk(env.create_room_response().status())) {
                 showError("Failed to create room");
             }
             break;
@@ -218,7 +214,7 @@ void WebSocketClient::handleMessage(const std::string& msg) {
             }
             std::vector<Message> messages;
             for(const auto& proto_message : env.get_messages_response().message()) {
-                messages.emplace_back(Message{wxString::FromUTF8(proto_message.from())
+                messages.emplace_back(Message{wxString::FromUTF8(proto_message.from().user_name())
                     , wxString::FromUTF8(proto_message.message())
                     , proto_message.timestamp()});
             }
@@ -257,21 +253,16 @@ void WebSocketClient::showRoomMessage(const chat::MessageInfo& mi) {
         std::string timeStr = formatMessageTimestamp(time);
         ui->chatPanel->AppendMessage(
             wxString(timeStr.c_str(), wxConvUTF8),
-            wxString(user.c_str(), wxConvUTF8),
-            wxString(text.c_str(), wxConvUTF8));
+            wxString(user.user_name().c_str(), wxConvUTF8),
+            wxString(text.c_str(), wxConvUTF8),
+            time);
     });
 }
 
 void WebSocketClient::showMessageHistory(const std::vector<Message> &messages) {
-    std::vector<Message> sorted_messages = messages;
-    std::sort(sorted_messages.begin(), sorted_messages.end(),
-        [](const Message &lhs, const Message &rhs) {
-            return lhs.timestamp < rhs.timestamp;
-        });
-
-    wxTheApp->CallAfter([this, sorted_messages = std::move(sorted_messages)] {
+    wxTheApp->CallAfter([this, messages] {
         LOG_DEBUG << "Stared bulk add";
-        ui->chatPanel->AppendMessages(sorted_messages);
+        ui->chatPanel->AppendMessages(messages, true);
         LOG_DEBUG << "Finished bulk add";
     });
 }

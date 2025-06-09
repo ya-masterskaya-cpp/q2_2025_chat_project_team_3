@@ -1,6 +1,5 @@
 #pragma once
 
-#include <drogon/drogon.h>
 #include <server/chat/WsData.h>
 #include <server/utils/utils.h>
 #include <server/chat/MessageHandlerService.h>

@@ -1,4 +1,3 @@
-
 #include <client/messageWidget.h>
 #include <client/textUtil.h>
 
@@ -10,9 +9,11 @@ MessageWidget::MessageWidget(wxWindow* parent,
                              const wxString& sender,
                              const wxString& message,
                              const wxString& timestamp,
+                             int64_t timestamp_val,
                              int lastKnownWrapWidth)
     : wxPanel(parent, wxID_ANY),
       m_originalMessage(message), // Store the original message directly in constructor
+      m_timestamp_val(timestamp_val), // Store the raw timestamp value
       m_messageStaticText(nullptr) // Initialize pointer to null
 {
     Freeze();

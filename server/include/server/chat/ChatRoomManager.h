@@ -1,11 +1,6 @@
 #pragma once
 
 #include <drogon/WebSocketConnection.h>
-#include <unordered_map>
-#include <unordered_set>
-#include <shared_mutex>
-
-#include <common/proto/chat.pb.h>
 
 class ChatRoomManager {
 public:
