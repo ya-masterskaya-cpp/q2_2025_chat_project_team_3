@@ -30,3 +30,13 @@ add_custom_command(TARGET server_app POST_BUILD
         "${CMAKE_CURRENT_SOURCE_DIR}/db/migrations"
         "$<TARGET_FILE_DIR:server_app>/db/migrations"
 )
+
+install(TARGETS server_app
+    DESTINATION server
+)
+install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/config.json
+    DESTINATION server
+)
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/db/
+    DESTINATION server/db
+)

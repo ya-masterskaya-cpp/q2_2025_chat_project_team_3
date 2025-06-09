@@ -25,3 +25,7 @@ target_link_libraries(client_app PRIVATE
     wx::core
     wx::base
 )
+
+install(TARGETS client_app
+    DESTINATION client
+)
