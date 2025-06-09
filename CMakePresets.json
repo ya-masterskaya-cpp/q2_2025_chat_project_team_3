@@ -5,8 +5,8 @@
       "name": "base",
       "hidden": true,
       "generator": "Ninja",
-      "binaryDir": "${sourceDir}/build/${presetName}",
-      "installDir": "${sourceDir}/install/${presetName}",
+      "binaryDir": "${sourceDir}/build",
+      "installDir": "${sourceDir}/install",
       "cacheVariables": {
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
       }
@@ -46,33 +46,9 @@
       }
     },
     {
-      "name": "linux-debug-server",
-      "displayName": "Linux Debug Server",
-      "description": "Build server only (Debug) on Linux. Requires VCPKG_ROOT.",
-      "inherits": "linux-base",
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug",
-        "BUILD_SERVER": "ON",
-        "BUILD_CLIENT": "OFF",
-        "VCPKG_MANIFEST_FEATURES": ""
-      }
-    },
-    {
-      "name": "linux-debug-client",
-      "displayName": "Linux Debug Client",
-      "description": "Build client only (Debug) on Linux with wxWidgets. Requires VCPKG_ROOT.",
-      "inherits": "linux-base",
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug",
-        "BUILD_SERVER": "OFF",
-        "BUILD_CLIENT": "ON",
-        "VCPKG_MANIFEST_FEATURES": "client"
-      }
-    },
-    {
-      "name": "linux-debug-all",
+      "name": "linux-debug",
       "displayName": "Linux Debug Server+Client",
-      "description": "Build server and client (Debug) on Linux with wxWidgets. Requires VCPKG_ROOT.",
+      "description": "Build server and client (Debug) on Linux.",
       "inherits": "linux-base",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
@@ -82,33 +58,21 @@
       }
     },
     {
-      "name": "windows-debug-server",
-      "displayName": "Windows Debug Server",
-      "description": "Build server only (Debug) on Windows. Requires VCPKG_ROOT.",
-      "inherits": "windows-base",
+      "name": "linux-release",
+      "displayName": "Linux Release Server+Client",
+      "description": "Build server and client (Release) on Linux.",
+      "inherits": "linux-base",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_BUILD_TYPE": "Release",
         "BUILD_SERVER": "ON",
-        "BUILD_CLIENT": "OFF",
-        "VCPKG_MANIFEST_FEATURES": ""
-      }
-    },
-    {
-      "name": "windows-debug-client",
-      "displayName": "Windows Debug Client",
-      "description": "Build client only (Debug) on Windows with wxWidgets. Requires VCPKG_ROOT.",
-      "inherits": "windows-base",
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug",
-        "BUILD_SERVER": "OFF",
         "BUILD_CLIENT": "ON",
         "VCPKG_MANIFEST_FEATURES": "client"
       }
     },
     {
-      "name": "windows-debug-all",
+      "name": "windows-debug",
       "displayName": "Windows Debug Server+Client",
-      "description": "Build server and client (Debug) on Windows with wxWidgets. Requires VCPKG_ROOT.",
+      "description": "Build server and client (Debug) on Windows.",
       "inherits": "windows-base",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
@@ -116,70 +80,18 @@
         "BUILD_CLIENT": "ON",
         "VCPKG_MANIFEST_FEATURES": "client"
       }
-    }
-  ],
-  "buildPresets": [
-    {
-      "name": "build-linux-server",
-      "configurePreset": "linux-debug-server",
-      "targets": ["server_app"]
     },
     {
-      "name": "build-linux-client",
-      "configurePreset": "linux-debug-client",
-      "targets": ["client_app"]
-    },
-    {
-      "name": "build-linux-all",
-      "configurePreset": "linux-debug-all",
-      "targets": ["server_app", "client_app"]
-    },
-    {
-      "name": "build-windows-server",
-      "configurePreset": "windows-debug-server",
-      "targets": ["server_app"]
-    },
-    {
-      "name": "build-windows-client",
-      "configurePreset": "windows-debug-client",
-      "targets": ["client_app"]
-    },
-    {
-      "name": "build-windows-all",
-      "configurePreset": "windows-debug-all",
-      "targets": ["server_app", "client_app"]
-    }
-  ],
-  "testPresets": [
-    {
-      "name": "test-linux-server",
-      "configurePreset": "linux-debug-server",
-      "output": { "outputOnFailure": true }
-    },
-    {
-      "name": "test-linux-client",
-      "configurePreset": "linux-debug-client",
-      "output": { "outputOnFailure": true }
-    },
-    {
-      "name": "test-linux-all",
-      "configurePreset": "linux-debug-all",
-      "output": { "outputOnFailure": true }
-    },
-    {
-      "name": "test-windows-server",
-      "configurePreset": "windows-debug-server",
-      "output": { "outputOnFailure": true }
-    },
-    {
-      "name": "test-windows-client",
-      "configurePreset": "windows-debug-client",
-      "output": { "outputOnFailure": true }
-    },
-    {
-      "name": "test-windows-all",
-      "configurePreset": "windows-debug-all",
-      "output": { "outputOnFailure": true }
+      "name": "windows-release",
+      "displayName": "Windows Release Server+Client",
+      "description": "Build server and client (Release) on Windows.",
+      "inherits": "windows-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "BUILD_SERVER": "ON",
+        "BUILD_CLIENT": "ON",
+        "VCPKG_MANIFEST_FEATURES": "client"
+      }
     }
   ]
 }

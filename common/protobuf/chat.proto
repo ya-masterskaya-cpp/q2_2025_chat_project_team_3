@@ -1,6 +1,8 @@
 syntax = "proto3";
 package chat;
 
+option optimize_for = LITE_RUNTIME;
+
 enum StatusCode {
     STATUS_UNKNOWN = 0;
     STATUS_SUCCESS = 1;
@@ -28,9 +30,9 @@ message UserInfo {
 }
 
 message MessageInfo {
-    string from = 1;
+    UserInfo from = 1;
     string message = 2;
-    uint64 timestamp = 3;
+    int64 timestamp = 3;
 }
 
 message RoomInfo {
@@ -104,8 +106,8 @@ message RoomMessage {
 }
 
 message GetMessagesRequest{
-    uint32 limit = 1;
-    uint32 offset = 2;
+    int32 limit = 1;
+    int64 offset_ts = 2;
 }
 message GetMessagesResponse{
     Status status = 1;
