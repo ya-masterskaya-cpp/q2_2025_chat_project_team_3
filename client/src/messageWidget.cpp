@@ -1,52 +1,47 @@
 #include <client/messageWidget.h>
 #include <client/textUtil.h>
+#include <client/message.h>
+#include <client/wsClient.h>
 
 enum {
     ID_COPY = wxID_HIGHEST + 40
 };
 
 MessageWidget::MessageWidget(wxWindow* parent,
-                             const wxString& sender,
-                             const wxString& message,
-                             const wxString& timestamp,
-                             int64_t timestamp_val,
+                             const Message& msg,
                              int lastKnownWrapWidth)
-    : wxPanel(parent, wxID_ANY),
-      m_originalMessage(message), // Store the original message directly in constructor
-      m_timestamp_val(timestamp_val), // Store the raw timestamp value
-      m_messageStaticText(nullptr) // Initialize pointer to null
-{
-    Freeze();
-
+    : wxPanel(parent, wxID_ANY), m_originalMessage{msg.msg}, m_timestamp_val{msg.timestamp} {
     SetBackgroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW));
-
     auto* mainSizer = new wxBoxSizer(wxVERTICAL);
 
     // Header line (user + timestamp)
     auto* headerSizer = new wxBoxSizer(wxHORIZONTAL);
 
+
     // Username (bold)
-    auto* userText = new wxStaticText(this, wxID_ANY, sender);
-    wxFont userFont = userText->GetFont();
+    m_userText = new wxStaticText(this, wxID_ANY, msg.user);
+    wxFont userFont = m_userText->GetFont();
     userFont.SetWeight(wxFONTWEIGHT_BOLD);
-    userText->SetFont(userFont);
-    userText->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
-    headerSizer->Add(userText, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(5));
+    m_userText->SetFont(userFont);
+    m_userText->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
+    headerSizer->Add(m_userText, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(5));
 
     headerSizer->AddStretchSpacer();
 
+    wxString timestamp_str = wxString::FromUTF8(WebSocketClient::formatMessageTimestamp(msg.timestamp));
+
     // Timestamp (smaller, gray)
-    auto* timeText = new wxStaticText(this, wxID_ANY, timestamp);
-    timeText->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_GRAYTEXT));
-    wxFont timeFont = timeText->GetFont();
+    m_timeText = new wxStaticText(this, wxID_ANY, timestamp_str);
+    m_timeText->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_GRAYTEXT));
+    wxFont timeFont = m_timeText->GetFont();
     timeFont.SetPointSize(timeFont.GetPointSize() - 1); // Make it slightly smaller
-    timeText->SetFont(timeFont);
-    headerSizer->Add(timeText, 0, wxALIGN_CENTER_VERTICAL);
+    m_timeText->SetFont(timeFont);
+    headerSizer->Add(m_timeText, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(5));
 
     mainSizer->Add(headerSizer, 0, wxEXPAND | wxBOTTOM, FromDIP(2));
 
     // Wrap the original message using our utility function
-    wxString wrapped = TextUtil::WrapText(this, m_originalMessage, lastKnownWrapWidth, wxSystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT));
+    wxString wrapped = TextUtil::WrapText(this, m_originalMessage, lastKnownWrapWidth - FromDIP(10), wxSystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT));
 
     m_messageStaticText = new wxStaticText(this, wxID_ANY, wrapped,
                                           wxDefaultPosition, wxDefaultSize,
@@ -60,14 +55,21 @@ MessageWidget::MessageWidget(wxWindow* parent,
     SetSizer(mainSizer); // Set the sizer for the panel
 
     Bind(wxEVT_RIGHT_DOWN, &MessageWidget::OnRightClick, this);
-    userText->Bind(wxEVT_RIGHT_DOWN, &MessageWidget::OnRightClick, this);
-    timeText->Bind(wxEVT_RIGHT_DOWN, &MessageWidget::OnRightClick, this);
+    m_userText->Bind(wxEVT_RIGHT_DOWN, &MessageWidget::OnRightClick, this);
+    m_timeText->Bind(wxEVT_RIGHT_DOWN, &MessageWidget::OnRightClick, this);
     m_messageStaticText->Bind(wxEVT_RIGHT_DOWN, &MessageWidget::OnRightClick, this);
 
     Bind(wxEVT_ENTER_WINDOW, &MessageWidget::OnMouseEnter, this);
     Bind(wxEVT_LEAVE_WINDOW, &MessageWidget::OnMouseLeave, this);
+}
 
-    Thaw();
+void MessageWidget::Update(wxWindow* parent, const Message& msg, int lastKnownWrapWidth) {
+    m_originalMessage = msg.msg;
+    m_timestamp_val = msg.timestamp;
+    m_messageStaticText->SetLabelText(TextUtil::WrapText(this, m_originalMessage, lastKnownWrapWidth - FromDIP(10), m_messageStaticText->GetFont()));
+    m_userText->SetLabelText(msg.user);
+    m_timeText->SetLabelText(wxString::FromUTF8(WebSocketClient::formatMessageTimestamp(msg.timestamp)));
+    Layout();
 }
 
 // Method to set the wrapped message based on a given width
@@ -78,12 +80,12 @@ void MessageWidget::SetWrappedMessage(int wrapWidth) {
     wxFont messageFont = m_messageStaticText->GetFont();
 
     // Wrap the original message using our utility function
-    wxString wrapped = TextUtil::WrapText(this, m_originalMessage, wrapWidth, messageFont);
+    wxString wrapped = TextUtil::WrapText(this, m_originalMessage, wrapWidth - FromDIP(10), messageFont);
 
     // Only update the label and re-layout if the wrapped text has actually changed
     // This prevents unnecessary redraws and layout passes.
     if (m_messageStaticText->GetLabel() != wrapped) {
-        m_messageStaticText->SetLabel(wrapped);
+        m_messageStaticText->SetLabelText(wrapped);
     }
 }
 
