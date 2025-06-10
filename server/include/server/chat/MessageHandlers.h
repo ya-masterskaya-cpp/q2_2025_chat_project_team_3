@@ -202,15 +202,8 @@ public:
             co_return resp;
         }
 
-        chat::Envelope user_left_msg;
-        user_left_msg.mutable_user_left()->mutable_user()->set_user_id(wsData->user->id);
-        user_left_msg.mutable_user_left()->mutable_user()->set_user_name(wsData->user->name);
-        user_left_msg.mutable_user_left()->mutable_user()->set_user_room_rights(wsData->room->rights);
-
         room_service.leaveCurrentRoom();
         wsData->room.reset();
-
-        ChatRoomManager::instance().sendToRoom(wsData->room->id, user_left_msg);
 
         setStatus(resp, chat::STATUS_SUCCESS);
         co_return resp;

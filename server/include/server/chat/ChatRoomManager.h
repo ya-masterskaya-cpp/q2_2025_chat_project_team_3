@@ -16,6 +16,8 @@ private:
     ChatRoomManager(const ChatRoomManager&) = delete;
     ChatRoomManager& operator=(const ChatRoomManager&) = delete;
 
+    void sendToRoom_unsafe(int32_t room_id, const chat::Envelope& message) const;
+
     std::unordered_map<int32_t, std::unordered_set<drogon::WebSocketConnectionPtr>> m_user_id_to_conns;
     std::unordered_map<int32_t, std::unordered_set<drogon::WebSocketConnectionPtr>> m_room_to_conns;
     mutable std::shared_mutex m_mutex;
