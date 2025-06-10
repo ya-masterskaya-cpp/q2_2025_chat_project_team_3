@@ -9,6 +9,7 @@ public:
     void addConnectionToRoom(const drogon::WebSocketConnectionPtr& conn);
     void unregisterConnection(const drogon::WebSocketConnectionPtr& conn);
     void sendToRoom(int32_t room_id, const chat::Envelope& message) const;
+    std::vector<chat::UserInfo> getUsersInRoom(int32_t room_id) const;
 
 private:
     ChatRoomManager() = default;

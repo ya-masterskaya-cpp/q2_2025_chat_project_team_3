@@ -22,15 +22,14 @@ UserListPanel::UserListPanel(wxWindow* parent)
     SetSizer(sizer);
 }
 
-void UserListPanel::SetUserList(const std::vector<User>& users) {
+void UserListPanel::SetUserList(std::vector<User> users) {
     m_userContainer->Freeze();
     m_userSizer->Clear(true); // Destroy existing widgets
 
     // Sort the incoming user list by the User::operator<
-    std::vector<User> sortedUsers = users;
-    std::sort(sortedUsers.begin(), sortedUsers.end());
+    std::sort(users.begin(), users.end());
 
-    for (const auto& user : sortedUsers) {
+    for (const auto& user : users) {
         auto* userWidget = new UserNameWidget(m_userContainer, user);
         m_userSizer->Add(userWidget, 0, wxEXPAND | wxALL, FromDIP(2));
     }
@@ -94,26 +93,3 @@ void UserListPanel::RemoveUser(int userId) { // Now accepts user ID
     m_userContainer->Thaw();
 }
 
-// void UserListPanel::OnRightClick(wxMouseEvent& event) {
-//     wxPoint ptClient = event.GetPosition();
-//     int idx = userListBox->HitTest(ptClient);
-//     if(idx == wxNOT_FOUND) { 
-//         event.Skip();
-//         return;
-//     }
-
-//     userListBox->SetSelection(idx);
-
-//     wxMenu menu;
-//     menu.Append(wxID_ANY, "Private message");
-//     menu.AppendSeparator();
-//     menu.Append(wxID_ANY, "Kick user");
-//     menu.Append(wxID_ANY, "Ban user");
-
-//     userListBox->PopupMenu(&menu, ptClient);
-
-//     userListBox->DeselectAll();
-//     userListBox->Refresh();
-
-//     //event.Skip();
-// }

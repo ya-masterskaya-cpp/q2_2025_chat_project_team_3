@@ -6,6 +6,7 @@ class AuthPanel;
 class RoomsPanel;
 class ChatPanel;
 class WebSocketClient;
+class User;
 
 class MainWidget : public wxFrame {
 public:
@@ -14,7 +15,7 @@ public:
 
     void ShowAuth();
     void ShowRooms();
-    void ShowChat();
+    void ShowChat(std::vector<User> users);
 
     AuthPanel* authPanel;
     RoomsPanel* roomsPanel;

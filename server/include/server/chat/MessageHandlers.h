@@ -173,6 +173,16 @@ public:
 
             room_service.joinRoom();
 
+            auto users = ChatRoomManager::instance().getUsersInRoom(req.room_id());
+            *resp.mutable_users() = {std::make_move_iterator(users.begin()), 
+                                      std::make_move_iterator(users.end())};
+
+            chat::Envelope user_joined_msg;
+            user_joined_msg.mutable_user_joined()->mutable_user()->set_user_id(wsData->user->id);
+            user_joined_msg.mutable_user_joined()->mutable_user()->set_user_name(wsData->user->name);
+            user_joined_msg.mutable_user_joined()->mutable_user()->set_user_room_rights(wsData->room->rights);
+            ChatRoomManager::instance().sendToRoom(wsData->room->id, user_joined_msg);
+
             setStatus(resp, chat::STATUS_SUCCESS);
             co_return resp;
         } catch(const std::exception& e) {
@@ -192,8 +202,15 @@ public:
             co_return resp;
         }
 
+        chat::Envelope user_left_msg;
+        user_left_msg.mutable_user_left()->mutable_user()->set_user_id(wsData->user->id);
+        user_left_msg.mutable_user_left()->mutable_user()->set_user_name(wsData->user->name);
+        user_left_msg.mutable_user_left()->mutable_user()->set_user_room_rights(wsData->room->rights);
+
         room_service.leaveCurrentRoom();
         wsData->room.reset();
+
+        ChatRoomManager::instance().sendToRoom(wsData->room->id, user_left_msg);
 
         setStatus(resp, chat::STATUS_SUCCESS);
         co_return resp;

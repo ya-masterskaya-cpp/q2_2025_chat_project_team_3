@@ -79,11 +79,17 @@ message JoinRoomResponse {
     Status status = 1;
     repeated UserInfo users = 2;
 }
+message UserJoinedRoom {
+    UserInfo user = 1;
+}
 
 message LeaveRoomRequest {
 }
 message LeaveRoomResponse {
     Status status = 1;
+}
+message UserLeftRoom {
+    UserInfo user = 1;
 }
 
 message GetRoomsRequest {
@@ -135,5 +141,7 @@ message Envelope {
         GetMessagesRequest get_messages_request = 17;
         GetMessagesResponse get_messages_response = 18;
         GenericError generic_error = 19;
+        UserJoinedRoom user_joined = 20;
+        UserLeftRoom user_left = 21;
     }
 }

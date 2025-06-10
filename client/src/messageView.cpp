@@ -14,7 +14,7 @@ MessageView::MessageView(ChatPanel* parent)
       m_lastKnownWrapWidth(-1)
 {
     SetBackgroundStyle(wxBG_STYLE_PAINT);
-    Bind(wxEVT_PAINT, &MessageView::OnPaint, this);
+    //Bind(wxEVT_PAINT, &MessageView::OnPaint, this);
     Bind(wxEVT_SIZE, &MessageView::OnSize, this);
     Bind(wxEVT_SCROLLWIN_LINEUP, &MessageView::OnScroll, this);
     Bind(wxEVT_SCROLLWIN_LINEDOWN, &MessageView::OnScroll, this);
@@ -90,8 +90,8 @@ void MessageView::OnPaint(wxPaintEvent& event) {
 
 void MessageView::OnScroll(wxScrollWinEvent& event) {
     event.Skip();
-    if (m_loadingOlder || m_loadingNewer) return;
     UpdateWidgetPositions();
+    if (m_loadingOlder || m_loadingNewer) return;
     wxCoord firstVisiblePixel = GetVisibleRowsBegin() * SCROLL_STEP;
     wxCoord totalHeight = GetUnitCount() * SCROLL_STEP;
     wxCoord visibleHeight = GetClientSize().y;
@@ -104,14 +104,14 @@ void MessageView::UpdateWidgetPositions() {
     wxCoord scrollY = GetVisibleRowsBegin() * SCROLL_STEP;
     wxCoord clientHeight = GetClientSize().y;
     wxCoord containerWidth = GetClientSize().x;
-    const wxCoord padding = SCROLL_STEP * 5; 
+    const wxCoord padding = SCROLL_STEP * 10; 
     wxCoord currentY = 0;
     for (auto* widget : m_messageWidgets) {
         wxCoord h = widget->GetBestSize().y;
         if ((currentY + h) > (scrollY - padding) && (currentY < scrollY + clientHeight + padding)) {
             wxCoord physicalY = currentY - scrollY;
             widget->SetSize(0, physicalY, containerWidth, -1);
-            //widget->Layout();
+            widget->Layout();
             widget->Show();
         } else {
             widget->Hide();

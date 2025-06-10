@@ -8,6 +8,7 @@
 class MainWidget;
 struct Room;
 struct Message;
+struct User;
 
 class WebSocketClient {
 public:
@@ -35,12 +36,13 @@ private:
     void showError(const wxString& msg);
     void showInfo(const wxString& msg);
     void updateRoomsPanel(const std::vector<Room>& rooms);
-    void showChat();
+    void showChat(std::vector<User> users);
     void showRooms();
     void showRoomMessage(const chat::MessageInfo& mi);
     void showMessageHistory(const std::vector<Message>& messages);
-
-
+    void addUser(User user);
+    void removeUser(User user);
+    
     MainWidget* ui;
     std::shared_ptr<drogon::WebSocketConnection> conn;
     drogon::WebSocketClientPtr client;

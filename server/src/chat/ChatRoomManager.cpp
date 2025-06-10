@@ -7,6 +7,28 @@ ChatRoomManager& ChatRoomManager::instance() {
     return inst;
 }
 
+std::vector<chat::UserInfo> ChatRoomManager::getUsersInRoom(int32_t room_id) const {
+    std::vector<chat::UserInfo> res;
+    {
+        std::shared_lock lock(m_mutex);
+
+        auto it = m_room_to_conns.find(room_id);
+
+        if(it != m_room_to_conns.end()) {
+            res.reserve(it->second.size());
+            for(const auto& conn : it->second) {
+                auto& ws_data = conn->getContextRef<WsData>();
+                chat::UserInfo ui;
+                ui.set_user_id(ws_data.user->id);
+                ui.set_user_name(ws_data.user->name);
+                ui.set_user_room_rights(ws_data.room->rights);
+                res.emplace_back(std::move(ui));
+            }
+        }
+    }
+    return res;
+}
+
 void ChatRoomManager::addConnectionToRoom(const drogon::WebSocketConnectionPtr& conn) {
     auto& ws_data = conn->getContextRef<WsData>();
     int32_t user_id = ws_data.user->id;

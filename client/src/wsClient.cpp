@@ -3,6 +3,7 @@
 #include <client/authPanel.h>
 #include <client/roomsPanel.h>
 #include <client/chatPanel.h>
+#include <client/userListPanel.h>
 #include <client/message.h>
 #include <client/messageView.h>
 #include <drogon/HttpRequest.h>
@@ -161,10 +162,22 @@ void WebSocketClient::handleMessage(const std::string& msg) {
         }
         case chat::Envelope::kJoinRoomResponse: {
             if(statusOk(env.join_room_response().status())) {
-                showChat();
+                std::vector<User> users;
+                for(const auto& user : env.join_room_response().users()) {
+                    users.emplace_back(user.user_id(), wxString::FromUTF8(user.user_name()), user.user_room_rights());
+                }
+                showChat(std::move(users));
             } else {
                 showError("Failed to join room.");
             }
+            break;
+        }
+        case chat::Envelope::kUserJoined: {
+            addUser({env.user_joined().user().user_id(), wxString::FromUTF8(env.user_joined().user().user_name()), env.user_joined().user().user_room_rights()});
+            break;
+        }
+        case chat::Envelope::kUserLeft: {
+            removeUser({env.user_left().user().user_id(), wxString::FromUTF8(env.user_left().user().user_name()), env.user_left().user().user_room_rights()});
             break;
         }
         case chat::Envelope::kLeaveRoomResponse: {
@@ -241,12 +254,20 @@ void WebSocketClient::updateRoomsPanel(const std::vector<Room>& rooms) {
     wxTheApp->CallAfter([this, rooms] { ui->roomsPanel->UpdateRoomList(rooms); });
 }
 
-void WebSocketClient::showChat() {
-    wxTheApp->CallAfter([this] { ui->ShowChat(); });
+void WebSocketClient::showChat(std::vector<User> users) {
+    wxTheApp->CallAfter([this, users = std::move(users)] { ui->ShowChat(std::move(users)); });
 }
 
 void WebSocketClient::showRooms() {
     wxTheApp->CallAfter([this] { ui->ShowRooms(); });
+}
+
+void WebSocketClient::addUser(User user) {
+    wxTheApp->CallAfter([this, user = std::move(user)] { ui->chatPanel->m_userListPanel->AddUser(std::move(user)); });
+}
+
+void WebSocketClient::removeUser(User user) {
+    wxTheApp->CallAfter([this, user = std::move(user)] { ui->chatPanel->m_userListPanel->RemoveUser(user.id); });
 }
 
 void WebSocketClient::showRoomMessage(const chat::MessageInfo& mi) {

@@ -8,16 +8,16 @@ UserNameWidget::UserNameWidget(wxWindow* parent, const User& user)
     // Set color based on role
     wxColour textColor;
     switch (user.role) {
-        case UserRole::Owner:
+        case chat::UserRights::OWNER:
             textColor = *wxRED;
             break;
-        case UserRole::Admin:
+        case chat::UserRights::ADMIN:
             textColor = *wxGREEN;
             break;
-        case UserRole::Moderator:
+        case chat::UserRights::MODERATOR:
             textColor = *wxBLUE;
             break;
-        case UserRole::Regular:
+        case chat::UserRights::REGULAR:
         default:
             textColor = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT);
             break;
@@ -26,4 +26,31 @@ UserNameWidget::UserNameWidget(wxWindow* parent, const User& user)
 
     sizer->Add(m_usernameText, 0, wxALIGN_CENTER_VERTICAL | wxALL, 5);
     SetSizer(sizer);
+
+    Bind(wxEVT_RIGHT_DOWN, &UserNameWidget::OnRightClick, this);
+    m_usernameText->Bind(wxEVT_RIGHT_DOWN, &UserNameWidget::OnRightClick, this);
+}
+
+void UserNameWidget::OnRightClick(wxMouseEvent& event) {
+    UserNameWidget* clickedWidget = static_cast<UserNameWidget*>(event.GetEventObject());
+    if (!clickedWidget) {
+        event.Skip();
+        return;
+    }
+    
+    // Store the selected user for menu actions
+    //m_selectedUser = clickedWidget->GetUser();
+    
+    wxMenu menu;
+    menu.Append(wxID_ANY, "Private message");
+    menu.AppendSeparator();
+    menu.Append(wxID_ANY, "Kick user");
+    menu.Append(wxID_ANY, "Ban user");
+    
+    // Bind menu events
+    //menu.Bind(wxEVT_MENU, &UserListPanel::OnPrivateMessage, this, ID_PRIVATE_MESSAGE);
+    //menu.Bind(wxEVT_MENU, &UserListPanel::OnKickUser, this, ID_KICK_USER);
+    //menu.Bind(wxEVT_MENU, &UserListPanel::OnBanUser, this, ID_BAN_USER);
+    
+    PopupMenu(&menu, event.GetPosition());
 }

@@ -12,6 +12,8 @@ public:
     }
 
 private:
+    void OnRightClick(wxMouseEvent& event);
+
     wxStaticText* m_usernameText;
     User m_user;
 };

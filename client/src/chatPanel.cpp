@@ -11,8 +11,8 @@ enum { ID_SEND = wxID_HIGHEST+30, ID_LEAVE, ID_RESIZE_TIMER };
 wxBEGIN_EVENT_TABLE(ChatPanel, wxPanel)
     EVT_BUTTON(ID_SEND, ChatPanel::OnSend)
     EVT_BUTTON(ID_LEAVE, ChatPanel::OnLeave)
-    EVT_TIMER(ID_RESIZE_TIMER, ChatPanel::OnResizeTimerTick)
-    EVT_SIZE(ChatPanel::OnChatPanelSize)
+    //EVT_TIMER(ID_RESIZE_TIMER, ChatPanel::OnResizeTimerTick)
+    //EVT_SIZE(ChatPanel::OnChatPanelSize)
 wxEND_EVENT_TABLE()
 
 ChatPanel::ChatPanel(MainWidget* parent)

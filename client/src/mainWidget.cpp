@@ -42,11 +42,13 @@ void MainWidget::ShowRooms() {
     wsClient->requestRoomList();
 }
 
-void MainWidget::ShowChat() {
+void MainWidget::ShowChat(std::vector<User> users) {
+    users.emplace_back(1000, "admin", chat::UserRights::ADMIN);
+    users.emplace_back(1001, "moderator", chat::UserRights::MODERATOR);
     authPanel->Hide();
     roomsPanel->Hide();
     chatPanel->Show();
-    chatPanel->m_userListPanel->SetUserList({{0, "user1", UserRole::Regular}, {1, "user2", UserRole::Regular}, {2, "user3", UserRole::Regular}});
+    chatPanel->m_userListPanel->SetUserList(std::move(users));
     chatPanel->m_messageView->Start();
     Layout();
 }
