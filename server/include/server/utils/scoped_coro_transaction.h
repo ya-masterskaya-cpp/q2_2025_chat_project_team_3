@@ -1,5 +1,7 @@
 #pragma once
 
+#include <drogon/drogon.h>
+#include <optional>
 #include <server/utils/utils.h>
 
 using ScopedTransactionResult =

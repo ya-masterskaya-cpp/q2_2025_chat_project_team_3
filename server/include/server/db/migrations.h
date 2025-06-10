@@ -1,5 +1,8 @@
 #pragma once
 
+#include <fstream>
+#include <filesystem>
+
 #include <server/models/Migrations.h>
 
 struct MigrationFile {
@@ -51,14 +54,8 @@ applyMigrations(drogon::orm::DbClientPtr db, const std::vector<MigrationFile> &f
     namespace models = drogon_model::drogon_test;
     using namespace drogon::orm;
 
-    bool exists = true;
-    try {
-        co_await db->execSqlCoro("SELECT * FROM migrations");
-    } catch(std::exception&) {
-        exists = false;
-    }
-    
-    if(!exists) {
+    auto rc = co_await db->execSqlCoro("SELECT to_regclass('public.migrations')");
+    if(rc.empty() || rc[0][0].isNull()) {
         LOG_INFO << "No migrations table; running main.sql";
 
         std::ifstream mf("db/main.sql");

@@ -1,11 +1,9 @@
 #pragma once
-
 #include <wx/wx.h>
-
-class AuthPanel;
-class RoomsPanel;
-class ChatPanel;
-class WebSocketClient;
+#include <client/wsClient.h>
+#include <client/authPanel.h>
+#include <client/roomsPanel.h>
+#include <client/chatPanel.h>
 
 class MainWidget : public wxFrame {
 public:

@@ -1,7 +1,5 @@
 #pragma once
-
 #include <wx/wx.h>
-
 class MainWidget;
 
 class AuthPanel : public wxPanel {

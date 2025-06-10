@@ -1,6 +1,6 @@
 #!/bin/bash
 
-./build/vcpkg_installed/x64-linux/tools/drogon/drogon_ctl create model server/src/models "$@"
+./build/linux-debug-server/vcpkg_installed/x64-linux/tools/drogon/drogon_ctl create model server/src/models "$@"
 
 # Loop over all .h files in ./server/src/models/
 for header in ./server/src/models/*.h; do

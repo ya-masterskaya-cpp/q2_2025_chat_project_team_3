@@ -1,9 +1,8 @@
 #pragma once
 
-template <typename Response>
-void setStatus(Response& resp, chat::StatusCode code) {
-    resp.mutable_status()->set_code(code);
-}
+#include <string>     
+#include <drogon/drogon.h> 
+#include <common/proto/chat.pb.h>
 
 template <typename Response>
 void setStatus(Response& resp, chat::StatusCode code, const std::string& msg) {

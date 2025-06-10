@@ -1,11 +1,13 @@
 #pragma once
-
 #include <wx/wx.h>
-
+#include <vector>
+#include <string>
+#include <cstdint>
+#include <unordered_map>
 class MainWidget;
 
 struct Room {
-    int32_t room_id;
+    uint32_t room_id;
     std::string room_name;
 };
 

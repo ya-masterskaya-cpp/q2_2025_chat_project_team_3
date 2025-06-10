@@ -26,4 +26,4 @@ target_include_directories(common_lib PUBLIC
     ${PROTO_INCLUDE_DIR}
 )
 
-target_link_libraries(common_lib PUBLIC Drogon::Drogon protobuf::libprotobuf-lite)
+target_link_libraries(common_lib PUBLIC Drogon::Drogon protobuf::libprotobuf)
