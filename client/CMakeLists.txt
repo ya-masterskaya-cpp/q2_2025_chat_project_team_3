@@ -14,6 +14,7 @@ add_executable(client_app
     src/userListPanel.cpp
     src/textUtil.cpp
     src/userNameWidget.cpp
+    src/messageView.cpp
 )
 
 target_include_directories(client_app PRIVATE

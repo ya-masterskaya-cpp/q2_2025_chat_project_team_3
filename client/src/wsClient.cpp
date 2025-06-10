@@ -4,6 +4,7 @@
 #include <client/roomsPanel.h>
 #include <client/chatPanel.h>
 #include <client/message.h>
+#include <client/messageView.h>
 #include <drogon/HttpRequest.h>
 #include <drogon/HttpAppFramework.h>
 
@@ -249,20 +250,22 @@ void WebSocketClient::showRooms() {
 }
 
 void WebSocketClient::showRoomMessage(const chat::MessageInfo& mi) {
-    wxTheApp->CallAfter([this, user = mi.from(), text = mi.message(), time = mi.timestamp()] {
-        std::string timeStr = formatMessageTimestamp(time);
-        ui->chatPanel->AppendMessage(
-            wxString(timeStr.c_str(), wxConvUTF8),
-            wxString(user.user_name().c_str(), wxConvUTF8),
-            wxString(text.c_str(), wxConvUTF8),
-            time);
+    std::vector<Message> messages;
+    messages.emplace_back(Message{wxString::FromUTF8(mi.from().user_name())
+        , wxString::FromUTF8(mi.message())
+        , mi.timestamp()});
+
+    wxTheApp->CallAfter([this, messages] {
+        LOG_DEBUG << "Stared singular add";
+        ui->chatPanel->m_messageView->OnMessagesReceived(messages, false);
+        LOG_DEBUG << "Finished singular add";
     });
 }
 
 void WebSocketClient::showMessageHistory(const std::vector<Message> &messages) {
     wxTheApp->CallAfter([this, messages] {
         LOG_DEBUG << "Stared bulk add";
-        ui->chatPanel->AppendMessages(messages, true);
+        ui->chatPanel->m_messageView->OnMessagesReceived(messages, true);
         LOG_DEBUG << "Finished bulk add";
     });
 }

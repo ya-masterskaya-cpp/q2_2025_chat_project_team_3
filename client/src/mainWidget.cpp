@@ -4,6 +4,7 @@
 #include <client/chatPanel.h>
 #include <client/wsClient.h>
 #include <client/userListPanel.h>
+#include <client/messageView.h>
 
 MainWidget::MainWidget() : wxFrame(NULL, wxID_ANY, "Drogon wxWidgets Chat Client", wxDefaultPosition, wxSize(450, 600)) {
     wsClient = new WebSocketClient(this);
@@ -46,6 +47,6 @@ void MainWidget::ShowChat() {
     roomsPanel->Hide();
     chatPanel->Show();
     chatPanel->m_userListPanel->SetUserList({{0, "user1", UserRole::Regular}, {1, "user2", UserRole::Regular}, {2, "user3", UserRole::Regular}});
-    chatPanel->LoadInitialMessages();
+    chatPanel->m_messageView->Start();
     Layout();
 }
