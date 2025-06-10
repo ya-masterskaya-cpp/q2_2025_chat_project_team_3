@@ -4,7 +4,7 @@ UserNameWidget::UserNameWidget(wxWindow* parent, const User& user)
     : wxPanel(parent, wxID_ANY), m_user(user) {
     auto* sizer = new wxBoxSizer(wxHORIZONTAL);
     m_usernameText = new wxStaticText(this, wxID_ANY, user.username);
-
+    m_usernameText->Wrap(-1);
     // Set color based on role
     wxColour textColor;
     switch (user.role) {

@@ -23,6 +23,7 @@ MessageWidget::MessageWidget(wxWindow* parent,
     wxFont userFont = m_userText->GetFont();
     userFont.SetWeight(wxFONTWEIGHT_BOLD);
     m_userText->SetFont(userFont);
+    m_userText->Wrap(-1);
     m_userText->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
     headerSizer->Add(m_userText, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(5));
 
@@ -36,6 +37,7 @@ MessageWidget::MessageWidget(wxWindow* parent,
     wxFont timeFont = m_timeText->GetFont();
     timeFont.SetPointSize(timeFont.GetPointSize() - 1); // Make it slightly smaller
     m_timeText->SetFont(timeFont);
+    m_timeText->Wrap(-1);
     headerSizer->Add(m_timeText, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(5));
 
     mainSizer->Add(headerSizer, 0, wxEXPAND | wxBOTTOM, FromDIP(2));
@@ -46,6 +48,7 @@ MessageWidget::MessageWidget(wxWindow* parent,
     m_messageStaticText = new wxStaticText(this, wxID_ANY, wrapped,
                                           wxDefaultPosition, wxDefaultSize,
                                           wxALIGN_LEFT); // Ensure left alignment
+    m_messageStaticText->Wrap(-1);
     //m_messageStaticText->SetBackgroundColour(*wxYELLOW); // For debugging the text control width
 
     // Add wxStaticText to the sizer. Proportion 1 allows it to expand vertically
