@@ -1,11 +1,17 @@
 #pragma once
-#include <string>
-#include <optional>
+
+struct User {
+    int32_t id;
+    std::string name;
+};
+
+struct CurrentRoom {
+    int32_t id;
+    chat::UserRights rights;
+};
 
 //user's data associated with websocket
 struct WsData {
-    bool authenticated{false};
-    std::string username;
-    std::optional<uint32_t> currentRoomId;
-    uint32_t user_id;
+    std::optional<User> user;
+    std::optional<CurrentRoom> room;
 };

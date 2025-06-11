@@ -1,9 +1,12 @@
 #pragma once
+
 #include <wx/wx.h>
-#include <client/wsClient.h>
-#include <client/authPanel.h>
-#include <client/roomsPanel.h>
-#include <client/chatPanel.h>
+
+class AuthPanel;
+class RoomsPanel;
+class ChatPanel;
+class WebSocketClient;
+class User;
 
 class MainWidget : public wxFrame {
 public:
@@ -12,7 +15,7 @@ public:
 
     void ShowAuth();
     void ShowRooms();
-    void ShowChat();
+    void ShowChat(std::vector<User> users);
 
     AuthPanel* authPanel;
     RoomsPanel* roomsPanel;

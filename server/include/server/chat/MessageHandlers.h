@@ -1,23 +1,22 @@
 #pragma once
 
+#include <drogon/orm/CoroMapper.h>
+
+#include <server/chat/WsData.h>
+#include <server/chat/IRoomService.h>
+#include <server/chat/ChatRoomManager.h>
 #include <server/utils/utils.h>
 #include <server/utils/scoped_coro_transaction.h>
-#include <server/chat/WsData.h>
-#include <server/chat/UserConnectionRegistry.h>
-#include <server/chat/IAuthNotifier.h>
-#include <server/chat/UserRoomRegistry.h>
-#include <drogon/drogon.h> // needed for logging
-#include <drogon/orm/CoroMapper.h> // needed for ORM
+
 #include <server/models/Users.h>
 #include <server/models/Rooms.h>
 #include <server/models/Messages.h>
-#include <common/proto/chat.pb.h>
 
 namespace models = drogon_model::drogon_test;
 
 class MessageHandlers {
 public:
-    static drogon::Task<chat::AuthResponse> handleAuth(std::shared_ptr<WsData> wsData, const chat::AuthRequest& req, IAuthNotifier& notifier) {
+    static drogon::Task<chat::AuthResponse> handleAuth(const std::shared_ptr<WsData>& wsData, const chat::AuthRequest& req) {
         chat::AuthResponse resp;
         auto db = drogon::app().getDbClient();
         if(!db) {
@@ -36,12 +35,8 @@ public:
                 setStatus(resp, chat::STATUS_UNAUTHORIZED, "Invalid credentials.");
                 co_return resp;
             }
-            wsData->authenticated = true;
-            wsData->username = req.username();
-            wsData->user_id = *users.front().getUserId();
-            notifier.onUserAuthenticated(req.username());
-            setStatus(resp, chat::STATUS_SUCCESS, "OK");
-            resp.set_token("dummy_token");
+            wsData->user = User{*users.front().getUserId(), req.username()};
+            setStatus(resp, chat::STATUS_SUCCESS);
             co_return resp;
         } catch(const std::exception& e) {
             setStatus(resp, chat::STATUS_FAILURE, std::string("Auth failed: ") + e.what());
@@ -80,7 +75,7 @@ public:
                 co_return resp;
             }
 
-            setStatus(resp, chat::STATUS_SUCCESS, "Registered!");
+            setStatus(resp, chat::STATUS_SUCCESS);
             co_return resp;
         } catch(const std::exception& e) {
             LOG_ERROR << "Register error: " << e.what();
@@ -89,13 +84,13 @@ public:
         }
     }
 
-    static drogon::Task<chat::SendMessageResponse> handleSendMessage(std::shared_ptr<WsData> wsData, const chat::SendMessageRequest& req) {
+    static drogon::Task<chat::SendMessageResponse> handleSendMessage(const std::shared_ptr<WsData>& wsData, const chat::SendMessageRequest& req) {
         chat::SendMessageResponse resp;
-        if(!wsData->authenticated) {
+        if(!wsData->user) {
             setStatus(resp, chat::STATUS_UNAUTHORIZED, "User not authenticated.");
             co_return resp;
         }
-        if(!wsData->currentRoomId.has_value()) {
+        if(!wsData->room) {
             setStatus(resp, chat::STATUS_FAILURE, "User is not in any room.");
             co_return resp;
         }
@@ -103,17 +98,6 @@ public:
             setStatus(resp, chat::STATUS_FAILURE, "Empty 'message' field.");
             co_return resp;
         }
-        uint32_t room_id = *wsData->currentRoomId;
-        std::string username = wsData->username;
-        uint64_t time = trantor::Date::now().microSecondsSinceEpoch();
-
-        // Build and broadcast RoomMessage
-        chat::Envelope msgEnv;
-        auto* msg = msgEnv.mutable_room_message();
-        auto* message_info = msg->mutable_message();
-        message_info->set_from(username);
-        message_info->set_message(req.message());
-        message_info->set_timestamp(time);
 
         auto db = drogon::app().getDbClient();
         if(!db) {
@@ -127,8 +111,8 @@ public:
                     try {
                         models::Messages m;
                         m.setMessageText(req.message());
-                        m.setRoomId(*wsData->currentRoomId);
-                        m.setUserId(wsData->user_id);
+                        m.setRoomId(wsData->room->id);
+                        m.setUserId(wsData->user->id);
                         co_await drogon::orm::CoroMapper<models::Messages>(tx).insert(m);
                         co_return std::nullopt;
                     } catch(const drogon::orm::DrogonDbException& e) {
@@ -142,51 +126,34 @@ public:
                 setStatus(resp, chat::STATUS_FAILURE, *err);
                 co_return resp;
             }
-            } catch(const std::exception& e) {
+        } catch(const std::exception& e) {
             LOG_ERROR << "Inser message error: " << e.what();
             setStatus(resp, chat::STATUS_FAILURE, std::string("Insert message failed: ") + e.what());
             co_return resp;
         }
-        for(const auto& user : UserRoomRegistry::instance().getUsersInRoom(room_id)) {
-            UserConnectionRegistry::instance().sendToUser(user, msgEnv);
-        }
 
-        setStatus(resp, chat::STATUS_SUCCESS, "Message sent");
+        // Build and broadcast RoomMessage
+        chat::Envelope msgEnv;
+        auto* msg = msgEnv.mutable_room_message();
+        auto* message_info = msg->mutable_message();
+        auto* user_info = message_info->mutable_from();
+
+        message_info->set_message(req.message());
+        message_info->set_timestamp(trantor::Date::now().microSecondsSinceEpoch());
+
+        user_info->set_user_id(wsData->user->id);
+        user_info->set_user_name(wsData->user->name);
+
+        ChatRoomManager::instance().sendToRoom(wsData->room->id, msgEnv);
+
+        setStatus(resp, chat::STATUS_SUCCESS);
         co_return resp;
     }
 
-    static drogon::Task<chat::GetUsersResponse> handleGetUsers(std::shared_ptr<WsData> wsData, const chat::GetUsersRequest&) {
-        chat::GetUsersResponse resp;
-        if(!wsData->authenticated) {
-            setStatus(resp, chat::STATUS_UNAUTHORIZED, "Not authenticated");
-            co_return resp;
-        }
-        auto db = drogon::app().getDbClient();
-        if(!db) {
-            setStatus(resp, chat::STATUS_FAILURE, "Server configuration error: DB not available.");
-            co_return resp;
-        }
-        try {
-            auto users = co_await drogon::orm::CoroMapper<models::Users>(db).findAll();
-            for(auto& u : users) {
-                resp.add_users(u.getValueOfUsername());
-            }
-            setStatus(resp, chat::STATUS_SUCCESS, "Fetched users");
-            co_return resp;
-        } catch(const std::exception& e) {
-            setStatus(resp, chat::STATUS_FAILURE, "Database error while fetching users.");
-            co_return resp;
-        }
-    }
-
-    static drogon::Task<chat::JoinRoomResponse> handleJoinRoom(std::shared_ptr<WsData> wsData, const chat::JoinRoomRequest& req) {
+    static drogon::Task<chat::JoinRoomResponse> handleJoinRoom(const std::shared_ptr<WsData>& wsData, const chat::JoinRoomRequest& req, IRoomService& room_service) {
         chat::JoinRoomResponse resp;
-        if(!wsData->authenticated) {
+        if(!wsData->user) {
             setStatus(resp, chat::STATUS_UNAUTHORIZED, "User not authenticated.");
-            co_return resp;
-        }
-        if(!req.has_room_id()) {
-            setStatus(resp, chat::STATUS_FAILURE, "Room id cannot be empty.");
             co_return resp;
         }
         auto db = drogon::app().getDbClient();
@@ -196,15 +163,27 @@ public:
         }
         try {
             using namespace drogon::orm;
-            auto rooms = co_await drogon::orm::CoroMapper<models::Rooms>(db)
+            auto rooms = co_await CoroMapper<models::Rooms>(db)
                 .findBy(Criteria(models::Rooms::Cols::_room_id, CompareOperator::EQ, req.room_id()));
             if(rooms.empty()) {
                 setStatus(resp, chat::STATUS_NOT_FOUND, "Room does not exist.");
                 co_return resp;
             }
-            wsData->currentRoomId = req.room_id();
-            UserRoomRegistry::instance().addUserToRoom(wsData->username, req.room_id());
-            setStatus(resp, chat::STATUS_SUCCESS, "Joined room");
+            wsData->room = CurrentRoom{req.room_id(), chat::UserRights::REGULAR};
+
+            room_service.joinRoom();
+
+            auto users = ChatRoomManager::instance().getUsersInRoom(req.room_id());
+            *resp.mutable_users() = {std::make_move_iterator(users.begin()), 
+                                      std::make_move_iterator(users.end())};
+
+            chat::Envelope user_joined_msg;
+            user_joined_msg.mutable_user_joined()->mutable_user()->set_user_id(wsData->user->id);
+            user_joined_msg.mutable_user_joined()->mutable_user()->set_user_name(wsData->user->name);
+            user_joined_msg.mutable_user_joined()->mutable_user()->set_user_room_rights(wsData->room->rights);
+            ChatRoomManager::instance().sendToRoom(wsData->room->id, user_joined_msg);
+
+            setStatus(resp, chat::STATUS_SUCCESS);
             co_return resp;
         } catch(const std::exception& e) {
             setStatus(resp, chat::STATUS_FAILURE, "Failed to join room: " + std::string(e.what()));
@@ -212,26 +191,27 @@ public:
         }
     }
 
-    static drogon::Task<chat::LeaveRoomResponse> handleLeaveRoom(std::shared_ptr<WsData> wsData, const chat::LeaveRoomRequest&) {
+    static drogon::Task<chat::LeaveRoomResponse> handleLeaveRoom(const std::shared_ptr<WsData>& wsData, const chat::LeaveRoomRequest&, IRoomService& room_service) {
         chat::LeaveRoomResponse resp;
-        if(!wsData->authenticated) {
+        if(!wsData->user) {
             setStatus(resp, chat::STATUS_UNAUTHORIZED, "User not authenticated.");
             co_return resp;
         }
-        if(!wsData->currentRoomId) {
+        if(!wsData->room) {
             setStatus(resp, chat::STATUS_FAILURE, "User is not in any room.");
             co_return resp;
         }
-        uint32_t leftRoomId = *wsData->currentRoomId;
-        wsData->currentRoomId.reset();
-        UserRoomRegistry::instance().removeUser(wsData->username);
-        setStatus(resp, chat::STATUS_SUCCESS, "Left room");
+
+        room_service.leaveCurrentRoom();
+        wsData->room.reset();
+
+        setStatus(resp, chat::STATUS_SUCCESS);
         co_return resp;
     }
 
-    static drogon::Task<chat::GetRoomsResponse> handleGetRooms(std::shared_ptr<WsData> wsData, const chat::GetRoomsRequest&) {
+    static drogon::Task<chat::GetRoomsResponse> handleGetRooms(const std::shared_ptr<WsData>& wsData, const chat::GetRoomsRequest&) {
         chat::GetRoomsResponse resp;
-        if(!wsData->authenticated) {
+        if(!wsData->user) {
             setStatus(resp, chat::STATUS_UNAUTHORIZED, "User not authenticated.");
             co_return resp;
         }
@@ -247,7 +227,7 @@ public:
                 room_info->set_room_id(room.getValueOfRoomId());
                 room_info->set_room_name(room.getValueOfRoomName());
             }
-            setStatus(resp, chat::STATUS_SUCCESS, "Fetched rooms");
+            setStatus(resp, chat::STATUS_SUCCESS);
             co_return resp;
         } catch(const std::exception& e) {
             setStatus(resp, chat::STATUS_FAILURE, "Failed to retrieve rooms: " + std::string(e.what()));
@@ -255,9 +235,9 @@ public:
         }
     }
 
-    static drogon::Task<chat::CreateRoomResponse> handleCreateRoom(std::shared_ptr<WsData> wsData, const chat::CreateRoomRequest& req) {
+    static drogon::Task<chat::CreateRoomResponse> handleCreateRoom(const std::shared_ptr<WsData>& wsData, const chat::CreateRoomRequest& req) {
         chat::CreateRoomResponse resp;
-        if(!wsData->authenticated) {
+        if(!wsData->user) {
             setStatus(resp, chat::STATUS_UNAUTHORIZED, "Not authenticated");
             co_return resp;
         }
@@ -286,8 +266,8 @@ public:
                 setStatus(resp, chat::STATUS_FAILURE, *err);
                 co_return resp;
             }
-            resp.set_room_id(room_id);
-            setStatus(resp, chat::STATUS_SUCCESS, "Created room");
+            resp.mutable_info()->set_room_id(room_id);
+            setStatus(resp, chat::STATUS_SUCCESS);
             co_return resp;
         } catch(const std::exception& e) {
             LOG_ERROR << "Create room error: " << e.what();
@@ -296,13 +276,13 @@ public:
         }
     }
 
-    static drogon::Task<chat::GetMessagesResponse> handleGetMessages(std::shared_ptr<WsData> wsData, const chat::GetMessagesRequest& req) {
+    static drogon::Task<chat::GetMessagesResponse> handleGetMessages(const std::shared_ptr<WsData>& wsData, const chat::GetMessagesRequest& req) {
         chat::GetMessagesResponse resp;
-        if(!wsData->authenticated) {
+        if(!wsData->user) {
             setStatus(resp, chat::STATUS_UNAUTHORIZED, "User not authenticated.");
             co_return resp;
         }
-        if(!wsData->currentRoomId) {
+        if(!wsData->room) {
             setStatus(resp, chat::STATUS_FAILURE, "User is not in any room.");
             co_return resp;
         }
@@ -314,17 +294,36 @@ public:
         try {
             using namespace drogon::orm;
             auto mapper = drogon::orm::CoroMapper<models::Messages>(db);
+
+            auto limit = req.limit();
+
+            LOG_DEBUG << "Limit: " + std::to_string(limit);
+            LOG_DEBUG << "Ts: " + std::to_string(req.offset_ts());
+
+            auto criteria = Criteria(models::Messages::Cols::_created_at, 
+                                    limit > 0 ? CompareOperator::LT : CompareOperator::GT, 
+                                    trantor::Date(req.offset_ts()));
+            auto order = limit > 0 ? SortOrder::DESC : SortOrder::ASC;
+            limit = std::abs(limit);
+
             auto messages = co_await mapper
-            .orderBy(models::Messages::Cols::_created_at, SortOrder::DESC)
-            .limit(req.limit())
-            .findBy(Criteria(models::Messages::Cols::_room_id, CompareOperator::EQ, *wsData->currentRoomId));
-                for(const auto& message : messages) {
-                    chat::MessageInfo* message_info = resp.add_message();
-                    message_info->set_message(*message.getMessageText());
-                    message_info->set_from(*message.getUser(db).getUsername());
-                    message_info->set_timestamp(message.getCreatedAt()->microSecondsSinceEpoch());
+                .orderBy(models::Messages::Cols::_created_at, order)
+                .limit(limit)
+                .findBy(Criteria(models::Messages::Cols::_room_id, CompareOperator::EQ, wsData->room->id) && criteria);
+
+            for(const auto& message : messages) {
+                auto* message_info = resp.add_message();
+                message_info->set_message(message.getValueOfMessageText());
+                LOG_DEBUG << std::string("Message text \"") + message.getValueOfMessageText() + "\"";
+                message_info->set_timestamp(message.getValueOfCreatedAt().microSecondsSinceEpoch());
+                LOG_DEBUG << std::string("Message timestamp \"") + std::to_string(message.getValueOfCreatedAt().microSecondsSinceEpoch()) + "\"";
+                auto* user_info = message_info->mutable_from();
+                auto user = message.getUser(db); //TODO this is blocking
+
+                user_info->set_user_id(user.getValueOfUserId());
+                user_info->set_user_name(user.getValueOfUsername());
             }
-            setStatus(resp, chat::STATUS_SUCCESS, "Messsage history");
+            setStatus(resp, chat::STATUS_SUCCESS);
             co_return resp;
         } catch(const std::exception& e) {
             setStatus(resp, chat::STATUS_FAILURE, "Failed to retrieve messages: " + std::string(e.what()));

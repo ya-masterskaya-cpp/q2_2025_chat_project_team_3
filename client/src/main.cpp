@@ -1,5 +1,4 @@
 #include <wx/wx.h>
-#include <thread>
 #include <drogon/HttpAppFramework.h>
 #include <client/mainWidget.h>
 

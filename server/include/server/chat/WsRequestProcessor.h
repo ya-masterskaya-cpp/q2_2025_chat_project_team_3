@@ -1,10 +1,9 @@
 #pragma once
 
-#include <drogon/drogon.h>
 #include <server/chat/WsData.h>
 #include <server/utils/utils.h>
 #include <server/chat/MessageHandlerService.h>
-#include <server/chat/WsAuthNotifierImpl.h>
+#include <server/chat/DrogonRoomService.h>
 
 class WsRequestProcessor {
 public:
@@ -15,8 +14,8 @@ public:
                 sendEnvelope(conn, makeGenericErrorEnvelope("Malformed protobuf message"));
                 co_return;
             }
-            WsAuthNotifierImpl notifier{conn};
-            sendEnvelope(conn, co_await MessageHandlerService::processMessage(conn->getContext<WsData>(), env, notifier));
+            DrogonRoomService room_service{conn};
+            sendEnvelope(conn, co_await MessageHandlerService::processMessage(conn->getContext<WsData>(), env, room_service));
         } catch(const std::exception& e) {
             LOG_ERROR << "Critical error in WsRequestProcessor::handleIncomingMessage: " << e.what();
             sendEnvelope(conn, makeGenericErrorEnvelope("Critical server error during message handling."));

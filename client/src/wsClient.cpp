@@ -3,10 +3,11 @@
 #include <client/authPanel.h>
 #include <client/roomsPanel.h>
 #include <client/chatPanel.h>
+#include <client/userListPanel.h>
+#include <client/message.h>
+#include <client/messageView.h>
 #include <drogon/HttpRequest.h>
 #include <drogon/HttpAppFramework.h>
-#include <chrono>
-#include <thread>
 
 WebSocketClient::WebSocketClient(MainWidget* ui_) : ui(ui_) {}
 
@@ -74,7 +75,7 @@ void WebSocketClient::createRoom(const std::string& roomName) {
     sendEnvelope(env);
 }
 
-void WebSocketClient::joinRoom(uint32_t room_id) {
+void WebSocketClient::joinRoom(int32_t room_id) {
     chat::Envelope env;
     env.mutable_join_room_request()->set_room_id(room_id);
     sendEnvelope(env);
@@ -114,16 +115,15 @@ void WebSocketClient::scheduleRoomListRefresh() {
     }).detach();
 }
 
-void WebSocketClient::getMessages(int limit, int offset){
-chat::Envelope env;
+void WebSocketClient::getMessages(int32_t limit, int64_t offset_ts) {
+    chat::Envelope env;
     auto* request = env.mutable_get_messages_request();
     request->set_limit(limit);
-    request->set_offset(offset);
+    request->set_offset_ts(offset_ts);
     sendEnvelope(env);
 }
 
-void WebSocketClient::requestRoomList()
-{
+void WebSocketClient::requestRoomList() {
     getRooms();
     scheduleRoomListRefresh();
 }
@@ -162,11 +162,22 @@ void WebSocketClient::handleMessage(const std::string& msg) {
         }
         case chat::Envelope::kJoinRoomResponse: {
             if(statusOk(env.join_room_response().status())) {
-                getMessages(LAST_MESSAGES, 0);
-                showChat();
+                std::vector<User> users;
+                for(const auto& user : env.join_room_response().users()) {
+                    users.emplace_back(user.user_id(), wxString::FromUTF8(user.user_name()), user.user_room_rights());
+                }
+                showChat(std::move(users));
             } else {
                 showError("Failed to join room.");
             }
+            break;
+        }
+        case chat::Envelope::kUserJoined: {
+            addUser({env.user_joined().user().user_id(), wxString::FromUTF8(env.user_joined().user().user_name()), env.user_joined().user().user_room_rights()});
+            break;
+        }
+        case chat::Envelope::kUserLeft: {
+            removeUser({env.user_left().user().user_id(), wxString::FromUTF8(env.user_left().user().user_name()), env.user_left().user().user_room_rights()});
             break;
         }
         case chat::Envelope::kLeaveRoomResponse: {
@@ -178,7 +189,7 @@ void WebSocketClient::handleMessage(const std::string& msg) {
             break;
         }
         case chat::Envelope::kCreateRoomResponse: {
-            if (!statusOk(env.create_room_response().status())) {
+            if(!statusOk(env.create_room_response().status())) {
                 showError("Failed to create room");
             }
             break;
@@ -212,13 +223,13 @@ void WebSocketClient::handleMessage(const std::string& msg) {
             break;
         }
         case chat::Envelope::kGetMessagesResponse: {
-            if (!statusOk(env.get_messages_response().status())){
+            if(!statusOk(env.get_messages_response().status())) {
                 showError("Failed to get messages!");
             }
             std::vector<Message> messages;
-            for (const auto& proto_message : env.get_messages_response().message()){
-                messages.emplace_back(Message{proto_message.from()
-                    , proto_message.message()
+            for(const auto& proto_message : env.get_messages_response().message()) {
+                messages.emplace_back(Message{wxString::FromUTF8(proto_message.from().user_name())
+                    , wxString::FromUTF8(proto_message.message())
                     , proto_message.timestamp()});
             }
             showMessageHistory(messages);
@@ -243,39 +254,40 @@ void WebSocketClient::updateRoomsPanel(const std::vector<Room>& rooms) {
     wxTheApp->CallAfter([this, rooms] { ui->roomsPanel->UpdateRoomList(rooms); });
 }
 
-void WebSocketClient::showChat() {
-    wxTheApp->CallAfter([this] { ui->ShowChat(); });
+void WebSocketClient::showChat(std::vector<User> users) {
+    wxTheApp->CallAfter([this, users = std::move(users)] { ui->ShowChat(std::move(users)); });
 }
 
 void WebSocketClient::showRooms() {
     wxTheApp->CallAfter([this] { ui->ShowRooms(); });
 }
 
+void WebSocketClient::addUser(User user) {
+    wxTheApp->CallAfter([this, user = std::move(user)] { ui->chatPanel->m_userListPanel->AddUser(std::move(user)); });
+}
+
+void WebSocketClient::removeUser(User user) {
+    wxTheApp->CallAfter([this, user = std::move(user)] { ui->chatPanel->m_userListPanel->RemoveUser(user.id); });
+}
+
 void WebSocketClient::showRoomMessage(const chat::MessageInfo& mi) {
-    wxTheApp->CallAfter([this, user = mi.from(), text = mi.message(), time = mi.timestamp()] {
-        std::string timeStr = formatMessageTimestamp(time);
-        ui->chatPanel->AppendMessage(wxString::Format("%s %s: %s",
-            wxString(timeStr.c_str(), wxConvUTF8),
-            wxString(user.c_str(), wxConvUTF8),
-            wxString(text.c_str(), wxConvUTF8)));
+    std::vector<Message> messages;
+    messages.emplace_back(Message{wxString::FromUTF8(mi.from().user_name())
+        , wxString::FromUTF8(mi.message())
+        , mi.timestamp()});
+
+    wxTheApp->CallAfter([this, messages] {
+        LOG_DEBUG << "Stared singular add";
+        ui->chatPanel->m_messageView->OnMessagesReceived(messages, false);
+        LOG_DEBUG << "Finished singular add";
     });
 }
 
 void WebSocketClient::showMessageHistory(const std::vector<Message> &messages) {
-    std::vector<Message> sorted_messages = messages;
-    std::sort(sorted_messages.begin(), sorted_messages.end(),
-        [](const Message &lhs, const Message &rhs) {
-            return lhs.timestamp < rhs.timestamp;
-        });
-
-    wxTheApp->CallAfter([this, sorted_messages] {
-        for (const auto& message : sorted_messages) {
-            std::string timeStr = formatMessageTimestamp(message.timestamp);
-            ui->chatPanel->AppendMessage(wxString::Format("%s %s: %s",
-                wxString(timeStr.c_str(), wxConvUTF8),
-                wxString(message.from.c_str(), wxConvUTF8),
-                wxString(message.message.c_str(), wxConvUTF8)));
-        }
+    wxTheApp->CallAfter([this, messages] {
+        LOG_DEBUG << "Stared bulk add";
+        ui->chatPanel->m_messageView->OnMessagesReceived(messages, true);
+        LOG_DEBUG << "Finished bulk add";
     });
 }
 

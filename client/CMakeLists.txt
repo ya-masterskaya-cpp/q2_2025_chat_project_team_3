@@ -10,6 +10,11 @@ add_executable(client_app
     src/roomsPanel.cpp
     src/mainWidget.cpp
     src/wsClient.cpp
+    src/messageWidget.cpp
+    src/userListPanel.cpp
+    src/textUtil.cpp
+    src/userNameWidget.cpp
+    src/messageView.cpp
 )
 
 target_include_directories(client_app PRIVATE
@@ -20,4 +25,12 @@ target_link_libraries(client_app PRIVATE
     common_lib
     wx::core
     wx::base
+)
+
+target_precompile_headers(client_app PRIVATE
+    "${CMAKE_SOURCE_DIR}/common/include/pch.h"
+)
+
+install(TARGETS client_app
+    DESTINATION client
 )
