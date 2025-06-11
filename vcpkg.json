@@ -6,7 +6,8 @@
       "name": "drogon",
       "features": ["ctl","orm","postgres"]
     },
-    "protobuf"
+    "protobuf",
+    "libopaque"
   ],
   "features": {
     "client": {

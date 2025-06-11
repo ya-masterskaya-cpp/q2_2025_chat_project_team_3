@@ -1,0 +1,10 @@
+{
+  "name": "libopaque",
+  "version": "1.0.1",
+  "description": "OPAQUE password-authenticated key agreement protocol implementation",
+  "homepage": "https://github.com/stef/libopaque",
+  "dependencies": [
+    "libsodium",
+    "liboprf"
+  ]
+}

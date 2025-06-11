@@ -1,0 +1,9 @@
+{
+  "name": "liboprf",
+  "version": "0.8.0",
+  "description": "Library providing OPRF and Threshold OPRF based on libsodium",
+  "homepage": "https://github.com/stef/liboprf.git",
+  "dependencies": [
+    "libsodium"
+  ]
+}

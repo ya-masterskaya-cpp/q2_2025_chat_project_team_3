@@ -3,6 +3,7 @@ project(MyProjectCommonSubproject LANGUAGES CXX)
 
 find_package(Drogon CONFIG REQUIRED)
 find_package(Protobuf CONFIG REQUIRED)
+find_package(opaque CONFIG REQUIRED)
 
 set(PROTO_INCLUDE_DIR "${CMAKE_BINARY_DIR}/gen_include")
 set(PROTO_OUT_DIR "${PROTO_INCLUDE_DIR}/common/proto")
@@ -26,4 +27,4 @@ target_include_directories(common_lib PUBLIC
     ${PROTO_INCLUDE_DIR}
 )
 
-target_link_libraries(common_lib PUBLIC Drogon::Drogon protobuf::libprotobuf)
+target_link_libraries(common_lib PUBLIC Drogon::Drogon protobuf::libprotobuf opaque)
