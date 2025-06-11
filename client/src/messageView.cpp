@@ -11,7 +11,8 @@ MessageView::MessageView(ChatPanel* parent)
       m_chatPanelParent(parent),
       m_loadingOlder(false),
       m_loadingNewer(false),
-      m_lastKnownWrapWidth(-1)
+      m_lastKnownWrapWidth(-1),
+      m_lastKnownSnapState(true)
 {
     SetBackgroundStyle(wxBG_STYLE_PAINT);
     //Bind(wxEVT_PAINT, &MessageView::OnPaint, this);
@@ -118,6 +119,8 @@ void MessageView::UpdateWidgetPositions() {
         }
         currentY += h;
     }
+
+    CheckAndUpdateSnapState();
 }
 
 void MessageView::ReWrapAllMessages(int wrapWidth) {
@@ -182,23 +185,56 @@ int MessageView::TrimWidgets(bool fromTop) {
 
 wxCoord MessageView::CalculateTotalHeight() const {
     wxCoord totalHeight = 0;
-    for (const auto* widget : m_messageWidgets) {
+    for(const auto* widget : m_messageWidgets) {
         totalHeight += widget->GetBestSize().y;
     }
     return totalHeight;
 }
 
 void MessageView::LoadOlderMessages() {
-    if (m_loadingOlder) return;
+    if(m_loadingOlder) {
+        return;
+    }
     m_loadingOlder = true;
-    int64_t timestamp = m_messageWidgets.empty() ? std::numeric_limits<int64_t>::max() : m_messageWidgets.front()->GetTimestampValue();
-    m_chatPanelParent->GetMainWidget()->wsClient->getMessages(CHUNK_SIZE, timestamp);
+    const auto topTimestamp = m_messageWidgets.empty() ? std::numeric_limits<int64_t>::max() : m_messageWidgets.front()->GetTimestampValue();
+    m_chatPanelParent->GetMainWidget()->wsClient->getMessages(CHUNK_SIZE, topTimestamp);
 }
 
 void MessageView::LoadNewerMessages() {
-    if (m_loadingNewer || m_messageWidgets.empty()) return;
-    if ((GetVisibleRowsBegin() * SCROLL_STEP) + GetClientSize().y >= (GetUnitCount() * SCROLL_STEP)) return;
+    if(m_loadingNewer || m_messageWidgets.empty()) {
+        return;
+    }
     m_loadingNewer = true;
-    int64_t bottomTimestamp = m_messageWidgets.back()->GetTimestampValue();
+    const auto bottomTimestamp = m_messageWidgets.back()->GetTimestampValue();
     m_chatPanelParent->GetMainWidget()->wsClient->getMessages(-CHUNK_SIZE, bottomTimestamp);
+}
+
+bool MessageView::IsSnappedToBottom() const {
+    if(m_messageWidgets.empty()) {
+        return true;
+    }
+
+    const wxCoord currentScrollY = GetVisibleRowsBegin() * SCROLL_STEP;
+    const wxCoord totalHeight = GetUnitCount() * SCROLL_STEP;
+    const wxCoord visibleHeight = GetClientSize().y;
+
+    return (currentScrollY + visibleHeight) >= (totalHeight - 100);
+}
+
+void MessageView::CheckAndUpdateSnapState() {
+    bool currentlySnapped = IsSnappedToBottom();
+    if (currentlySnapped != m_lastKnownSnapState) {
+        m_lastKnownSnapState = currentlySnapped;
+        UpdateSnapState(currentlySnapped);
+    }
+}
+
+void MessageView::UpdateSnapState(bool isSnapped) {
+    wxCommandEvent evt(wxEVT_SNAP_STATE_CHANGED, GetId());
+    evt.SetInt(isSnapped ? 1 : 0);
+    ProcessEvent(evt);
+}
+
+void MessageView::JumpToPresent() {
+    Start();
 }

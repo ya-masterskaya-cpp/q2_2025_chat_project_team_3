@@ -70,6 +70,7 @@ public:
     void OnMessagesReceived(const std::vector<Message>& messages, bool isHistoryResponse);
     void ReWrapAllMessages(int wrapWidth);
     void Clear();
+    void JumpToPresent();
 
 protected:
     // --- THE CRITICAL FIX ---
@@ -88,6 +89,9 @@ private:
     void LoadOlderMessages();
     void LoadNewerMessages();
     wxCoord CalculateTotalHeight() const;
+    void UpdateSnapState(bool isSnapped);
+    bool IsSnappedToBottom() const;
+    void CheckAndUpdateSnapState();
 
     ChatPanel* m_chatPanelParent;
     std::deque<MessageWidget*> m_messageWidgets;
@@ -96,6 +100,7 @@ private:
     bool m_loadingOlder;
     bool m_loadingNewer;
     int m_lastKnownWrapWidth;
+    bool m_lastKnownSnapState;
 
     static const int MAX_MESSAGES = 100;
     static const int CHUNK_SIZE = 25;

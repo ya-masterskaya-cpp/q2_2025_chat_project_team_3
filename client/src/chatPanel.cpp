@@ -6,19 +6,22 @@
 #include <client/message.h>
 #include <client/messageView.h>
 
-enum { ID_SEND = wxID_HIGHEST+30, ID_LEAVE, ID_RESIZE_TIMER };
+enum { ID_SEND = wxID_HIGHEST+30, ID_LEAVE, ID_JUMP_TO_PRESENT };
+
+wxDEFINE_EVENT(wxEVT_SNAP_STATE_CHANGED, wxCommandEvent);
 
 wxBEGIN_EVENT_TABLE(ChatPanel, wxPanel)
     EVT_BUTTON(ID_SEND, ChatPanel::OnSend)
     EVT_BUTTON(ID_LEAVE, ChatPanel::OnLeave)
+    EVT_BUTTON(ID_JUMP_TO_PRESENT, ChatPanel::JumpToPresent)
     //EVT_TIMER(ID_RESIZE_TIMER, ChatPanel::OnResizeTimerTick)
     //EVT_SIZE(ChatPanel::OnChatPanelSize)
 wxEND_EVENT_TABLE()
 
 ChatPanel::ChatPanel(MainWidget* parent)
     : wxPanel(parent, wxID_ANY),
-      m_parent(parent),
-      m_resizeTimer(this, ID_RESIZE_TIMER) // Initialize the timer with 'this' as the owner
+      m_parent(parent)//,
+      //m_resizeTimer(this, ID_RESIZE_TIMER) // Initialize the timer with 'this' as the owner
 {
     // Main sizer for the ChatPanel itself (horizontal layout: chat area | user list)
     m_mainSizer = new wxBoxSizer(wxHORIZONTAL);
@@ -29,24 +32,11 @@ ChatPanel::ChatPanel(MainWidget* parent)
     // Add the chat area to the main sizer, expanding horizontally and taking all available vertical space.
     m_mainSizer->Add(m_chatSizer, 1, wxEXPAND | wxALL, FromDIP(5));
 
-    // --- NEW: Create the self-contained MessageView ---
-    // The constructor takes 'this' (a ChatPanel*) so MessageView can call back
-    // to get the wsClient.
     m_messageView = new MessageView(this);
     // Add the new message view directly to the chat sizer. It will fill the available space.
     m_chatSizer->Add(m_messageView, 1, wxEXPAND | wxALL, FromDIP(5));
 
-    // --- REMOVED ---
-    // The old wxScrolledWindow and its sizer are no longer needed.
-    // m_messageContainer = new wxScrolledWindow(this, wxID_ANY, ...);
-    // m_messageContainer->SetScrollRate(0, FromDIP(10));
-    // m_messageContainer->SetBackgroundColour(...);
-    // m_messageSizer = new wxBoxSizer(wxVERTICAL);
-    // m_messageContainer->SetSizer(m_messageSizer);
-    // m_chatSizer->Add(m_messageContainer, 1, wxEXPAND | wxALL, FromDIP(5));
-
     // --- Input area (text control + send/leave buttons) ---
-    // This part remains exactly the same.
     auto* inputSizer = new wxBoxSizer(wxHORIZONTAL);
     m_input_ctrl = new wxTextCtrl(this, wxID_ANY, wxEmptyString,
                                            wxDefaultPosition, wxDefaultSize,
@@ -61,19 +51,22 @@ ChatPanel::ChatPanel(MainWidget* parent)
 
     m_chatSizer->Add(inputSizer, 0, wxEXPAND | wxBOTTOM | wxLEFT | wxRIGHT, FromDIP(5));
 
-    // --- Right side: User list ---
-    // This part remains exactly the same.
+    // --- Right side: User list and jump button ---
+    auto* rightSizer = new wxBoxSizer(wxVERTICAL);
+    
     m_userListPanel = new UserListPanel(this);
-    m_mainSizer->Add(m_userListPanel, 0, wxEXPAND | wxTOP | wxBOTTOM | wxRIGHT, FromDIP(5));
+    rightSizer->Add(m_userListPanel, 1, wxEXPAND, 0);
+
+    m_jumpToPresentButton = new wxButton(this, ID_JUMP_TO_PRESENT, "Jump to present");
+    rightSizer->Add(m_jumpToPresentButton, 0, wxEXPAND | wxTOP | wxRESERVE_SPACE_EVEN_IF_HIDDEN, FromDIP(5));
+
+    m_mainSizer->Add(rightSizer, 0, wxEXPAND | wxTOP | wxBOTTOM | wxRIGHT, FromDIP(5));
 
     // Final layout of the main sizer for the ChatPanel
     m_mainSizer->Layout();
+    m_jumpToPresentButton->Hide();
 
-    // --- REMOVED ---
-    // The scroll events are now handled internally by MessageView. ChatPanel no longer
-    // needs to listen for them.
-    // m_messageContainer->Bind(wxEVT_SCROLLWIN_LINEUP,      &ChatPanel::OnScroll, this);
-    // ... all other m_messageContainer->Bind calls ...
+    Bind(wxEVT_SNAP_STATE_CHANGED, &ChatPanel::OnSnapStateChanged, this);
 }
 
 // Event handler for when the message container (wxScrolledWindow) changes size.
@@ -123,4 +116,21 @@ void ChatPanel::OnSend(wxCommandEvent&) {
 void ChatPanel::OnLeave(wxCommandEvent&) {
     m_messageView->Clear();
     m_parent->wsClient->leaveRoom();
+}
+
+void ChatPanel::JumpToPresent(wxCommandEvent&) {
+    m_messageView->JumpToPresent();
+}
+
+void ChatPanel::OnSnapStateChanged(wxCommandEvent& event) {
+    bool isSnapped = event.GetInt() == 1;
+    if(isSnapped) {
+        m_jumpToPresentButton->Hide();
+    } else {
+        m_jumpToPresentButton->Show();
+        m_jumpToPresentButton->Refresh();
+    }
+    
+    //m_jumpToPresentButton->Enable(!isSnapped);
+    Layout();
 }

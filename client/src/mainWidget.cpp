@@ -43,8 +43,8 @@ void MainWidget::ShowRooms() {
 }
 
 void MainWidget::ShowChat(std::vector<User> users) {
-    users.emplace_back(1000, "admin", chat::UserRights::ADMIN);
-    users.emplace_back(1001, "moderator", chat::UserRights::MODERATOR);
+    //users.emplace_back(1000, "admin", chat::UserRights::ADMIN);
+    //users.emplace_back(1001, "moderator", chat::UserRights::MODERATOR);
     authPanel->Hide();
     roomsPanel->Hide();
     chatPanel->Show();
