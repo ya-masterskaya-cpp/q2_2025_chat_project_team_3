@@ -7,13 +7,16 @@ vcpkg_from_github(
 )
 
 # Replace the original build system with our cross-platform CMake file.
-file(COPY "${CMAKE_CURRENT_LIST_DIR}/CMakeLists.txt" DESTINATION "${SOURCE_PATH}")
+file(COPY "${CMAKE_CURRENT_LIST_DIR}/CMakeLists.txt" "${CMAKE_CURRENT_LIST_DIR}/config.cmake.in" DESTINATION "${SOURCE_PATH}")
 
 vcpkg_configure_cmake(
     SOURCE_PATH ${SOURCE_PATH}
 )
 
 vcpkg_install_cmake()
+
+# This command will automatically fix up the config files we just created.
+vcpkg_cmake_config_fixup(CONFIG_PATH lib/cmake/liboprf)
 
 # Handle the pkg-config file
 vcpkg_fixup_pkgconfig()

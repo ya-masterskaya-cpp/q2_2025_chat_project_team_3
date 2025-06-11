@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.12)
-project(liboprf C)
+project(liboprf VERSION 0.8.0 LANGUAGES C)
+
+include(CMakePackageConfigHelpers)
 
 # --- 1. Find Dependencies ---
 find_package(unofficial-sodium CONFIG REQUIRED)
@@ -18,6 +20,7 @@ target_include_directories(oprf-noiseXK-internal PUBLIC
 )
 target_link_libraries(oprf-noiseXK-internal PUBLIC unofficial-sodium::sodium)
 
+
 # --- 3. Build The Main Library ---
 add_library(liboprf
     src/oprf.c
@@ -31,7 +34,6 @@ add_library(liboprf
     src/toprf-update.c
     $<TARGET_OBJECTS:oprf-noiseXK-internal>
 )
-add_library(oprf::liboprf ALIAS liboprf)
 target_compile_definitions(liboprf PRIVATE HAVE_SODIUM_HKDF=1)
 
 # --- 4. Define Links and Includes ---
@@ -55,6 +57,7 @@ target_include_directories(liboprf PUBLIC
     $<INSTALL_INTERFACE:include>
 )
 
+
 # --- 5. Installation Rules ---
 install(TARGETS liboprf
     EXPORT liboprf-targets
@@ -63,7 +66,7 @@ install(TARGETS liboprf
     RUNTIME DESTINATION bin
 )
 
-# Install the intended public headers of liboprf.
+# Install ONLY the intended public headers of liboprf.
 install(FILES
     src/oprf.h
     src/toprf.h
@@ -75,9 +78,24 @@ install(FILES
     DESTINATION include/oprf
 )
 
-# Install the CMake configuration files.
+# Install the CMake configuration files
 install(EXPORT liboprf-targets
-    FILE liboprf-config.cmake
-    NAMESPACE oprf::
-    DESTINATION share/liboprf
+    FILE liboprf-targets.cmake
+    DESTINATION lib/cmake/liboprf
+)
+
+# Create and install the main config files using the template
+configure_package_config_file(config.cmake.in
+    "${CMAKE_CURRENT_BINARY_DIR}/liboprf-config.cmake"
+    INSTALL_DESTINATION lib/cmake/liboprf
+)
+write_basic_package_version_file(
+    "${CMAKE_CURRENT_BINARY_DIR}/liboprf-config-version.cmake"
+    VERSION ${PROJECT_VERSION}
+    COMPATIBILITY AnyNewerVersion
+)
+install(FILES
+    "${CMAKE_CURRENT_BINARY_DIR}/liboprf-config.cmake"
+    "${CMAKE_CURRENT_BINARY_DIR}/liboprf-config-version.cmake"
+    DESTINATION lib/cmake/liboprf
 )
