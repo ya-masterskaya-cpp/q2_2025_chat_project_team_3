@@ -19,5 +19,9 @@ vcpkg_install_cmake()
 # Handle the pkg-config file
 vcpkg_fixup_pkgconfig()
 
+# Clean up redundant debug directories
+file(REMOVE_RECURSE "${CURRENT_PACKAGES_DIR}/debug/include")
+file(REMOVE_RECURSE "${CURRENT_PACKAGES_DIR}/debug/share")
+
 # Install copyright file
 vcpkg_install_copyright(FILE_LIST "${SOURCE_PATH}/LICENSE")
