@@ -3,7 +3,7 @@
 #include <wx/wx.h>
 #include <wx/popupwin.h>
 
-class Message;
+struct Message;
 
 class MessageWidget : public wxPanel {
 public:

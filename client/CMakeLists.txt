@@ -31,6 +31,10 @@ target_precompile_headers(client_app PRIVATE
     "${CMAKE_SOURCE_DIR}/common/include/pch.h"
 )
 
+if(MSVC)
+    target_link_options(client_app PRIVATE "/SUBSYSTEM:WINDOWS")
+endif()
+
 install(TARGETS client_app
     DESTINATION client
 )

@@ -5,9 +5,10 @@
 #include <client/wsClient.h>
 #include <wx/dcbuffer.h> // Include for wxAutoBufferedPaintDC
 #include <numeric>
+#include <limits>
 
 MessageView::MessageView(ChatPanel* parent)
-    : wxVScrolledWindow(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxNO_BORDER),
+    : wxVScrolledWindow(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxBORDER_NONE),
       m_chatPanelParent(parent),
       m_loadingOlder(false),
       m_loadingNewer(false),
@@ -15,14 +16,21 @@ MessageView::MessageView(ChatPanel* parent)
       m_lastKnownSnapState(true)
 {
     SetBackgroundStyle(wxBG_STYLE_PAINT);
+    SetDoubleBuffered(true);
     //Bind(wxEVT_PAINT, &MessageView::OnPaint, this);
     Bind(wxEVT_SIZE, &MessageView::OnSize, this);
-    Bind(wxEVT_SCROLLWIN_LINEUP, &MessageView::OnScroll, this);
-    Bind(wxEVT_SCROLLWIN_LINEDOWN, &MessageView::OnScroll, this);
-    Bind(wxEVT_SCROLLWIN_PAGEUP, &MessageView::OnScroll, this);
-    Bind(wxEVT_SCROLLWIN_PAGEDOWN, &MessageView::OnScroll, this);
-    Bind(wxEVT_SCROLLWIN_THUMBTRACK, &MessageView::OnScroll, this);
-    Bind(wxEVT_SCROLLWIN_THUMBRELEASE, &MessageView::OnScroll, this);
+    Bind(wxEVT_MOUSEWHEEL, &MessageView::OnMouseWheel, this);
+    //Bind(wxEVT_SCROLLWIN_LINEUP, &MessageView::OnScroll, this);
+    //Bind(wxEVT_SCROLLWIN_LINEDOWN, &MessageView::OnScroll, this);
+    //Bind(wxEVT_SCROLLWIN_PAGEUP, &MessageView::OnScroll, this);
+    //Bind(wxEVT_SCROLLWIN_PAGEDOWN, &MessageView::OnScroll, this);
+    //Bind(wxEVT_SCROLLWIN_THUMBTRACK, &MessageView::OnScroll, this);
+    //Bind(wxEVT_SCROLLWIN_THUMBRELEASE, &MessageView::OnScroll, this);
+
+    for (int i = 0; i < MAX_MESSAGES + CHUNK_SIZE; ++i) {
+        m_widgetsPool.return_instance(new MessageWidget(this, Message{}, m_lastKnownWrapWidth));
+        wxYieldIfNeeded();
+    }
 }
 
 void MessageView::Start() {
@@ -33,6 +41,53 @@ void MessageView::Start() {
 void MessageView::OnSize(wxSizeEvent& event) {
     event.Skip();
     ReWrapAllMessages(GetClientSize().x);
+}
+
+void MessageView::OnScrolled() {
+    UpdateWidgetPositions();
+    if (m_loadingOlder || m_loadingNewer) return;
+    wxCoord firstVisiblePixel = GetVisibleRowsBegin() * SCROLL_STEP;
+    wxCoord totalHeight = GetUnitCount() * SCROLL_STEP;
+    wxCoord visibleHeight = GetClientSize().y;
+    const int pixelThreshold = FromDIP(500);
+    if (firstVisiblePixel <= pixelThreshold) LoadOlderMessages();
+    else if (firstVisiblePixel + visibleHeight >= totalHeight - pixelThreshold) LoadNewerMessages();
+}
+
+void MessageView::OnMouseWheel(wxMouseEvent& event) {
+    // Handle vertical wheel scrolling only
+    if(event.GetWheelAxis() != wxMOUSE_WHEEL_VERTICAL) {
+        event.Skip();
+        return;
+    }
+    // Calculate scroll lines
+    int rotation = event.GetWheelRotation();
+    int delta = event.GetWheelDelta();
+    int linesPerWheel = FromDIP(15);//event.GetLinesPerAction();
+
+    // Calculate lines to scroll
+    int lines = (rotation * linesPerWheel) / delta;
+    if(lines == 0) {
+        lines = (rotation > 0) ? -1 : 1;
+    }
+
+    // Perform scrolling
+    //int oldPos = GetScrollPos(wxVERTICAL);
+    ScrollRows(lines);
+
+
+    //ScrollLines(lines);  // This updates the view
+    //int newPos = GetScrollPos(wxVERTICAL);
+
+    // Generate synthetic scroll event if position changed
+    //if (oldPos != newPos) {
+    //    wxScrollWinEvent evt(wxEVT_SCROLLWIN_THUMBTRACK, newPos, wxVERTICAL);
+    //    evt.SetEventObject(this);
+    //    OnScroll(evt);  // Process like other scroll events
+    //}
+
+    //event.Skip();
+    OnScrolled();
 }
 
 void MessageView::OnMessagesReceived(const std::vector<Message>& messages, bool isHistoryResponse) {
@@ -85,20 +140,13 @@ void MessageView::UpdateLayoutAndScroll(const std::vector<Message>& messages, bo
 }
 
 void MessageView::OnPaint(wxPaintEvent& event) {
-    wxAutoBufferedPaintDC dc(this);
+    //wxAutoBufferedPaintDC dc(this);
     //UpdateWidgetPositions();
 }
 
 void MessageView::OnScroll(wxScrollWinEvent& event) {
     event.Skip();
-    UpdateWidgetPositions();
-    if (m_loadingOlder || m_loadingNewer) return;
-    wxCoord firstVisiblePixel = GetVisibleRowsBegin() * SCROLL_STEP;
-    wxCoord totalHeight = GetUnitCount() * SCROLL_STEP;
-    wxCoord visibleHeight = GetClientSize().y;
-    const int pixelThreshold = FromDIP(500); 
-    if (firstVisiblePixel <= pixelThreshold) LoadOlderMessages();
-    else if (firstVisiblePixel + visibleHeight >= totalHeight - pixelThreshold) LoadNewerMessages();
+    OnScrolled();
 }
 
 void MessageView::UpdateWidgetPositions() {
@@ -112,8 +160,9 @@ void MessageView::UpdateWidgetPositions() {
         if ((currentY + h) > (scrollY - padding) && (currentY < scrollY + clientHeight + padding)) {
             wxCoord physicalY = currentY - scrollY;
             widget->SetSize(0, physicalY, containerWidth, -1);
-            widget->Layout();
             widget->Show();
+            //widget->Layout();
+           // widget->Refresh();
         } else {
             widget->Hide();
         }
@@ -156,6 +205,7 @@ void MessageView::AddMessageWidget(const Message& msg, bool prepend) {
     //msgWidget->SetClientSize(GetClientSize().x, -1);
     //msgWidget->SetSize(0, 0, GetClientSize().x, -1);
     //msgWidget->Layout();
+    //msgWidget->Refresh();
     if (prepend) {
         m_messageWidgets.push_front(msgWidget);
     } else {
@@ -196,7 +246,7 @@ void MessageView::LoadOlderMessages() {
         return;
     }
     m_loadingOlder = true;
-    const auto topTimestamp = m_messageWidgets.empty() ? std::numeric_limits<int64_t>::max() : m_messageWidgets.front()->GetTimestampValue();
+    const auto topTimestamp = m_messageWidgets.empty() ? 32517734834000000 : m_messageWidgets.front()->GetTimestampValue();
     m_chatPanelParent->GetMainWidget()->wsClient->getMessages(CHUNK_SIZE, topTimestamp);
 }
 
