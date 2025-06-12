@@ -1,5 +1,7 @@
 #pragma once
 
+#include <drogon/WebSocketConnection.h>
+
 template <typename Response>
 void setStatus(Response& resp, chat::StatusCode code) {
     resp.mutable_status()->set_code(code);

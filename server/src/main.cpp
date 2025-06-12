@@ -21,16 +21,13 @@ int main() {
             return;
         }
 
-        auto migrationFiles = scanMigrationFiles("db/migrations");
-        if(migrationFiles.empty()) {
-             LOG_INFO << "No migration .sql files found";
-        } else {
-            LOG_INFO << "Found " << migrationFiles.size() << " migration files";
-        }
-
         try {
-            drogon::sync_wait(applyMigrations(dbClient, migrationFiles));
-            LOG_INFO << "Migrations check/apply process completed.";
+            auto success = drogon::sync_wait(MigrateDatabase(dbClient));
+            if(success) {
+                LOG_INFO << "Migrations check/apply process completed.";
+            } else {
+                drogon::app().quit();
+            }
         } catch(const drogon::orm::DrogonDbException &e) {
             LOG_FATAL << "Database exception during migrations: " << e.base().what() << ". Aborting.";
             drogon::app().quit();
