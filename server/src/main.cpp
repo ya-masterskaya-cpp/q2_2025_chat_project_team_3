@@ -3,8 +3,12 @@
 #include <server/db/migrations.h>
 
 int main() {
+    std::filesystem::create_directory("logs");
+
     LOG_INFO << "Starting Drogon application...";
     drogon::app().loadConfigFile("config.json");
+    drogon::app().setUnicodeEscapingInJson(false); //TODO verify if we need this
+                                                   //prevents jsoncpp from turning utf into escaped codepoints
 
     // Setup and run migrations before the app starts serving
     drogon::app().registerBeginningAdvice([]() {
