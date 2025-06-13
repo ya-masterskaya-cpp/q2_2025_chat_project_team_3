@@ -7,7 +7,7 @@ wxDECLARE_EVENT(wxEVT_SNAP_STATE_CHANGED, wxCommandEvent);
 
 class MainWidget;
 class UserListPanel;
-class Message;
+struct Message;
 class MessageView;
 
 class ChatPanel : public wxPanel {

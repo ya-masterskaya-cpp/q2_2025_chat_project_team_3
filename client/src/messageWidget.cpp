@@ -12,6 +12,8 @@ MessageWidget::MessageWidget(wxWindow* parent,
                              int lastKnownWrapWidth)
     : wxPanel(parent, wxID_ANY), m_originalMessage{msg.msg}, m_timestamp_val{msg.timestamp} {
     SetBackgroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW));
+    SetDoubleBuffered(true);
+
     auto* mainSizer = new wxBoxSizer(wxVERTICAL);
 
     // Header line (user + timestamp)
@@ -63,7 +65,11 @@ MessageWidget::MessageWidget(wxWindow* parent,
     m_messageStaticText->Bind(wxEVT_RIGHT_DOWN, &MessageWidget::OnRightClick, this);
 
     Bind(wxEVT_ENTER_WINDOW, &MessageWidget::OnMouseEnter, this);
+
     Bind(wxEVT_LEAVE_WINDOW, &MessageWidget::OnMouseLeave, this);
+    m_userText->Bind(wxEVT_LEAVE_WINDOW, &MessageWidget::OnMouseLeave, this);
+    m_timeText->Bind(wxEVT_LEAVE_WINDOW, &MessageWidget::OnMouseLeave, this);
+    m_messageStaticText->Bind(wxEVT_LEAVE_WINDOW, &MessageWidget::OnMouseLeave, this);
 }
 
 void MessageWidget::Update(wxWindow* parent, const Message& msg, int lastKnownWrapWidth) {
@@ -72,7 +78,10 @@ void MessageWidget::Update(wxWindow* parent, const Message& msg, int lastKnownWr
     m_messageStaticText->SetLabelText(TextUtil::WrapText(this, m_originalMessage, lastKnownWrapWidth - FromDIP(10), m_messageStaticText->GetFont()));
     m_userText->SetLabelText(msg.user);
     m_timeText->SetLabelText(wxString::FromUTF8(WebSocketClient::formatMessageTimestamp(msg.timestamp)));
+    InvalidateBestSize();
     Layout();
+    Fit();
+    Refresh();
 }
 
 // Method to set the wrapped message based on a given width
@@ -114,8 +123,13 @@ void MessageWidget::OnMouseEnter(wxMouseEvent& event) {
 }
 
 void MessageWidget::OnMouseLeave(wxMouseEvent& event) {
-    SetBackgroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW));
-    Refresh();
+    // Check if mouse left entire widget
+    wxPoint screenPos = wxGetMousePosition();
+    wxPoint clientPos = ScreenToClient(screenPos);
+    if (!GetClientRect().Contains(clientPos)) {
+        SetBackgroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW));
+        Refresh();
+    }
     event.Skip();
 }
 

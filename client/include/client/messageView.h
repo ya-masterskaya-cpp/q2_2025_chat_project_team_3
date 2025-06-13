@@ -6,9 +6,6 @@
 #include <deque>
 #include <vector>
 
-#include <deque>
-#include <utility>
-
 template<typename T>
 class GenericCacher {
 private:
@@ -72,16 +69,23 @@ public:
     void Clear();
     void JumpToPresent();
 
+
+
 protected:
-    // --- THE CRITICAL FIX ---
-    // This signature must exactly match the pure virtual function in the base class.
+
+
     virtual wxCoord OnGetRowHeight(size_t row) const override;
-    // ----------------------
+
+    virtual void SetScrollbar(int orientation, int position, int thumbSize, int range, bool refresh = true) override {
+        //Make scroll bar disappear
+    }
 
 private:
     void OnSize(wxSizeEvent& event);
     void OnPaint(wxPaintEvent& event);
     void OnScroll(wxScrollWinEvent& event);
+    void OnMouseWheel(wxMouseEvent& event);
+    void OnScrolled();
     void UpdateLayoutAndScroll(const std::vector<Message>& messages, bool isHistoryResponse);
     void UpdateWidgetPositions();
     void AddMessageWidget(const Message& msg, bool prepend);
@@ -105,5 +109,5 @@ private:
     static const int MAX_MESSAGES = 100;
     static const int CHUNK_SIZE = 25;
     static const int LOAD_THRESHOLD_ROWS = 10;
-    const int SCROLL_STEP = FromDIP(10);
+    const int SCROLL_STEP = 1;//FromDIP(10);
 };

@@ -8,6 +8,7 @@
 #include <client/messageView.h>
 #include <drogon/HttpRequest.h>
 #include <drogon/HttpAppFramework.h>
+#include <time.h>
 
 WebSocketClient::WebSocketClient(MainWidget* ui_) : ui(ui_) {}
 
@@ -296,14 +297,19 @@ std::string WebSocketClient::formatMessageTimestamp(uint64_t timestamp) {
     auto now = trantor::Date::now();
     auto zeroTime = [](const trantor::Date& dt) {
         time_t t = dt.microSecondsSinceEpoch() / 1000000ULL;
-        struct tm local_tm{};
+        struct tm local_tm;
+        // Cross-platform local time conversion
+#if defined(_WIN32)
+        localtime_s(&local_tm, &t);
+#else
         localtime_r(&t, &local_tm);
+#endif
         local_tm.tm_hour = 0;
         local_tm.tm_min = 0;
         local_tm.tm_sec = 0;
         time_t zero_t = mktime(&local_tm);
         return trantor::Date(static_cast<uint64_t>(zero_t) * 1000000ULL);
-    };
+        };
     trantor::Date todayZero = zeroTime(now);
     trantor::Date msgZero = zeroTime(msgDate);
 

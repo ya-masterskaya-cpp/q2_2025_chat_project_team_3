@@ -25,7 +25,7 @@ std::pair<std::string_view, std::string_view> parse_sql_filename(std::string_vie
 
 std::optional<int64_t> parseTimestamp(std::string_view s) noexcept {
     int64_t v;
-    auto [ptr, ec] = std::from_chars(s.begin(), s.end(), v);
+    auto [ptr, ec] = std::from_chars(s.data(), s.data() + s.size(), v);
     return ec==std::errc{} ? std::optional{v} : std::nullopt;
 }
 

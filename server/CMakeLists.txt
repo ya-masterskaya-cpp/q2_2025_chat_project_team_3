@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.18)
+cmake_minimum_required(VERSION 3.21)
 project(MyProjectServerSubproject LANGUAGES CXX)
 
 add_executable(server_app
@@ -45,3 +45,10 @@ install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/config.json
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/db/
     DESTINATION server/db
 )
+
+if(WIN32)
+    install(CODE "
+        include(BundleUtilities)
+        fixup_bundle(\"\${CMAKE_INSTALL_PREFIX}/server/server_app.exe\" \"\" \"$<TARGET_FILE_DIR:server_app>\")
+    " COMPONENT Runtime)
+endif()

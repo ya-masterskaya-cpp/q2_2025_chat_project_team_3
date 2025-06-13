@@ -6,7 +6,7 @@ class AuthPanel;
 class RoomsPanel;
 class ChatPanel;
 class WebSocketClient;
-class User;
+struct User;
 
 class MainWidget : public wxFrame {
 public:
