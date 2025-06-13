@@ -10,12 +10,19 @@ public:
     static drogon::Task<chat::Envelope> processMessage(const std::shared_ptr<WsData>& wsData, const chat::Envelope& env, IRoomService& room_service) {
         chat::Envelope respEnv;
         switch(env.payload_case()) {
+            case chat::Envelope::kInitialAuthRequest: {
+                *respEnv.mutable_initial_auth_response() = co_await MessageHandlers::handleAuthInitial(wsData, env.initial_auth_request());
+                break;
+            }
+            case chat::Envelope::kInitialRegisterRequest: {
+                *respEnv.mutable_initial_register_response() = co_await MessageHandlers::handleRegisterInitial(wsData, env.initial_register_request());
+            }
             case chat::Envelope::kAuthRequest: {
                 *respEnv.mutable_auth_response() = co_await MessageHandlers::handleAuth(wsData, env.auth_request());
                 break;
             }
             case chat::Envelope::kRegisterRequest: {
-                *respEnv.mutable_register_response() = co_await MessageHandlers::handleRegister(env.register_request());
+                *respEnv.mutable_register_response() = co_await MessageHandlers::handleRegister(wsData, env.register_request());
                 break;
             }
             case chat::Envelope::kSendMessageRequest: {

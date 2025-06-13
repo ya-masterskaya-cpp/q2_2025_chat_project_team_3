@@ -16,26 +16,29 @@ namespace models = drogon_model::drogon_test;
 
 class MessageHandlers {
 public:
-    static drogon::Task<chat::AuthResponse> handleAuth(const std::shared_ptr<WsData>& wsData, const chat::AuthRequest& req) {
-        chat::AuthResponse resp;
+    static drogon::Task<chat::InitialAuthResponse> handleAuthInitial(const std::shared_ptr<WsData>& wsData, const chat::InitialAuthRequest& req) {
+        chat::InitialAuthResponse resp;
         auto db = drogon::app().getDbClient();
         if(!db) {
             setStatus(resp, chat::STATUS_FAILURE, "Server configuration error: DB not available.");
             co_return resp;
         }
-        if(req.username().empty() || req.password().empty()) {
-            setStatus(resp, chat::STATUS_FAILURE, "Empty username or password.");
+        if(req.username().empty()) {
+            setStatus(resp, chat::STATUS_FAILURE, "Empty username.");
             co_return resp;
         }
         try {
             using namespace drogon::orm;
             auto users = co_await drogon::orm::CoroMapper<models::Users>(db)
                 .findBy(Criteria(models::Users::Cols::_username, CompareOperator::EQ, req.username()));
-            if(users.empty() || users.front().getValueOfPassword() != req.password()) {
+            if(users.empty()) {
                 setStatus(resp, chat::STATUS_UNAUTHORIZED, "Invalid credentials.");
                 co_return resp;
             }
-            wsData->user = User{*users.front().getUserId(), req.username()};
+            wsData->status = USER_STATUS::Authenticating;
+            wsData->user = User{.id = 0, .name = req.username()};
+            //if (!users.front().getValueOfSalt().empty()) resp.set_salt(users.front().getValueOfSalt());
+
             setStatus(resp, chat::STATUS_SUCCESS);
             co_return resp;
         } catch(const std::exception& e) {
@@ -44,10 +47,121 @@ public:
         }
     }
 
-    static drogon::Task<chat::RegisterResponse> handleRegister(const chat::RegisterRequest& req) {
-        chat::RegisterResponse resp;
-        if(req.username().empty() || req.password().empty()) {
+    static drogon::Task<chat::InitialRegisterResponse> handleRegisterInitial(const std::shared_ptr<WsData>& wsData, const chat::InitialRegisterRequest& req) {
+        chat::InitialRegisterResponse resp;
+        auto db = drogon::app().getDbClient();
+        if(!db) {
+            setStatus(resp, chat::STATUS_FAILURE, "Server configuration error: DB not available.");
+            co_return resp;
+        }
+        if(req.username().empty()) {
             setStatus(resp, chat::STATUS_FAILURE, "Empty username or password.");
+            co_return resp;
+        }
+        try {
+            using namespace drogon::orm;
+            auto users = co_await drogon::orm::CoroMapper<models::Users>(db)
+                .findBy(Criteria(models::Users::Cols::_username, CompareOperator::EQ, req.username()));
+            if(!users.empty()) {
+                setStatus(resp, chat::STATUS_FAILURE, "Username already exists.");
+                co_return resp;
+            }
+            wsData->status = USER_STATUS::Registering;
+            wsData->user = User{.id = 0, .name = req.username() };
+            setStatus(resp, chat::STATUS_SUCCESS);
+            co_return resp;
+        } catch(const std::exception& e) {
+            setStatus(resp, chat::STATUS_FAILURE, std::string("Registration failed: ") + e.what());
+            co_return resp;
+        }
+    }
+
+    static drogon::Task<chat::AuthResponse> handleAuth(const std::shared_ptr<WsData>& wsData, const chat::AuthRequest& req) {
+    chat::AuthResponse resp;
+
+    if (wsData->status != USER_STATUS::Authenticating) {
+        setStatus(resp, chat::STATUS_FAILURE, "Not in authentication phase.");
+        co_return resp;
+    }
+
+    if (req.hash().empty()) {
+        setStatus(resp, chat::STATUS_FAILURE, "Missing hash.");
+        co_return resp;
+    }
+
+    try {
+        using namespace drogon::orm;
+        auto db = drogon::app().getDbClient();
+
+        auto users = co_await CoroMapper<models::Users>(db)
+            .findBy(Criteria(models::Users::Cols::_username, CompareOperator::EQ, wsData->user->name));
+
+        if (users.empty()) {
+            wsData->status = USER_STATUS::Unauthenticated;
+            setStatus(resp, chat::STATUS_UNAUTHORIZED, "User not found.");
+            co_return resp;
+        }
+
+        auto user = users.front();
+
+        if (req.has_password() && req.has_salt()) {
+            if (user.getValueOfSalt().empty()) {
+                if (user.getValueOfHashPassword() != req.password()) {
+                    setStatus(resp, chat::STATUS_UNAUTHORIZED, "Incorrect password.");
+                    co_return resp;
+                }
+                auto err = co_await WithTransaction(
+                    [&](auto tx) -> drogon::Task<std::optional<std::string>> {
+                        try {
+                            user.setHashPassword(req.hash());
+                            user.setSalt(req.salt());
+                            co_await CoroMapper<models::Users>(tx).update(user);
+                            co_return std::nullopt;
+                        } catch (const drogon::orm::DrogonDbException& e) {
+                            LOG_ERROR << "User update error: " << e.base().what();
+                            co_return "Database error during user update.";
+                        }
+                    });
+
+                if (err) {
+                    wsData->status = USER_STATUS::Unauthenticated;
+                    setStatus(resp, chat::STATUS_FAILURE, *err);
+                    co_return resp;
+                }
+            } else {
+                setStatus(resp, chat::STATUS_FAILURE, "User already migrated. Non correct Auth");
+                co_return resp;
+            }
+        } else {
+            if (user.getValueOfSalt().empty()) {
+                setStatus(resp, chat::STATUS_FAILURE, "Migration required.");
+                co_return resp;
+            }
+
+            if (user.getValueOfHashPassword() != req.hash()) {
+                setStatus(resp, chat::STATUS_UNAUTHORIZED, "Hash mismatch.");
+                co_return resp;
+            }
+        }
+
+        wsData->user->id = *user.getUserId();
+        wsData->status = USER_STATUS::Authenticated;
+        setStatus(resp, chat::STATUS_SUCCESS);
+        co_return resp;
+    } catch (const std::exception& e) {
+        setStatus(resp, chat::STATUS_FAILURE, std::string("Auth failed: ") + e.what());
+        co_return resp;
+    }
+    }
+
+    static drogon::Task<chat::RegisterResponse> handleRegister(const std::shared_ptr<WsData>& wsData, const chat::RegisterRequest& req) {
+        chat::RegisterResponse resp;
+        if (wsData->status != USER_STATUS::Registering) {
+            setStatus(resp, chat::STATUS_FAILURE, "Non-correct registering");
+            co_return resp;
+        }
+        if(req.salt().empty() || req.hash().empty()) {
+            setStatus(resp, chat::STATUS_FAILURE, "Empty hash or salt.");
             co_return resp;
         }
         try {
@@ -56,8 +170,9 @@ public:
                 [&](auto tx) -> drogon::Task<ScopedTransactionResult> {
                     try {
                         models::Users u;
-                        u.setUsername(req.username());
-                        u.setPassword(req.password());
+                        u.setUsername(wsData->user->name);
+                        u.setHashPassword(req.hash());
+                        u.setSalt(req.salt());
                         co_await drogon::orm::CoroMapper<models::Users>(tx).insert(u);
                         co_return std::nullopt;
                     } catch(const drogon::orm::DrogonDbException& e) {
@@ -71,14 +186,16 @@ public:
                 });
 
             if(err) {
+                wsData->status = USER_STATUS::Unauthenticated;
                 setStatus(resp, chat::STATUS_FAILURE, *err);
                 co_return resp;
             }
-
+            wsData->status = USER_STATUS::Unauthenticated;
             setStatus(resp, chat::STATUS_SUCCESS);
             co_return resp;
         } catch(const std::exception& e) {
             LOG_ERROR << "Register error: " << e.what();
+            wsData->status = USER_STATUS::Unauthenticated;
             setStatus(resp, chat::STATUS_FAILURE, std::string("Registration failed: ") + e.what());
             co_return resp;
         }

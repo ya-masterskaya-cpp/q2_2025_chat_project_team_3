@@ -17,10 +17,12 @@ public:
     wxListBox* roomList;
     wxButton* joinButton;
     wxButton* createButton;
+    wxButton* logoutButton;
 private:
     std::unordered_map<int, uint32_t> room_list_index_to_id_;
     void OnJoin(wxCommandEvent&);
     void OnCreate(wxCommandEvent&);
+    void OnLogout(wxCommandEvent&);
     MainWidget* mainWin;
     wxDECLARE_EVENT_TABLE();
 };

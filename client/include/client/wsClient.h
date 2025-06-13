@@ -4,6 +4,7 @@
 #include <wx/datetime.h>
 #include <wx/longlong.h>
 #include <drogon/WebSocketClient.h>
+#include <optional>
 
 class MainWidget;
 struct Room;
@@ -15,8 +16,11 @@ public:
     explicit WebSocketClient(MainWidget* ui);
 
     void start();
-    void registerUser(const std::string& username, const std::string& password);
-    void loginUser(const std::string& username, const std::string& password);
+    
+    void requestInitialRegister(const std::string& username);
+    void requestInitialAuth(const std::string& username);
+    void completeRegister(const std::string& hash, const std::string& salt);
+    void completeAuth(const std::string& hash, const std::optional<std::string>& password, const std::optional<std::string>& salt);
     void getRooms();
     void createRoom(const std::string& roomName);
     void joinRoom(int32_t room_id);
@@ -25,6 +29,7 @@ public:
     void requestRoomList();
     void scheduleRoomListRefresh();
     void getMessages(int32_t limit, int64_t offset_ts);
+    void logout();
 
     static std::string formatMessageTimestamp(uint64_t timestamp);
 

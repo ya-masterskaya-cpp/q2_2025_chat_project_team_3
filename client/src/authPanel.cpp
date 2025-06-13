@@ -1,6 +1,8 @@
 #include <client/authPanel.h>
 #include <client/mainWidget.h>
 #include <client/wsClient.h>
+#include <client/passwordUtil.h>
+#include <optional>
 
 enum { ID_LOGIN = wxID_HIGHEST+10, ID_REGISTER };
 
@@ -10,6 +12,8 @@ wxBEGIN_EVENT_TABLE(AuthPanel, wxPanel)
 wxEND_EVENT_TABLE()
 
 void AuthPanel::SetButtonsEnabled(bool enabled) {
+    usernameInput->Enable(enabled);
+    passwordInput->Enable(enabled);
     loginButton->Enable(enabled);
     registerButton->Enable(enabled);
 }
@@ -36,14 +40,29 @@ AuthPanel::AuthPanel(MainWidget* parent) : wxPanel(parent), mainWin(parent) {
 }
 
 void AuthPanel::OnLogin(wxCommandEvent&) {
-    mainWin->wsClient->loginUser(
-        usernameInput->GetValue().ToStdString(),
-        passwordInput->GetValue().ToStdString()
-    );
+    m_password = passwordInput->GetValue();
+    mainWin->wsClient->requestInitialAuth(usernameInput->GetValue().ToStdString());
 }
+
 void AuthPanel::OnRegister(wxCommandEvent&) {
-    mainWin->wsClient->registerUser(
-        usernameInput->GetValue().ToStdString(),
-        passwordInput->GetValue().ToStdString()
-    );
+    m_password = passwordInput->GetValue();
+    mainWin->wsClient->requestInitialRegister(usernameInput->GetValue().ToStdString());
+}
+
+void AuthPanel::HandleRegisterContinue() {
+    std::string salt = password::generate_salt();
+    mainWin->wsClient->completeRegister(password::hash_password(m_password.ToStdString(), salt), salt);
+    m_password.clear();
+}
+
+void AuthPanel::HandleAuthContinue(const std::string &salt) {
+    if (salt.empty()){
+        std::string new_salt = password::generate_salt();
+        std::string hash = password::hash_password(m_password.ToStdString(), new_salt);
+        mainWin->wsClient->completeAuth(hash, m_password.ToStdString(), new_salt);
+    } else {
+        std::string hash = password::hash_password(m_password.ToStdString(), salt);
+        mainWin->wsClient->completeAuth(hash, std::nullopt, std::nullopt);
+    }
+    m_password.clear();
 }

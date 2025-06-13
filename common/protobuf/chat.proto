@@ -49,19 +49,40 @@ message ServerHello {
     string message = 1;
 }
 
-message AuthRequest {
+message InitialAuthRequest {
     string username = 1;
-    string password = 2;
+}
+message InitialAuthResponse {
+    Status status = 1;
+    optional string salt = 2;
+}
+message AuthRequest {
+    string hash = 1;
+    optional string password = 2;
+    optional string salt = 3;
 }
 message AuthResponse {
     Status status = 1;
 }
 
-message RegisterRequest {
+message InitialRegisterRequest {
     string username = 1;
-    string password = 2;
+}
+message InitialRegisterResponse { 
+    Status status = 1;
+}
+message RegisterRequest {
+    string salt = 1;
+    string hash = 2;
 }
 message RegisterResponse {
+    Status status = 1;
+}
+
+message LogoutRequest {
+
+}
+message LogoutResponse {
     Status status = 1;
 }
 
@@ -123,25 +144,31 @@ message GetMessagesResponse{
 message Envelope {
     oneof payload {
         ServerHello server_hello = 1;
-        AuthRequest auth_request = 2;
-        AuthResponse auth_response = 3;
-        RegisterRequest register_request = 4;
-        RegisterResponse register_response = 5;
-        SendMessageRequest send_message_request = 6;
-        SendMessageResponse send_message_response = 7;
-        JoinRoomRequest join_room_request = 8;
-        JoinRoomResponse join_room_response = 9;
-        LeaveRoomRequest leave_room_request = 10;
-        LeaveRoomResponse leave_room_response = 11;
-        GetRoomsRequest get_rooms_request = 12;
-        GetRoomsResponse get_rooms_response = 13;
-        CreateRoomRequest create_room_request = 14;
-        CreateRoomResponse create_room_response = 15;
-        RoomMessage room_message = 16;
-        GetMessagesRequest get_messages_request = 17;
-        GetMessagesResponse get_messages_response = 18;
-        GenericError generic_error = 19;
-        UserJoinedRoom user_joined = 20;
-        UserLeftRoom user_left = 21;
+        InitialAuthRequest initial_auth_request = 2;
+        InitialAuthResponse initial_auth_response = 3;
+        AuthRequest auth_request = 4;
+        AuthResponse auth_response = 5;
+        InitialRegisterRequest initial_register_request = 6;
+        InitialRegisterResponse initial_register_response = 7;
+        RegisterRequest register_request = 8;
+        RegisterResponse register_response = 9;
+        LogoutRequest logout_request = 10;
+        LogoutResponse logout_response = 11;
+        SendMessageRequest send_message_request = 12;
+        SendMessageResponse send_message_response = 13;
+        JoinRoomRequest join_room_request = 14;
+        JoinRoomResponse join_room_response = 15;
+        LeaveRoomRequest leave_room_request = 16;
+        LeaveRoomResponse leave_room_response = 17;
+        GetRoomsRequest get_rooms_request = 18;
+        GetRoomsResponse get_rooms_response = 19;
+        CreateRoomRequest create_room_request = 20;
+        CreateRoomResponse create_room_response = 21;
+        RoomMessage room_message = 22;
+        GetMessagesRequest get_messages_request = 23;
+        GetMessagesResponse get_messages_response = 24;
+        GenericError generic_error = 25;
+        UserJoinedRoom user_joined = 26;
+        UserLeftRoom user_left = 27;
     }
 }
