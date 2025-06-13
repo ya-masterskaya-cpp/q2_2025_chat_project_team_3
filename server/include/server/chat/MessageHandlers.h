@@ -37,7 +37,7 @@ public:
             }
             wsData->status = USER_STATUS::Authenticating;
             wsData->user = User{.id = 0, .name = req.username()};
-            //if (!users.front().getValueOfSalt().empty()) resp.set_salt(users.front().getValueOfSalt());
+            if (!users.front().getValueOfSalt().empty()) resp.set_salt(users.front().getValueOfSalt());
 
             setStatus(resp, chat::STATUS_SUCCESS);
             co_return resp;
@@ -103,7 +103,8 @@ public:
         }
 
         auto user = users.front();
-
+        auto pas = req.password();
+        auto salt = req.salt();
         if (req.has_password() && req.has_salt()) {
             if (user.getValueOfSalt().empty()) {
                 if (user.getValueOfHashPassword() != req.password()) {
@@ -447,4 +448,20 @@ public:
             co_return resp;
         }
     }
+
+    static drogon::Task<chat::LogoutResponse> handleLogoutUser(const std::shared_ptr<WsData>& wsData, IRoomService& room_service) {
+        chat::LogoutResponse resp;
+        if(wsData->status != USER_STATUS::Authenticated) {
+            setStatus(resp, chat::STATUS_UNAUTHORIZED, "User not authenticated.");
+            co_return resp;
+        }
+        if(wsData->room) {
+            room_service.leaveCurrentRoom();
+        }
+        wsData->room.reset();
+        wsData->user.reset();
+        setStatus(resp, chat::STATUS_SUCCESS);
+        co_return resp;
+    }
+
 };

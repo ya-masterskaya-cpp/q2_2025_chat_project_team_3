@@ -50,19 +50,28 @@ void AuthPanel::OnRegister(wxCommandEvent&) {
 }
 
 void AuthPanel::HandleRegisterContinue() {
-    std::string salt = password::generate_salt();
-    mainWin->wsClient->completeRegister(password::hash_password(m_password.ToStdString(), salt), salt);
+    try {
+        std::string salt = password::generate_salt();
+        std::string hash = password::hash_password(m_password.ToStdString(), salt);
+        mainWin->wsClient->completeRegister(hash, salt);
+    } catch (const std::exception& ex) {
+        mainWin->ShowPopup(ex.what(), wxICON_ERROR);
+    }
     m_password.clear();
 }
 
 void AuthPanel::HandleAuthContinue(const std::string &salt) {
-    if (salt.empty()){
-        std::string new_salt = password::generate_salt();
-        std::string hash = password::hash_password(m_password.ToStdString(), new_salt);
-        mainWin->wsClient->completeAuth(hash, m_password.ToStdString(), new_salt);
-    } else {
-        std::string hash = password::hash_password(m_password.ToStdString(), salt);
-        mainWin->wsClient->completeAuth(hash, std::nullopt, std::nullopt);
+    try {
+        if (salt.empty()) {
+            std::string new_salt = password::generate_salt();
+            std::string hash = password::hash_password(m_password.ToStdString(), new_salt);
+            mainWin->wsClient->completeAuth(hash, m_password.ToStdString(), new_salt);
+        } else {
+            std::string hash = password::hash_password(m_password.ToStdString(), salt);
+            mainWin->wsClient->completeAuth(hash, std::nullopt, std::nullopt);
+        }
+    } catch (const std::exception& ex) {
+        mainWin->ShowPopup(ex.what(), wxICON_ERROR);
     }
     m_password.clear();
 }
