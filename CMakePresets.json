@@ -1,97 +1,37 @@
 {
-  "version": 8,
-  "configurePresets": [
-    {
-      "name": "base",
-      "hidden": true,
-      "generator": "Ninja",
-      "binaryDir": "${sourceDir}/build",
-      "installDir": "${sourceDir}/install",
-      "cacheVariables": {
-        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
-      }
+    "version": 8,
+    "cmakeMinimumRequired": {
+        "major": 3,
+        "minor": 21,
+        "patch": 0
     },
-    {
-      "name": "linux-base",
-      "hidden": true,
-      "inherits": "base",
-      "condition": {
-        "type": "equals",
-        "lhs": "${hostSystemName}",
-        "rhs": "Linux"
-      },
-      "cacheVariables": {
-        "CMAKE_TOOLCHAIN_FILE": {
-          "type": "FILEPATH",
-          "value": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+    "configurePresets": [
+        {
+            "name": "ninja-multi-vcpkg",
+            "displayName": "Ninja Multi-Config",
+            "description": "Configure with vcpkg toolchain and generate Ninja project files for all configurations",
+            "binaryDir": "${sourceDir}/build",
+            "generator": "Ninja Multi-Config",
+            "toolchainFile": "${sourceDir}/vcpkg/scripts/buildsystems/vcpkg.cmake",
+			"cacheVariables": {
+                "VCPKG_MANIFEST_FEATURES": "client"
+			}
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "ninja-vcpkg-debug",
+            "configurePreset": "ninja-multi-vcpkg",
+            "displayName": "Build (Debug)",
+            "description": "Build with Ninja/vcpkg (Debug)",
+            "configuration": "Debug"
         },
-        "VCPKG_TARGET_TRIPLET": "x64-linux"
-      }
-    },
-    {
-      "name": "windows-base",
-      "hidden": true,
-      "inherits": "base",
-      "condition": {
-        "type": "equals",
-        "lhs": "${hostSystemName}",
-        "rhs": "Windows"
-      },
-      "cacheVariables": {
-        "CMAKE_TOOLCHAIN_FILE": {
-          "type": "FILEPATH",
-          "value": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
-        },
-        "VCPKG_TARGET_TRIPLET": "x64-windows"
-      }
-    },
-    {
-      "name": "linux-debug",
-      "displayName": "Linux Debug Server+Client",
-      "description": "Build server and client (Debug) on Linux.",
-      "inherits": "linux-base",
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug",
-        "BUILD_SERVER": "ON",
-        "BUILD_CLIENT": "ON",
-        "VCPKG_MANIFEST_FEATURES": "client"
-      }
-    },
-    {
-      "name": "linux-release",
-      "displayName": "Linux Release Server+Client",
-      "description": "Build server and client (Release) on Linux.",
-      "inherits": "linux-base",
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release",
-        "BUILD_SERVER": "ON",
-        "BUILD_CLIENT": "ON",
-        "VCPKG_MANIFEST_FEATURES": "client"
-      }
-    },
-    {
-      "name": "windows-debug",
-      "displayName": "Windows Debug Server+Client",
-      "description": "Build server and client (Debug) on Windows.",
-      "inherits": "windows-base",
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug",
-        "BUILD_SERVER": "ON",
-        "BUILD_CLIENT": "ON",
-        "VCPKG_MANIFEST_FEATURES": "client"
-      }
-    },
-    {
-      "name": "windows-release",
-      "displayName": "Windows Release Server+Client",
-      "description": "Build server and client (Release) on Windows.",
-      "inherits": "windows-base",
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release",
-        "BUILD_SERVER": "ON",
-        "BUILD_CLIENT": "ON",
-        "VCPKG_MANIFEST_FEATURES": "client"
-      }
-    }
-  ]
+        {
+            "name": "ninja-vcpkg-release",
+            "configurePreset": "ninja-multi-vcpkg",
+            "displayName": "Build (Release)",
+            "description": "Build with Ninja/vcpkg (Release)",
+            "configuration": "Release"
+        }
+	]
 }
