@@ -115,7 +115,7 @@ void MessageView::UpdateLayoutAndScroll(const std::vector<Message>& messages, bo
             ScrollToRow(GetUnitCount());
         } else {
             int newScrollUnits = (oldScrollY - removedHeight);
-            ScrollToRow(std::max(0, newScrollUnits));
+            ScrollToRow((std::max)(0, newScrollUnits));
         }
     }
 
