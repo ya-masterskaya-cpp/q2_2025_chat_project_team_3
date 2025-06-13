@@ -14,10 +14,13 @@ public:
     wxButton* registerButton;
 
     void SetButtonsEnabled(bool enabled);
+    void HandleRegisterContinue();
+    void HandleAuthContinue(const std::string& salt);
 
 private:
     void OnLogin(wxCommandEvent&);
     void OnRegister(wxCommandEvent&);
     MainWidget* mainWin;
+    wxString m_password;
     wxDECLARE_EVENT_TABLE();
 };

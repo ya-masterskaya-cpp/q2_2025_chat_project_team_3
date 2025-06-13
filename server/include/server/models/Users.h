@@ -47,8 +47,9 @@ class Users
     {
         static const std::string _user_id;
         static const std::string _username;
-        static const std::string _password;
+        static const std::string _hash_password;
         static const std::string _created_at;
+        static const std::string _salt;
     };
 
     static const int primaryKeyNumber;
@@ -117,14 +118,14 @@ class Users
     void setUsername(const std::string &pUsername) noexcept;
     void setUsername(std::string &&pUsername) noexcept;
 
-    /**  For column password  */
-    ///Get the value of the column password, returns the default value if the column is null
-    const std::string &getValueOfPassword() const noexcept;
+    /**  For column hash_password  */
+    ///Get the value of the column hash_password, returns the default value if the column is null
+    const std::string &getValueOfHashPassword() const noexcept;
     ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
-    const std::shared_ptr<std::string> &getPassword() const noexcept;
-    ///Set the value of the column password
-    void setPassword(const std::string &pPassword) noexcept;
-    void setPassword(std::string &&pPassword) noexcept;
+    const std::shared_ptr<std::string> &getHashPassword() const noexcept;
+    ///Set the value of the column hash_password
+    void setHashPassword(const std::string &pHashPassword) noexcept;
+    void setHashPassword(std::string &&pHashPassword) noexcept;
 
     /**  For column created_at  */
     ///Get the value of the column created_at, returns the default value if the column is null
@@ -135,8 +136,18 @@ class Users
     void setCreatedAt(const ::trantor::Date &pCreatedAt) noexcept;
     void setCreatedAtToNull() noexcept;
 
+    /**  For column salt  */
+    ///Get the value of the column salt, returns the default value if the column is null
+    const std::string &getValueOfSalt() const noexcept;
+    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
+    const std::shared_ptr<std::string> &getSalt() const noexcept;
+    ///Set the value of the column salt
+    void setSalt(const std::string &pSalt) noexcept;
+    void setSalt(std::string &&pSalt) noexcept;
+    void setSaltToNull() noexcept;
 
-    static size_t getColumnNumber() noexcept {  return 4;  }
+
+    static size_t getColumnNumber() noexcept {  return 5;  }
     static const std::string &getColumnName(size_t index) noexcept(false);
 
     Json::Value toJson() const;
@@ -163,8 +174,9 @@ class Users
     void updateId(const uint64_t id);
     std::shared_ptr<int32_t> userId_;
     std::shared_ptr<std::string> username_;
-    std::shared_ptr<std::string> password_;
+    std::shared_ptr<std::string> hashPassword_;
     std::shared_ptr<::trantor::Date> createdAt_;
+    std::shared_ptr<std::string> salt_;
     struct MetaData
     {
         const std::string colName_;
@@ -176,7 +188,7 @@ class Users
         const bool notNull_;
     };
     static const std::vector<MetaData> metaData_;
-    bool dirtyFlag_[4]={ false };
+    bool dirtyFlag_[5]={ false };
   public:
     static const std::string &sqlForFindingByPrimaryKey()
     {
@@ -203,7 +215,7 @@ class Users
         }
         if(dirtyFlag_[2])
         {
-            sql += "password,";
+            sql += "hash_password,";
             ++parametersCount;
         }
         sql += "created_at,";
@@ -211,6 +223,11 @@ class Users
         if(!dirtyFlag_[3])
         {
             needSelection=true;
+        }
+        if(dirtyFlag_[4])
+        {
+            sql += "salt,";
+            ++parametersCount;
         }
         needSelection=true;
         if(parametersCount > 0)
@@ -243,6 +260,11 @@ class Users
         else
         {
             sql +="default,";
+        }
+        if(dirtyFlag_[4])
+        {
+            n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
+            sql.append(placeholderStr, n);
         }
         if(parametersCount > 0)
         {

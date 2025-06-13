@@ -50,17 +50,32 @@ void WebSocketClient::start() {
     );
 }
 
-void WebSocketClient::registerUser(const std::string& username, const std::string& password) {
+void WebSocketClient::requestInitialRegister(const std::string &username) {
     chat::Envelope env;
-    env.mutable_register_request()->set_username(username);
-    env.mutable_register_request()->set_password(password);
+    env.mutable_initial_register_request()->set_username(username);
     sendEnvelope(env);
 }
 
-void WebSocketClient::loginUser(const std::string& username, const std::string& password) {
+void WebSocketClient::requestInitialAuth(const std::string &username) {
     chat::Envelope env;
-    env.mutable_auth_request()->set_username(username);
-    env.mutable_auth_request()->set_password(password);
+    env.mutable_initial_auth_request()->set_username(username);
+    sendEnvelope(env);
+}
+
+void WebSocketClient::completeRegister(const std::string &hash, const std::string& salt) {
+    chat::Envelope env;
+    auto* req = env.mutable_register_request();
+    req->set_hash(hash);
+    req->set_salt(salt);
+    sendEnvelope(env);
+}
+
+void WebSocketClient::completeAuth(const std::string& hash, const std::optional<std::string>& password, const std::optional<std::string>& salt) {
+    chat::Envelope env;
+    auto* req = env.mutable_auth_request();
+    req->set_hash(hash);
+    if (password) req->set_password(*password);
+    if (salt) req->set_salt(*salt);
     sendEnvelope(env);
 }
 
@@ -124,7 +139,14 @@ void WebSocketClient::getMessages(int32_t limit, int64_t offset_ts) {
     sendEnvelope(env);
 }
 
-void WebSocketClient::requestRoomList() {
+void WebSocketClient::logout() {
+    chat::Envelope env;
+    env.mutable_logout_request();
+    sendEnvelope(env);
+}
+
+void WebSocketClient::requestRoomList()
+{
     getRooms();
     scheduleRoomListRefresh();
 }
@@ -195,11 +217,33 @@ void WebSocketClient::handleMessage(const std::string& msg) {
             }
             break;
         }
-        case chat::Envelope::kRegisterResponse: {
-            if(statusOk(env.register_response().status())) {
-                showInfo("Registration successful!");
+        case chat::Envelope::kInitialRegisterResponse: {
+            if (statusOk(env.initial_register_response().status())){
+                wxTheApp->CallAfter([this] {
+                    ui->authPanel->HandleRegisterContinue();
+                });
             } else {
-                showError("Registration failed!");
+                showError("Failed to register user");
+            }
+            break;
+        }
+        case chat::Envelope::kInitialAuthResponse: {
+            if (statusOk(env.initial_auth_response().status())){
+                wxTheApp->CallAfter([this, response = env.initial_auth_response()] {
+                    std::string salt = "";
+                    if (response.has_salt()) salt = response.salt();
+                    ui->authPanel->HandleAuthContinue(salt);
+                });
+            } else {
+                showError("Failed to login");
+            }
+            break;
+        }
+        case chat::Envelope::kLogoutResponse: {
+            if(statusOk(env.logout_response().status())) {
+                wxTheApp->CallAfter([this] { ui->ShowAuth(); });
+            } else {
+                showError("Failed to logout");
             }
             break;
         }
@@ -208,7 +252,15 @@ void WebSocketClient::handleMessage(const std::string& msg) {
                 showInfo("Login successful!");
                 showRooms();
             } else {
-                showError("Login failed!");
+                showError("Login failed! " + wxString(env.auth_response().status().message()));
+            }
+            break;
+        }
+        case chat::Envelope::kRegisterResponse: {
+            if(statusOk(env.register_response().status())) {
+                showInfo("Registration successful!");
+            } else {
+                showError("Registration failed! " + wxString(env.register_response().status().message()));
             }
             break;
         }
@@ -251,7 +303,8 @@ void WebSocketClient::showInfo(const wxString& msg) {
     wxTheApp->CallAfter([this, msg] { ui->ShowPopup(msg, wxICON_INFORMATION); });
 }
 
-void WebSocketClient::updateRoomsPanel(const std::vector<Room>& rooms) {
+void WebSocketClient::updateRoomsPanel(const std::vector<Room> &rooms)
+{
     wxTheApp->CallAfter([this, rooms] { ui->roomsPanel->UpdateRoomList(rooms); });
 }
 
