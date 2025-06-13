@@ -16,6 +16,7 @@ public:
             }
             case chat::Envelope::kInitialRegisterRequest: {
                 *respEnv.mutable_initial_register_response() = co_await MessageHandlers::handleRegisterInitial(wsData, env.initial_register_request());
+                break;
             }
             case chat::Envelope::kAuthRequest: {
                 *respEnv.mutable_auth_response() = co_await MessageHandlers::handleAuth(wsData, env.auth_request());
@@ -47,6 +48,10 @@ public:
             }
             case chat::Envelope::kGetMessagesRequest: {
                 *respEnv.mutable_get_messages_response() = co_await MessageHandlers::handleGetMessages(wsData, env.get_messages_request());
+                break;
+            }
+            case chat::Envelope::kLogoutRequest: {
+                *respEnv.mutable_logout_response() = co_await MessageHandlers::handleLogoutUser(wsData, room_service);
                 break;
             }
             default: {
