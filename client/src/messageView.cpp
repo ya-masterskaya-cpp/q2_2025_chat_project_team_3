@@ -17,15 +17,8 @@ MessageView::MessageView(ChatPanel* parent)
 {
     SetBackgroundStyle(wxBG_STYLE_PAINT);
     SetDoubleBuffered(true);
-    //Bind(wxEVT_PAINT, &MessageView::OnPaint, this);
     Bind(wxEVT_SIZE, &MessageView::OnSize, this);
     Bind(wxEVT_MOUSEWHEEL, &MessageView::OnMouseWheel, this);
-    //Bind(wxEVT_SCROLLWIN_LINEUP, &MessageView::OnScroll, this);
-    //Bind(wxEVT_SCROLLWIN_LINEDOWN, &MessageView::OnScroll, this);
-    //Bind(wxEVT_SCROLLWIN_PAGEUP, &MessageView::OnScroll, this);
-    //Bind(wxEVT_SCROLLWIN_PAGEDOWN, &MessageView::OnScroll, this);
-    //Bind(wxEVT_SCROLLWIN_THUMBTRACK, &MessageView::OnScroll, this);
-    //Bind(wxEVT_SCROLLWIN_THUMBRELEASE, &MessageView::OnScroll, this);
 
     for (int i = 0; i < MAX_MESSAGES + CHUNK_SIZE; ++i) {
         m_widgetsPool.return_instance(new MessageWidget(this, Message{}, m_lastKnownWrapWidth));
@@ -46,8 +39,8 @@ void MessageView::OnSize(wxSizeEvent& event) {
 void MessageView::OnScrolled() {
     UpdateWidgetPositions();
     if (m_loadingOlder || m_loadingNewer) return;
-    wxCoord firstVisiblePixel = GetVisibleRowsBegin() * SCROLL_STEP;
-    wxCoord totalHeight = GetUnitCount() * SCROLL_STEP;
+    wxCoord firstVisiblePixel = GetVisibleRowsBegin();
+    wxCoord totalHeight = GetUnitCount();
     wxCoord visibleHeight = GetClientSize().y;
     const int pixelThreshold = FromDIP(500);
     if (firstVisiblePixel <= pixelThreshold) LoadOlderMessages();
@@ -71,38 +64,21 @@ void MessageView::OnMouseWheel(wxMouseEvent& event) {
         lines = (rotation > 0) ? -1 : 1;
     }
 
-    // Perform scrolling
-    //int oldPos = GetScrollPos(wxVERTICAL);
-    ScrollRows(lines);
-
-
-    //ScrollLines(lines);  // This updates the view
-    //int newPos = GetScrollPos(wxVERTICAL);
-
-    // Generate synthetic scroll event if position changed
-    //if (oldPos != newPos) {
-    //    wxScrollWinEvent evt(wxEVT_SCROLLWIN_THUMBTRACK, newPos, wxVERTICAL);
-    //    evt.SetEventObject(this);
-    //    OnScroll(evt);  // Process like other scroll events
-    //}
-
-    //event.Skip();
-    OnScrolled();
+    if(ScrollRows(lines)) {
+        OnScrolled();
+    }
 }
 
 void MessageView::OnMessagesReceived(const std::vector<Message>& messages, bool isHistoryResponse) {
-    if (messages.empty()) {
-        m_loadingOlder = false;
-        m_loadingNewer = false;
-        return;
+    if (!messages.empty()) {
+        UpdateLayoutAndScroll(messages, isHistoryResponse);
     }
-    UpdateLayoutAndScroll(messages, isHistoryResponse);
     m_loadingOlder = false;
     m_loadingNewer = false;
 }
 
 void MessageView::UpdateLayoutAndScroll(const std::vector<Message>& messages, bool isHistoryResponse) {
-    int oldScrollY = GetVisibleRowsBegin() * SCROLL_STEP;
+    int oldScrollY = GetVisibleRowsBegin();
     bool wasEmpty = m_messageWidgets.empty();
 
     if (m_loadingOlder) {
@@ -112,48 +88,45 @@ void MessageView::UpdateLayoutAndScroll(const std::vector<Message>& messages, bo
             addedHeight += m_messageWidgets.front()->GetBestSize().y;
         }
         TrimWidgets(false);
-        SetUnitCount(CalculateTotalHeight() / SCROLL_STEP);
-        if (wasEmpty) ScrollToRow(GetUnitCount());
-        else ScrollToRow((oldScrollY + addedHeight) / SCROLL_STEP);
+        SetUnitCount(CalculateTotalHeight());
+        if(wasEmpty) {
+            ScrollToRow(GetUnitCount() - GetClientSize().y);
+        } else {
+            ScrollToRow(oldScrollY + addedHeight);
+        }
     } else {
-        bool wasAtBottom = (GetVisibleRowsBegin() * SCROLL_STEP) + GetClientSize().y >= (GetUnitCount() * SCROLL_STEP) - 5;
+        bool wasAtBottom = GetVisibleRowsBegin() + GetClientSize().y >= GetUnitCount() - 5;
         int removedHeight = 0;
         int numToRemove = m_messageWidgets.size() + messages.size() - MAX_MESSAGES;
-        if (numToRemove > 0) {
-            for (int i = 0; i < numToRemove; ++i)
-                if (i < m_messageWidgets.size()) removedHeight += m_messageWidgets[i]->GetBestSize().y;
+        if(numToRemove > 0) {
+            for(int i = 0; i < numToRemove; ++i) {
+                if(i == m_messageWidgets.size()) {
+                    break;
+                }
+                removedHeight += m_messageWidgets[i]->GetBestSize().y;
+            }
         }
-        for (const auto& msg : messages) {
+        for(const auto& msg : messages) {
             AddMessageWidget(msg, false);
         }
         TrimWidgets(true);
-        SetUnitCount(CalculateTotalHeight() / SCROLL_STEP);
-        if (!isHistoryResponse && wasAtBottom) ScrollToRow(GetUnitCount());
-        else {
-            int newScrollUnits = (oldScrollY - removedHeight) / SCROLL_STEP;
-            if (newScrollUnits < 0) newScrollUnits = 0;
-            ScrollToRow(newScrollUnits);
+        SetUnitCount(CalculateTotalHeight());
+        if(!isHistoryResponse && wasAtBottom) {
+            ScrollToRow(GetUnitCount());
+        } else {
+            int newScrollUnits = (oldScrollY - removedHeight);
+            ScrollToRow(std::max(0, newScrollUnits));
         }
     }
-    
+
     UpdateWidgetPositions();
 }
 
-void MessageView::OnPaint(wxPaintEvent& event) {
-    //wxAutoBufferedPaintDC dc(this);
-    //UpdateWidgetPositions();
-}
-
-void MessageView::OnScroll(wxScrollWinEvent& event) {
-    event.Skip();
-    OnScrolled();
-}
-
 void MessageView::UpdateWidgetPositions() {
-    wxCoord scrollY = GetVisibleRowsBegin() * SCROLL_STEP;
+    wxCoord scrollY = GetVisibleRowsBegin();
     wxCoord clientHeight = GetClientSize().y;
     wxCoord containerWidth = GetClientSize().x;
-    const wxCoord padding = SCROLL_STEP * 10; 
+    const wxCoord padding = 100; 
     wxCoord currentY = 0;
     for (auto* widget : m_messageWidgets) {
         wxCoord h = widget->GetBestSize().y;
@@ -161,8 +134,6 @@ void MessageView::UpdateWidgetPositions() {
             wxCoord physicalY = currentY - scrollY;
             widget->SetSize(0, physicalY, containerWidth, -1);
             widget->Show();
-            //widget->Layout();
-           // widget->Refresh();
         } else {
             widget->Hide();
         }
@@ -175,12 +146,12 @@ void MessageView::UpdateWidgetPositions() {
 void MessageView::ReWrapAllMessages(int wrapWidth) {
     if (wrapWidth <= 0 || m_lastKnownWrapWidth == wrapWidth) return;
     m_lastKnownWrapWidth = wrapWidth;
-    wxCoord oldScrollY = GetVisibleRowsBegin() * SCROLL_STEP;
+    wxCoord oldScrollY = GetVisibleRowsBegin();
     for (auto* widget : m_messageWidgets) {
         widget->SetWrappedMessage(m_lastKnownWrapWidth);
     }
-    SetUnitCount(CalculateTotalHeight() / SCROLL_STEP);
-    ScrollToRow(oldScrollY / SCROLL_STEP);
+    SetUnitCount(CalculateTotalHeight());
+    ScrollToRow(oldScrollY);
     UpdateWidgetPositions();
 }
 
@@ -194,18 +165,13 @@ void MessageView::Clear() {
     m_loadingNewer = false;
 }
 
-// This now correctly overrides the pure virtual function.
 wxCoord MessageView::OnGetRowHeight(size_t row) const {
-    return SCROLL_STEP;
+    return 1;
 }
 
 void MessageView::AddMessageWidget(const Message& msg, bool prepend) {
     
     auto* msgWidget = m_widgetsPool.get_instance(this, msg, m_lastKnownWrapWidth);
-    //msgWidget->SetClientSize(GetClientSize().x, -1);
-    //msgWidget->SetSize(0, 0, GetClientSize().x, -1);
-    //msgWidget->Layout();
-    //msgWidget->Refresh();
     if (prepend) {
         m_messageWidgets.push_front(msgWidget);
     } else {
@@ -264,8 +230,8 @@ bool MessageView::IsSnappedToBottom() const {
         return true;
     }
 
-    const wxCoord currentScrollY = GetVisibleRowsBegin() * SCROLL_STEP;
-    const wxCoord totalHeight = GetUnitCount() * SCROLL_STEP;
+    const wxCoord currentScrollY = GetVisibleRowsBegin();
+    const wxCoord totalHeight = GetUnitCount();
     const wxCoord visibleHeight = GetClientSize().y;
 
     return (currentScrollY + visibleHeight) >= (totalHeight - 100);
