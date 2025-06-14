@@ -33,24 +33,26 @@ set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
 if(WIN32)
     set(CPACK_GENERATOR "ZIP")
     set(CPACK_PACKAGE_FILENAME "${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-win-x64")
+    set(CPACK_COMPONENTS_ALL client server)
+    set(CPACK_ARCHIVE_COMPONENT_INSTALL ON)
 elseif(APPLE)
     set(CPACK_GENERATOR "DragNDrop")
     set(CPACK_PACKAGE_FILE_EXTENSION "dmg")
     set(CPACK_PACKAGE_FILENAME "${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-osx-x64")
-    # Optional: Customize DMG appearance (background, icon size, etc.)
-    # set(CPACK_DMG_BACKGROUND_IMAGE_FILE "${CMAKE_CURRENT_SOURCE_DIR}/Resources/dmg_background.tif")
-    # set(CPACK_DMG_APPLICATIONS_DISABLED TRUE) # Don't show Applications shortcut
-    # set(CPACK_DMG_HIDE_MICROSOFT_APPLICATIONS TRUE)
-    # set(CPACK_DMG_HIDE_MAKEMUSIC_APPLICATIONS TRUE)
-    # set(CPACK_DMG_DEFAULT_ICON_SIZE 128)
-    # set(CPACK_DMG_VOLUME_NAME "${CPACK_PACKAGE_NAME} ${CPACK_PACKAGE_VERSION}") # Name of the mounted volume
-else() # Assume Linux/Unix if not WIN32 or APPLE
+    set(CPACK_COMPONENTS_ALL client)
+else() # Linux
     set(CPACK_GENERATOR "TGZ")
     set(CPACK_PACKAGE_FILENAME "${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-linux-x64")
+    set(CPACK_COMPONENTS_ALL server)
+    set(CPACK_ARCHIVE_COMPONENT_INSTALL ON)
 endif()
 
 # This tells CPack to put all installed files into a root folder inside the archive.
 set(CPACK_PACKAGE_INSTALL_DIRECTORY "${CPACK_PACKAGE_NAME}")
+
+message(STATUS "Platform: WIN32=${WIN32}, APPLE=${APPLE}, LINUX=${LINUX}")
+message(STATUS "Final CPACK_COMPONENTS_ALL: ${CPACK_COMPONENTS_ALL}")
+message(STATUS "CPACK_GENERATOR: ${CPACK_GENERATOR}")
 
 # Include the CPack module AFTER all CPACK_* variables are set.
 # This automatically creates the 'package' build target.

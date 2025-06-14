@@ -28,12 +28,13 @@ jobs:
       # Setup the build machine with the most recent versions of CMake and Ninja. Both are cached if not already: on subsequent runs both will be quickly restored from GitHub cache service.
       - uses: lukka/get-cmake@latest
 
-      # Restore vcpkg binary cache from the GitHub Action cache service.
+      # Restore vcpkg binary cache
       - name: Restore vcpkg cache
-        uses: actions/cache@v4
+        id: vcpkg-cache
+        uses: actions/cache/restore@v4
         with:
           path: ${{ env.VCPKG_DEFAULT_BINARY_CACHE }}
-          key: ${{ runner.os }}-vcpkg-${{ hashFiles( '.git/modules/vcpkg/HEAD' ) }}
+          key: ${{ runner.os }}-vcpkg-${{ hashFiles('.git/modules/vcpkg/HEAD') }}
           restore-keys: ${{ runner.os }}-vcpkg-
 
       # On Windows runners, let's ensure to have the Developer Command Prompt environment setup correctly.
@@ -46,9 +47,17 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y bison flex autoconf libltdl-dev python3-jinja2 libx11-dev libxft-dev libxext-dev libxi-dev libxtst-dev libxrandr-dev
 
-      - name: Restore from cache the dependencies and generate project files
+      - name: Configure CMake
         run: |
           cmake --preset ninja-multi-vcpkg
+
+      # Save vcpkg cache (always runs, even if later steps fail)
+      - name: Save vcpkg cache
+        if: always() && steps.vcpkg-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ env.VCPKG_DEFAULT_BINARY_CACHE }}
+          key: ${{ runner.os }}-vcpkg-${{ hashFiles('.git/modules/vcpkg/HEAD') }}
 
       - name: Build (Release configuration)
         run: |
@@ -58,6 +67,32 @@ jobs:
         run: |
           cmake --build --preset ninja-vcpkg-release --target package
 
+      - name: Create AppImage on Linux
+        if: runner.os == 'Linux'
+        run: |
+          cd build
+          cmake --install . --config Release --component client --prefix ./AppDir/usr/bin
+
+          mkdir -p AppDir/usr/share/applications
+          cat > AppDir/usr/share/applications/client_app.desktop << EOF
+          [Desktop Entry]
+          Type=Application
+          Name=My Client App
+          Exec=client_app
+          Categories=Utility;
+          Icon=appname
+          EOF
+
+          mkdir -p AppDir/usr/share/icons/hicolor/scalable/apps
+          touch AppDir/usr/share/icons/hicolor/scalable/apps/appname.svg
+
+          wget https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
+          chmod +x linuxdeploy-x86_64.AppImage
+
+          ./linuxdeploy-x86_64.AppImage --appimage-extract
+          rm linuxdeploy-x86_64.AppImage
+          ./squashfs-root/AppRun --appdir AppDir --output appimage
+
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -66,3 +101,4 @@ jobs:
             build/*.dmg
             build/*.zip
             build/*.tar.gz
+            build/*.AppImage

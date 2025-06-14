@@ -37,18 +37,18 @@ add_custom_command(TARGET server_app POST_BUILD
 )
 
 install(TARGETS server_app
-    DESTINATION server
+    DESTINATION . COMPONENT server
 )
 install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/config.json
-    DESTINATION server
+    DESTINATION . COMPONENT server
 )
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/db/
-    DESTINATION server/db
+    DESTINATION ./db COMPONENT server
 )
 
 if(WIN32)
     install(CODE "
         include(BundleUtilities)
-        fixup_bundle(\"\${CMAKE_INSTALL_PREFIX}/server/server_app.exe\" \"\" \"$<TARGET_FILE_DIR:server_app>\")
-    " COMPONENT Runtime)
+        fixup_bundle(\"\${CMAKE_INSTALL_PREFIX}/server_app.exe\" \"\" \"$<TARGET_FILE_DIR:server_app>\")
+    " COMPONENT server)
 endif()
