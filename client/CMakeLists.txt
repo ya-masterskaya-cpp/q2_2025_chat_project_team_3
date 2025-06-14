@@ -19,12 +19,12 @@ add_executable(client_app
 
 target_include_directories(client_app PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
-    ${wxWidgets_INCLUDE_DIRS}
 )
 
 target_link_libraries(client_app PRIVATE
     common_lib
-    ${wxWidgets_LIBRARIES}
+    wx::core
+    wx::base
 )
 
 target_precompile_headers(client_app PRIVATE
@@ -43,9 +43,9 @@ if(APPLE)
     # It creates the .app structure, and the executable inside is already
     # self-contained because of static linking. No fixup is required.
     set_target_properties(client_app PROPERTIES MACOSX_BUNDLE TRUE)
-    install(TARGETS client_app BUNDLE DESTINATION . COMPONENT Runtime)
+    install(TARGETS client_app BUNDLE DESTINATION . COMPONENT client)
 else()
-    install(TARGETS client_app DESTINATION client)
+    install(TARGETS client_app DESTINATION . COMPONENT client)
 endif()
 
 if(WIN32)
@@ -53,6 +53,6 @@ if(WIN32)
     # dynamic linking on Windows.
     install(CODE "
         include(BundleUtilities)
-        fixup_bundle(\"\${CMAKE_INSTALL_PREFIX}/client/client_app.exe\" \"\" \"$<TARGET_FILE_DIR:client_app>\")
-    " COMPONENT Runtime)
+        fixup_bundle(\"\${CMAKE_INSTALL_PREFIX}/client_app.exe\" \"\" \"$<TARGET_FILE_DIR:client_app>\")
+    " COMPONENT client)
 endif()
