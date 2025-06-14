@@ -20,6 +20,7 @@ add_subdirectory(common)
 
 if(BUILD_SERVER)
     add_subdirectory(server)
+    add_subdirectory(aggregator)
 endif()
 
 if(BUILD_CLIENT)

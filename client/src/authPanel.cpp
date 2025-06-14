@@ -36,7 +36,7 @@ AuthPanel::AuthPanel(MainWidget* parent) : wxPanel(parent), mainWin(parent) {
     sizer->AddStretchSpacer();
     SetSizer(sizer);
 
-    SetButtonsEnabled(false); // Disable by default until connection is ready
+    //SetButtonsEnabled(false); // Disable by default until connection is ready
 }
 
 void AuthPanel::OnLogin(wxCommandEvent&) {

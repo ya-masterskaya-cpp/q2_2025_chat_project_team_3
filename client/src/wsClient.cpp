@@ -4,18 +4,29 @@
 #include <client/roomsPanel.h>
 #include <client/chatPanel.h>
 #include <client/userListPanel.h>
+#include <client/serversPanel.h>
 #include <client/message.h>
 #include <client/messageView.h>
+#include <common/utils/utils.h>
 #include <drogon/HttpRequest.h>
 #include <drogon/HttpAppFramework.h>
 #include <time.h>
 
 WebSocketClient::WebSocketClient(MainWidget* ui_) : ui(ui_) {}
 
-void WebSocketClient::start() {
+void WebSocketClient::stop() {
+    LOG_INFO << "WebSocketClient::stop()";
+    client.reset();
+    conn.reset();
+}
+
+void WebSocketClient::start(const std::string& address) {
+    stop();
+
     LOG_INFO << "WebSocketClient::start()";
-    std::string server = "ws://localhost:8848";
-    std::string path = "/ws";
+
+    auto [server, path] = splitUrl(address);
+
     client = drogon::WebSocketClient::newWebSocketClient(server);
     auto req = drogon::HttpRequest::newHttpRequest();
     req->setPath(path);
@@ -29,9 +40,6 @@ void WebSocketClient::start() {
     });
 
     client->setConnectionClosedHandler([this](const drogon::WebSocketClientPtr&) {
-        connected = false;
-        wxTheApp->CallAfter([this] { ui->authPanel->SetButtonsEnabled(false); });
-        showError("Disconnected!");
     });
 
     LOG_INFO << "Connecting to WebSocket at " << server;
@@ -39,9 +47,6 @@ void WebSocketClient::start() {
         req,
         [this](drogon::ReqResult r, const drogon::HttpResponsePtr&, const drogon::WebSocketClientPtr& wsPtr) {
             if(r != drogon::ReqResult::Ok) {
-                connected = false;
-                wxTheApp->CallAfter([this] { ui->authPanel->SetButtonsEnabled(false); });
-                showError("Connection failed!");
                 conn.reset();
                 return;
             }
@@ -130,6 +135,12 @@ void WebSocketClient::logout() {
     sendEnvelope(env);
 }
 
+void WebSocketClient::getServers() {
+    chat::Envelope env;
+    env.mutable_get_servers_request();
+    sendEnvelope(env);
+}
+
 void WebSocketClient::handleMessage(const std::string& msg) {
     chat::Envelope env;
     if(!env.ParseFromString(msg)) {
@@ -141,9 +152,15 @@ void WebSocketClient::handleMessage(const std::string& msg) {
 
     switch(env.payload_case()) {
         case chat::Envelope::kServerHello: {
-            connected = true;
-            wxTheApp->CallAfter([this] { ui->authPanel->SetButtonsEnabled(true); });
-            showInfo("Connected!");
+            //wxTheApp->CallAfter([this] { ui->authPanel->SetButtonsEnabled(true); });
+            //showInfo("Connected!");
+            if(env.server_hello().type() == chat::ServerType::TYPE_AGGREGATOR) {
+                LOG_TRACE << "Aggregator, getting initial list of servers";
+                getServers();
+                showServers();
+            } else {
+                showAuth();
+            }
             break;
         }
         case chat::Envelope::kRoomMessage: {
@@ -242,6 +259,17 @@ void WebSocketClient::handleMessage(const std::string& msg) {
             }
             break;
         }
+        case chat::Envelope::kGetServersResponse: {
+            std::vector<std::string> servers;
+
+            LOG_TRACE << "got servers resp";
+            for(const auto& server : env.get_servers_response().servers()) {
+                LOG_TRACE << server.host();
+                servers.emplace_back(server.host());
+            }
+            SetServers(servers);
+            break;
+        }
         case chat::Envelope::kGenericError: {
             showError(wxString::Format("Server error: %s",
                 wxString(env.generic_error().status().message().c_str(), wxConvUTF8)));
@@ -294,6 +322,14 @@ void WebSocketClient::showRooms() {
     wxTheApp->CallAfter([this] { ui->ShowRooms(); });
 }
 
+void WebSocketClient::showAuth() {
+    wxTheApp->CallAfter([this] { ui->ShowAuth(); });
+}
+
+void WebSocketClient::showServers() {
+    wxTheApp->CallAfter([this] { ui->ShowServers(); });
+}
+
 void WebSocketClient::addUser(User user) {
     wxTheApp->CallAfter([this, user = std::move(user)] { ui->chatPanel->m_userListPanel->AddUser(std::move(user)); });
 }
@@ -321,6 +357,10 @@ void WebSocketClient::showMessageHistory(const std::vector<Message> &messages) {
         ui->chatPanel->m_messageView->OnMessagesReceived(messages, true);
         LOG_DEBUG << "Finished bulk add";
     });
+}
+
+void WebSocketClient::SetServers(const std::vector<std::string> &servers) {
+    wxTheApp->CallAfter([this, servers] {ui->serversPanel->SetServers(servers);});
 }
 
 std::string WebSocketClient::formatMessageTimestamp(uint64_t timestamp) {
