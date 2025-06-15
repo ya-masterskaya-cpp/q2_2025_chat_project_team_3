@@ -5,3 +5,4 @@
 [submodule "extern/utf8cpp"]
 	path = extern/utf8cpp
 	url = https://github.com/nemtrif/utfcpp.git
+	shallow = true

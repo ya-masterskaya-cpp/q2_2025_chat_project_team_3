@@ -41,6 +41,7 @@ ChatPanel::ChatPanel(MainWidget* parent)
     m_input_ctrl = new wxTextCtrl(this, wxID_ANY, wxEmptyString,
                                            wxDefaultPosition, wxDefaultSize,
                                            wxTE_PROCESS_ENTER | wxTE_MULTILINE);
+    m_input_ctrl->SetMaxLength(512);
     inputSizer->Add(m_input_ctrl, 1, wxEXPAND | wxRIGHT, FromDIP(5));
 
     wxButton* sendButton = new wxButton(this, ID_SEND, "Send");

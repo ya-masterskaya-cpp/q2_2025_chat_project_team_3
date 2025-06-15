@@ -14,6 +14,7 @@ add_executable(server_app
 
 target_include_directories(server_app PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_SOURCE_DIR}/extern/utf8cpp/source
 )
 
 target_link_libraries(server_app PRIVATE
