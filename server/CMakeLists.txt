@@ -6,6 +6,10 @@ add_executable(server_app
     src/chat/ChatRoomManager.cpp
     src/chat/DrogonRoomService.cpp
     src/chat/HttpCtrl.cpp
+    src/chat/MessageHandlers.cpp
+    src/chat/MessageHandlerService.cpp
+    src/chat/WsRequestProcessor.cpp
+    src/utils/scoped_coro_transaction.cpp
     src/db/migrations.cpp
     src/models/Migrations.cc
     src/models/Users.cc
