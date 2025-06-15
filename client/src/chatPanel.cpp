@@ -137,6 +137,7 @@ void ChatPanel::OnSnapStateChanged(wxCommandEvent& event) {
 }
 
 void ChatPanel::OnInputText(wxCommandEvent& event) {
+    event.Skip();
     wxString val = m_input_ctrl->GetValue();
     if (val.length() > 512) {
         long pos = m_input_ctrl->GetInsertionPoint();
@@ -147,5 +148,4 @@ void ChatPanel::OnInputText(wxCommandEvent& event) {
             wxBell();
         });
     }
-    event.Skip();
 }
