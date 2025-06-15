@@ -37,6 +37,7 @@ private:
     // Event handlers for the message container's size and the debouncing timer.
     void OnChatPanelSize(wxSizeEvent& event);
     void OnResizeTimerTick(wxTimerEvent& event);
+    void OnInputText(wxCommandEvent& event);
 
     wxDECLARE_EVENT_TABLE();
 };
