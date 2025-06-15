@@ -5,6 +5,7 @@ add_executable(server_app
     src/main.cpp
     src/chat/ChatRoomManager.cpp
     src/chat/DrogonRoomService.cpp
+    src/chat/HttpCtrl.cpp
     src/db/migrations.cpp
     src/models/Migrations.cc
     src/models/Users.cc
