@@ -147,4 +147,5 @@ void ChatPanel::OnInputText(wxCommandEvent& event) {
             wxBell();
         });
     }
+    event.Skip();
 }

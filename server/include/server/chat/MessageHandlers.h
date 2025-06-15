@@ -217,8 +217,16 @@ public:
             setStatus(resp, chat::STATUS_FAILURE, "Empty 'message' field.");
             co_return resp;
         }
-        if (size_t dist = utf8::distance(req.message().begin(), req.message().end()); dist > 512) {
-            setStatus(resp, chat::STATUS_FAILURE, "Big message (>512ch).");
+
+        try {
+            if (size_t dist = utf8::distance(req.message().begin(), req.message().end()); dist > 512) {
+                setStatus(resp, chat::STATUS_FAILURE, "Big message (>512ch).");
+                co_return resp;
+            }
+        }
+        catch (const std::exception& e) {
+            setStatus(resp, chat::STATUS_FAILURE, "Invalid UTF-8 message.");
+            co_return resp;
         }
 
         auto db = drogon::app().getDbClient();

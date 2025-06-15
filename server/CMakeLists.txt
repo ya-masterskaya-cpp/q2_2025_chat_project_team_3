@@ -22,7 +22,7 @@ target_link_libraries(server_app PRIVATE
 )
 
 target_compile_definitions(server_app PRIVATE
-    UTF_CPP_CPLUSPLUS=202002L
+    UTF_CPP_CPLUSPLUS=202302L
 )
 
 target_precompile_headers(server_app PRIVATE
