@@ -21,6 +21,10 @@ target_link_libraries(server_app PRIVATE
     common_lib
 )
 
+target_compile_definitions(server_app PRIVATE
+    UTF_CPP_CPLUSPLUS=202002L
+)
+
 target_precompile_headers(server_app PRIVATE
     "${CMAKE_SOURCE_DIR}/common/include/pch.h"
 )

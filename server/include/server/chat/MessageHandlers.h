@@ -11,10 +11,6 @@
 #include <server/models/Users.h>
 #include <server/models/Rooms.h>
 #include <server/models/Messages.h>
-
-#if defined(_MSC_VER) && (!defined(__cplusplus) || __cplusplus < 201703L)
-#define UTF_CPP_CPLUSPLUS 202002L
-#endif
 #include <utf8.h>
 
 namespace models = drogon_model::drogon_test;
