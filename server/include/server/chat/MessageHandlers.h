@@ -11,6 +11,7 @@
 #include <server/models/Users.h>
 #include <server/models/Rooms.h>
 #include <server/models/Messages.h>
+#include <utf8.h>
 
 namespace models = drogon_model::drogon_test;
 
@@ -214,6 +215,17 @@ public:
         }
         if(req.message().empty()) {
             setStatus(resp, chat::STATUS_FAILURE, "Empty 'message' field.");
+            co_return resp;
+        }
+
+        try {
+            if (size_t dist = utf8::distance(req.message().begin(), req.message().end()); dist > 512) {
+                setStatus(resp, chat::STATUS_FAILURE, "Big message (>512ch).");
+                co_return resp;
+            }
+        }
+        catch (const std::exception& e) {
+            setStatus(resp, chat::STATUS_FAILURE, "Invalid UTF-8 message.");
             co_return resp;
         }
 

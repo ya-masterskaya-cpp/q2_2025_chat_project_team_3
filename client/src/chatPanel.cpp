@@ -41,6 +41,7 @@ ChatPanel::ChatPanel(MainWidget* parent)
     m_input_ctrl = new wxTextCtrl(this, wxID_ANY, wxEmptyString,
                                            wxDefaultPosition, wxDefaultSize,
                                            wxTE_PROCESS_ENTER | wxTE_MULTILINE);
+    m_input_ctrl->Bind(wxEVT_TEXT, &ChatPanel::OnInputText, this);
     inputSizer->Add(m_input_ctrl, 1, wxEXPAND | wxRIGHT, FromDIP(5));
 
     wxButton* sendButton = new wxButton(this, ID_SEND, "Send");
@@ -133,4 +134,18 @@ void ChatPanel::OnSnapStateChanged(wxCommandEvent& event) {
     
     //m_jumpToPresentButton->Enable(!isSnapped);
     Layout();
+}
+
+void ChatPanel::OnInputText(wxCommandEvent& event) {
+    event.Skip();
+    wxString val = m_input_ctrl->GetValue();
+    if (val.length() > 512) {
+        long pos = m_input_ctrl->GetInsertionPoint();
+        wxString cated_str = val.Left(512);
+        CallAfter([this, cated_str, pos]() {
+            m_input_ctrl->SetValue(cated_str);
+            m_input_ctrl->SetInsertionPoint((std::min)(pos, 512L));
+            wxBell();
+        });
+    }
 }
