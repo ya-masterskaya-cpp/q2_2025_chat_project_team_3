@@ -3,6 +3,8 @@
 
 using namespace drogon;
 
+namespace http {
+	
 class HttpCtrl : public drogon::HttpController<HttpCtrl> {
 public:
     void healthCheck(const HttpRequestPtr& req, std::function<void(const HttpResponsePtr&)>&& callback) const;
@@ -11,3 +13,5 @@ public:
         ADD_METHOD_TO(HttpCtrl::healthCheck, "/health", Get);
     METHOD_LIST_END    
 };
+
+} // namespace http

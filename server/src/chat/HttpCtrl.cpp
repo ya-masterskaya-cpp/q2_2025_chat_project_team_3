@@ -1,5 +1,7 @@
 #include "server/chat/HttpCtrl.h"
 
+namespace http {
+
 void HttpCtrl::healthCheck(const HttpRequestPtr& req, std::function<void(const HttpResponsePtr&)>&& callback) const {
     auto resp = HttpResponse::newHttpResponse();
     resp->setStatusCode(k200OK);
@@ -7,3 +9,5 @@ void HttpCtrl::healthCheck(const HttpRequestPtr& req, std::function<void(const H
     resp->setBody("OK");
     callback(resp);
 }
+
+} // namespace http
