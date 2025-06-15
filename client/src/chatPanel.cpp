@@ -143,7 +143,7 @@ void ChatPanel::OnInputText(wxCommandEvent& event) {
         wxString cated_str = val.Left(512);
         CallAfter([this, cated_str, pos]() {
             m_input_ctrl->SetValue(cated_str);
-            m_input_ctrl->SetInsertionPoint(std::min(pos, 512L));
+            m_input_ctrl->SetInsertionPoint((std::min)(pos, 512L));
             wxBell();
         });
     }
