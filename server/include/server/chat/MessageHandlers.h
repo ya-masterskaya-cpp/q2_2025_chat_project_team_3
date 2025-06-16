@@ -145,6 +145,13 @@ public:
                 co_return resp;
             }
         }
+        
+        auto rooms = co_await drogon::orm::CoroMapper<models::Rooms>(db).findAll();
+        for(const auto& room : rooms) {
+            chat::RoomInfo* room_info = resp.add_rooms();
+            room_info->set_room_id(room.getValueOfRoomId());
+            room_info->set_room_name(room.getValueOfRoomName());
+        }
 
         wsData->user->id = *user.getUserId();
         wsData->status = USER_STATUS::Authenticated;
@@ -340,32 +347,6 @@ public:
         co_return resp;
     }
 
-    static drogon::Task<chat::GetRoomsResponse> handleGetRooms(const std::shared_ptr<WsData>& wsData, const chat::GetRoomsRequest&) {
-        chat::GetRoomsResponse resp;
-        if(!wsData->user) {
-            setStatus(resp, chat::STATUS_UNAUTHORIZED, "User not authenticated.");
-            co_return resp;
-        }
-        auto db = drogon::app().getDbClient();
-        if(!db) {
-            setStatus(resp, chat::STATUS_FAILURE, "DB not available.");
-            co_return resp;
-        }
-        try {
-            auto rooms = co_await drogon::orm::CoroMapper<models::Rooms>(db).findAll();
-            for(const auto& room : rooms) {
-                chat::RoomInfo* room_info = resp.add_rooms();
-                room_info->set_room_id(room.getValueOfRoomId());
-                room_info->set_room_name(room.getValueOfRoomName());
-            }
-            setStatus(resp, chat::STATUS_SUCCESS);
-            co_return resp;
-        } catch(const std::exception& e) {
-            setStatus(resp, chat::STATUS_FAILURE, "Failed to retrieve rooms: " + std::string(e.what()));
-            co_return resp;
-        }
-    }
-
     static drogon::Task<chat::CreateRoomResponse> handleCreateRoom(const std::shared_ptr<WsData>& wsData, const chat::CreateRoomRequest& req) {
         chat::CreateRoomResponse resp;
         if(!wsData->user) {
@@ -397,7 +378,13 @@ public:
                 setStatus(resp, chat::STATUS_FAILURE, *err);
                 co_return resp;
             }
-            resp.mutable_info()->set_room_id(room_id);
+
+            chat::Envelope new_room_msg;
+            auto* new_room_resp = new_room_msg.mutable_new_room_response();
+            new_room_resp->mutable_room()->set_room_id(room_id);
+            new_room_resp->mutable_room()->set_room_name(req.room_name());
+
+            ChatRoomManager::instance().sendToAll(new_room_msg);
             setStatus(resp, chat::STATUS_SUCCESS);
             co_return resp;
         } catch(const std::exception& e) {
@@ -471,6 +458,7 @@ public:
         room_service.logout();
         wsData->room.reset();
         wsData->user.reset();
+        wsData->status = USER_STATUS::Unauthenticated;
         setStatus(resp, chat::STATUS_SUCCESS);
         co_return resp;
     }

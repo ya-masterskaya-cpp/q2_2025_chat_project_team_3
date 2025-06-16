@@ -63,6 +63,7 @@ message AuthRequest {
 }
 message AuthResponse {
     Status status = 1;
+    repeated RoomInfo rooms = 2;
 }
 
 message InitialRegisterRequest {
@@ -113,19 +114,11 @@ message UserLeftRoom {
     UserInfo user = 1;
 }
 
-message GetRoomsRequest {
-}
-message GetRoomsResponse {
-    Status status = 1;
-    repeated RoomInfo rooms = 2;
-}
-
 message CreateRoomRequest {
     string room_name = 1;
 }
 message CreateRoomResponse {
     Status status = 1;
-    RoomInfo info = 2;
 }
 
 message RoomMessage {
@@ -139,6 +132,10 @@ message GetMessagesRequest{
 message GetMessagesResponse{
     Status status = 1;
     repeated MessageInfo message = 2;
+}
+
+message NewRoomResponse {
+    RoomInfo room = 1;
 }
 
 message Envelope {
@@ -160,15 +157,14 @@ message Envelope {
         JoinRoomResponse join_room_response = 15;
         LeaveRoomRequest leave_room_request = 16;
         LeaveRoomResponse leave_room_response = 17;
-        GetRoomsRequest get_rooms_request = 18;
-        GetRoomsResponse get_rooms_response = 19;
-        CreateRoomRequest create_room_request = 20;
-        CreateRoomResponse create_room_response = 21;
-        RoomMessage room_message = 22;
-        GetMessagesRequest get_messages_request = 23;
-        GetMessagesResponse get_messages_response = 24;
-        GenericError generic_error = 25;
-        UserJoinedRoom user_joined = 26;
-        UserLeftRoom user_left = 27;
+        CreateRoomRequest create_room_request = 18;
+        CreateRoomResponse create_room_response = 19;
+        RoomMessage room_message = 20;
+        GetMessagesRequest get_messages_request = 21;
+        GetMessagesResponse get_messages_response = 22;
+        GenericError generic_error = 23;
+        UserJoinedRoom user_joined = 24;
+        UserLeftRoom user_left = 25;
+        NewRoomResponse new_room_response = 26;
     }
 }

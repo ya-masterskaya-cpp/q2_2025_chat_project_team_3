@@ -38,10 +38,6 @@ public:
                 *respEnv.mutable_leave_room_response() = co_await MessageHandlers::handleLeaveRoom(wsData, env.leave_room_request(), room_service);
                 break;
             }
-            case chat::Envelope::kGetRoomsRequest: {
-                *respEnv.mutable_get_rooms_response() = co_await MessageHandlers::handleGetRooms(wsData, env.get_rooms_request());
-                break;
-            }
             case chat::Envelope::kCreateRoomRequest: {
                 *respEnv.mutable_create_room_response() = co_await MessageHandlers::handleCreateRoom(wsData, env.create_room_request());
                 break;

@@ -98,3 +98,14 @@ void ChatRoomManager::removeFromRoom_unsafe(const drogon::WebSocketConnectionPtr
         m_room_to_conns.erase(room_id);
     }
 }
+
+void ChatRoomManager::sendToAll(const chat::Envelope& message) const {
+    std::shared_lock lock(m_mutex);
+    for (const auto& [user_id, conns] : m_user_id_to_conns) {
+        for (const auto& conn : conns) {
+            if (conn->getContextRef<WsData>().status == USER_STATUS::Authenticated) {
+                sendEnvelope(conn, message);
+            }
+        }
+    }
+}
