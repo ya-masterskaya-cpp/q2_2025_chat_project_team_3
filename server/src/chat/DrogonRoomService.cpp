@@ -12,3 +12,11 @@ void DrogonRoomService::joinRoom() {
 void DrogonRoomService::leaveCurrentRoom() {
     ChatRoomManager::instance().removeConnectionFromRoom(m_conn);
 }
+
+void DrogonRoomService::logout() {
+    ChatRoomManager::instance().unregisterConnection(m_conn);
+}
+
+void DrogonRoomService::login() {
+    ChatRoomManager::instance().registerConnection(m_conn);
+}

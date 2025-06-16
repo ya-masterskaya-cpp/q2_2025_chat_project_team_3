@@ -3,7 +3,7 @@
 #include <drogon/orm/CoroMapper.h>
 
 #include <server/chat/WsData.h>
-#include <server/chat/IRoomService.h>
+#include <server/chat/IChatRoomService.h>
 #include <server/chat/ChatRoomManager.h>
 #include <server/utils/utils.h>
 #include <server/utils/scoped_coro_transaction.h>
@@ -77,7 +77,7 @@ public:
         }
     }
 
-    static drogon::Task<chat::AuthResponse> handleAuth(const std::shared_ptr<WsData>& wsData, const chat::AuthRequest& req) {
+    static drogon::Task<chat::AuthResponse> handleAuth(const std::shared_ptr<WsData>& wsData, const chat::AuthRequest& req, IChatRoomService& room_service) {
     chat::AuthResponse resp;
 
     if (wsData->status != USER_STATUS::Authenticating) {
@@ -148,6 +148,7 @@ public:
 
         wsData->user->id = *user.getUserId();
         wsData->status = USER_STATUS::Authenticated;
+        room_service.login();
         setStatus(resp, chat::STATUS_SUCCESS);
         co_return resp;
     } catch (const std::exception& e) {
@@ -280,7 +281,7 @@ public:
         co_return resp;
     }
 
-    static drogon::Task<chat::JoinRoomResponse> handleJoinRoom(const std::shared_ptr<WsData>& wsData, const chat::JoinRoomRequest& req, IRoomService& room_service) {
+    static drogon::Task<chat::JoinRoomResponse> handleJoinRoom(const std::shared_ptr<WsData>& wsData, const chat::JoinRoomRequest& req, IChatRoomService& room_service) {
         chat::JoinRoomResponse resp;
         if(!wsData->user) {
             setStatus(resp, chat::STATUS_UNAUTHORIZED, "User not authenticated.");
@@ -321,7 +322,7 @@ public:
         }
     }
 
-    static drogon::Task<chat::LeaveRoomResponse> handleLeaveRoom(const std::shared_ptr<WsData>& wsData, const chat::LeaveRoomRequest&, IRoomService& room_service) {
+    static drogon::Task<chat::LeaveRoomResponse> handleLeaveRoom(const std::shared_ptr<WsData>& wsData, const chat::LeaveRoomRequest&, IChatRoomService& room_service) {
         chat::LeaveRoomResponse resp;
         if(!wsData->user) {
             setStatus(resp, chat::STATUS_UNAUTHORIZED, "User not authenticated.");
@@ -461,15 +462,13 @@ public:
         }
     }
 
-    static drogon::Task<chat::LogoutResponse> handleLogoutUser(const std::shared_ptr<WsData>& wsData, IRoomService& room_service) {
+    static drogon::Task<chat::LogoutResponse> handleLogoutUser(const std::shared_ptr<WsData>& wsData, IChatRoomService& room_service) {
         chat::LogoutResponse resp;
         if(wsData->status != USER_STATUS::Authenticated) {
             setStatus(resp, chat::STATUS_UNAUTHORIZED, "User not authenticated.");
             co_return resp;
         }
-        if(wsData->room) {
-            room_service.leaveCurrentRoom();
-        }
+        room_service.logout();
         wsData->room.reset();
         wsData->user.reset();
         setStatus(resp, chat::STATUS_SUCCESS);

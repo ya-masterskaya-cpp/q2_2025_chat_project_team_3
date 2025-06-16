@@ -30,17 +30,14 @@ std::vector<chat::UserInfo> ChatRoomManager::getUsersInRoom(int32_t room_id) con
 }
 
 void ChatRoomManager::registerConnection(const drogon::WebSocketConnectionPtr& conn) {
-     std::unique_lock lock(m_mutex);
-
+    std::unique_lock lock(m_mutex);
     auto& ws_data = conn->getContextRef<WsData>();
     int32_t user_id = ws_data.user->id;
-    int32_t room_id = ws_data.room->id;
     m_user_id_to_conns[user_id].insert(conn);
 }
 
 void ChatRoomManager::addConnectionToRoom(const drogon::WebSocketConnectionPtr& conn) {
     std::unique_lock lock(m_mutex);
-
     auto& ws_data = conn->getContextRef<WsData>();
     int32_t room_id = ws_data.room->id;
     m_room_to_conns[room_id].insert(conn);
@@ -49,23 +46,6 @@ void ChatRoomManager::addConnectionToRoom(const drogon::WebSocketConnectionPtr& 
 void ChatRoomManager::removeConnectionFromRoom(const drogon::WebSocketConnectionPtr& conn) {
     std::unique_lock lock(m_mutex);
     removeFromRoom_unsafe(conn);
-}
-
-void ChatRoomManager::removeFromRoom_unsafe(const drogon::WebSocketConnectionPtr& conn) {
-    auto& ws_data = conn->getContextRef<WsData>();
-    int32_t room_id = ws_data.room->id;
-
-    chat::Envelope user_left_msg;
-    user_left_msg.mutable_user_left()->mutable_user()->set_user_id(ws_data.user->id);
-    user_left_msg.mutable_user_left()->mutable_user()->set_user_name(ws_data.user->name);
-    user_left_msg.mutable_user_left()->mutable_user()->set_user_room_rights(ws_data.room->rights);
-    ChatRoomManager::instance().sendToRoom_unsafe(ws_data.room->id, user_left_msg);
-
-    // The connection must be in the room's set if ws_data.room is present
-    m_room_to_conns[room_id].erase(conn);
-    if (m_room_to_conns[room_id].empty()) {
-        m_room_to_conns.erase(room_id);
-    }
 }
 
 void ChatRoomManager::unregisterConnection(const drogon::WebSocketConnectionPtr& conn) {
@@ -100,5 +80,21 @@ void ChatRoomManager::sendToRoom_unsafe(int32_t room_id, const chat::Envelope& m
         for (const auto& conn : connections_in_room) {
             sendEnvelope(conn, message);
         }
+    }
+}
+
+void ChatRoomManager::removeFromRoom_unsafe(const drogon::WebSocketConnectionPtr& conn) {
+    auto& ws_data = conn->getContextRef<WsData>();
+    int32_t room_id = ws_data.room->id;
+
+    chat::Envelope user_left_msg;
+    user_left_msg.mutable_user_left()->mutable_user()->set_user_id(ws_data.user->id);
+    user_left_msg.mutable_user_left()->mutable_user()->set_user_name(ws_data.user->name);
+    user_left_msg.mutable_user_left()->mutable_user()->set_user_room_rights(ws_data.room->rights);
+    ChatRoomManager::instance().sendToRoom_unsafe(ws_data.room->id, user_left_msg);
+
+    m_room_to_conns[room_id].erase(conn);
+    if (m_room_to_conns[room_id].empty()) {
+        m_room_to_conns.erase(room_id);
     }
 }

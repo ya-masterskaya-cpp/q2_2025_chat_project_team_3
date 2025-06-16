@@ -3,11 +3,11 @@
 #include <server/chat/WsData.h>
 #include <server/utils/utils.h>
 #include <server/chat/MessageHandlers.h>
-#include <server/chat/IRoomService.h>
+#include <server/chat/IChatRoomService.h>
 
 class MessageHandlerService {
 public:
-    static drogon::Task<chat::Envelope> processMessage(const std::shared_ptr<WsData>& wsData, const chat::Envelope& env, IRoomService& room_service) {
+    static drogon::Task<chat::Envelope> processMessage(const std::shared_ptr<WsData>& wsData, const chat::Envelope& env, IChatRoomService& room_service) {
         chat::Envelope respEnv;
         switch(env.payload_case()) {
             case chat::Envelope::kInitialAuthRequest: {
@@ -19,7 +19,7 @@ public:
                 break;
             }
             case chat::Envelope::kAuthRequest: {
-                *respEnv.mutable_auth_response() = co_await MessageHandlers::handleAuth(wsData, env.auth_request());
+                *respEnv.mutable_auth_response() = co_await MessageHandlers::handleAuth(wsData, env.auth_request(), room_service);
                 break;
             }
             case chat::Envelope::kRegisterRequest: {
