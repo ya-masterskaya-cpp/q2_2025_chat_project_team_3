@@ -21,13 +21,10 @@ public:
     void requestInitialAuth(const std::string& username);
     void completeRegister(const std::string& hash, const std::string& salt);
     void completeAuth(const std::string& hash, const std::optional<std::string>& password, const std::optional<std::string>& salt);
-    void getRooms();
     void createRoom(const std::string& roomName);
     void joinRoom(int32_t room_id);
     void leaveRoom();
     void sendMessage(const std::string& message);
-    void requestRoomList();
-    void scheduleRoomListRefresh();
     void getMessages(int32_t limit, int64_t offset_ts);
     void logout();
 

@@ -79,12 +79,6 @@ void WebSocketClient::completeAuth(const std::string& hash, const std::optional<
     sendEnvelope(env);
 }
 
-void WebSocketClient::getRooms() {
-    chat::Envelope env;
-    env.mutable_get_rooms_request();
-    sendEnvelope(env);
-}
-
 void WebSocketClient::createRoom(const std::string& roomName) {
     chat::Envelope env;
     env.mutable_create_room_request()->set_room_name(roomName);
@@ -122,15 +116,6 @@ void WebSocketClient::sendEnvelope(const chat::Envelope& env) {
     }
 }
 
-void WebSocketClient::scheduleRoomListRefresh() {
-    std::thread([this]() {
-        while(ui->roomsPanel->IsShown()) {
-            std::this_thread::sleep_for(std::chrono::seconds(5)); // TODO: create method
-            getRooms();
-        }
-    }).detach();
-}
-
 void WebSocketClient::getMessages(int32_t limit, int64_t offset_ts) {
     chat::Envelope env;
     auto* request = env.mutable_get_messages_request();
@@ -143,12 +128,6 @@ void WebSocketClient::logout() {
     chat::Envelope env;
     env.mutable_logout_request();
     sendEnvelope(env);
-}
-
-void WebSocketClient::requestRoomList()
-{
-    getRooms();
-    scheduleRoomListRefresh();
 }
 
 void WebSocketClient::handleMessage(const std::string& msg) {
@@ -169,18 +148,6 @@ void WebSocketClient::handleMessage(const std::string& msg) {
         }
         case chat::Envelope::kRoomMessage: {
             showRoomMessage(env.room_message().message());
-            break;
-        }
-        case chat::Envelope::kGetRoomsResponse: {
-            if(statusOk(env.get_rooms_response().status())) {
-                std::vector<Room> rooms;
-                for (const auto& proto_room : env.get_rooms_response().rooms()){
-                    rooms.emplace_back(Room{proto_room.room_id(), proto_room.room_name()});
-                }
-                updateRoomsPanel(rooms);
-            } else {
-                showError("Failed to get rooms.");
-            }
             break;
         }
         case chat::Envelope::kJoinRoomResponse: {
@@ -250,6 +217,11 @@ void WebSocketClient::handleMessage(const std::string& msg) {
         case chat::Envelope::kAuthResponse: {
             if(statusOk(env.auth_response().status())) {
                 showInfo("Login successful!");
+                std::vector<Room> rooms;
+                for (const auto& proto_room : env.auth_response().rooms()){
+                    rooms.emplace_back(Room{proto_room.room_id(), proto_room.room_name()});
+                }
+                updateRoomsPanel(rooms);
                 showRooms();
             } else {
                 showError("Login failed! " + wxString(env.auth_response().status().message()));
@@ -286,6 +258,12 @@ void WebSocketClient::handleMessage(const std::string& msg) {
                     , proto_message.timestamp()});
             }
             showMessageHistory(messages);
+            break;
+        }
+        case chat::Envelope::kNewRoomCreated: {
+            wxTheApp->CallAfter([this, response = env.new_room_created().room()] {
+                ui->roomsPanel->AddRoom(Room{response.room_id(), response.room_name()});
+            });
             break;
         }
         default: {

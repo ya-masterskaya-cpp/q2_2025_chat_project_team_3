@@ -31,17 +31,36 @@ RoomsPanel::RoomsPanel(MainWidget* parent) : wxPanel(parent), mainWin(parent) {
 
 void RoomsPanel::UpdateRoomList(const std::vector<Room>& rooms) {
     roomList->Clear();
-    room_list_index_to_id_.clear();
     for (const Room& room : rooms){
-        int room_list_index = roomList->Append(room.room_name);
-        room_list_index_to_id_[room_list_index] = room.room_id;
+        Room* roomData = new Room(room.room_id, room.room_name);
+        roomList->Append(room.room_name, roomData);
     }
 }
 
-void RoomsPanel::OnJoin(wxCommandEvent&) {
+void RoomsPanel::AddRoom(const Room &room) {
+    Room* roomData = new Room(room.room_id, room.room_name);
+    roomList->Append(room.room_name, roomData);
+}
+
+void RoomsPanel::RemoveRoom(uint32_t room_id) {
+    for (int i = 0; i < roomList->GetCount(); ++i) {
+        Room* roomData = dynamic_cast<Room*>(roomList->GetClientObject(i));
+        if (roomData && roomData->room_id == room_id) {
+            roomList->Delete(i);
+            break;
+        }
+    }
+}
+
+void RoomsPanel::OnJoin(wxCommandEvent &)
+{
     int sel = roomList->GetSelection();
-    if(sel != wxNOT_FOUND)
-        mainWin->wsClient->joinRoom(room_list_index_to_id_.at(sel));
+    if(sel != wxNOT_FOUND) {
+        Room* roomData = dynamic_cast<Room*>(roomList->GetClientObject(sel));
+        if (roomData){
+            mainWin->wsClient->joinRoom(roomData->room_id);
+        }
+    }
 }
 
 void RoomsPanel::OnCreate(wxCommandEvent&) {

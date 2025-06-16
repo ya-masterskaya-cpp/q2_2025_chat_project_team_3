@@ -39,7 +39,6 @@ void MainWidget::ShowRooms() {
     roomsPanel->Show();
     chatPanel->Hide();
     Layout();
-    wsClient->requestRoomList();
 }
 
 void MainWidget::ShowChat(std::vector<User> users) {

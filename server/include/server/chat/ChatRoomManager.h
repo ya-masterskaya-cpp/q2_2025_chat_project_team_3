@@ -11,6 +11,7 @@ public:
     void unregisterConnection(const drogon::WebSocketConnectionPtr& conn);
     void sendToRoom(int32_t room_id, const chat::Envelope& message) const;
     std::vector<chat::UserInfo> getUsersInRoom(int32_t room_id) const;
+    void sendToAll(const chat::Envelope& message) const;
 
 private:
     ChatRoomManager() = default;
