@@ -134,7 +134,7 @@ message GetMessagesResponse{
     repeated MessageInfo message = 2;
 }
 
-message NewRoomResponse {
+message NewRoomCreated {
     RoomInfo room = 1;
 }
 
@@ -165,6 +165,6 @@ message Envelope {
         GenericError generic_error = 23;
         UserJoinedRoom user_joined = 24;
         UserLeftRoom user_left = 25;
-        NewRoomResponse new_room_response = 26;
+        NewRoomCreated new_room_created = 26;
     }
 }

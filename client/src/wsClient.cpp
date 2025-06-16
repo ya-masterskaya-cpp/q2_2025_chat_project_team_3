@@ -260,8 +260,8 @@ void WebSocketClient::handleMessage(const std::string& msg) {
             showMessageHistory(messages);
             break;
         }
-        case chat::Envelope::kNewRoomResponse: {
-            wxTheApp->CallAfter([this, response = env.new_room_response().room()] {
+        case chat::Envelope::kNewRoomCreated: {
+            wxTheApp->CallAfter([this, response = env.new_room_created().room()] {
                 ui->roomsPanel->AddRoom(Room{response.room_id(), response.room_name()});
             });
             break;

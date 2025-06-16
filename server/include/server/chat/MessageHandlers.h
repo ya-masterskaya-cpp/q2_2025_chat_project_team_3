@@ -380,7 +380,7 @@ public:
             }
 
             chat::Envelope new_room_msg;
-            auto* new_room_resp = new_room_msg.mutable_new_room_response();
+            auto* new_room_resp = new_room_msg.mutable_new_room_created();
             new_room_resp->mutable_room()->set_room_id(room_id);
             new_room_resp->mutable_room()->set_room_name(req.room_name());
 
