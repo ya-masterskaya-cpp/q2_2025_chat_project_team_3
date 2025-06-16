@@ -28,7 +28,7 @@ InitialPanel::InitialPanel(MainWidget* parent)
 
     // 5) Populate & hook up events
     m_listBox->Append("ws://localhost:8848/ws");
-    m_listBox->Append("ws://localhost:8849/ws");
+    //m_listBox->Append("ws://localhost:8849/ws");
 
     m_connectButton->Bind(wxEVT_BUTTON, &InitialPanel::OnConnect, this);
     m_addButton    ->Bind(wxEVT_BUTTON, &InitialPanel::OnAdd,     this);
