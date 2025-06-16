@@ -11,6 +11,7 @@ public:
     void handleNewConnection(const drogon::HttpRequestPtr& req, const drogon::WebSocketConnectionPtr& conn) override {
         LOG_TRACE << "WS connect: " << conn->peerAddr().toIpPort();
         conn->setContext(std::make_shared<WsData>());
+        ChatRoomManager::instance().registerConnection(conn);
         chat::Envelope helloEnv;
         helloEnv.mutable_server_hello()->set_message("Welcome!");
         sendEnvelope(conn, helloEnv);
