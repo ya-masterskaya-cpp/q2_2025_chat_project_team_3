@@ -28,6 +28,9 @@ add_custom_command(TARGET aggregator_app POST_BUILD
 install(TARGETS aggregator_app
     DESTINATION . COMPONENT aggregator
 )
+install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/config.json
+    DESTINATION . COMPONENT aggregator
+)
 
 if(WIN32)
     install(CODE "
