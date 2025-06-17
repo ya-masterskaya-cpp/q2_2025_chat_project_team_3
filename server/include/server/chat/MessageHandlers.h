@@ -308,13 +308,11 @@ public:
                 setStatus(resp, chat::STATUS_NOT_FOUND, "Room does not exist.");
                 co_return resp;
             }
-            auto regular = co_await CoroMapper<models::UserRoomRoles>(db)
-            .findBy(
-                Criteria(models::UserRoomRoles::Cols::_user_id, CompareOperator::EQ, wsData->user->id) &&
-                Criteria(models::UserRoomRoles::Cols::_room_id, CompareOperator::EQ, req.room_id()));
-            if (regular.empty()) {
+
+            std::optional<chat::UserRights> role = co_await GetRoleType(wsData->user->id, req.room_id(), db);
+            if (!role.has_value()) {
                 auto err = co_await WithTransaction(
-                [&](auto tx) -> drogon::Task<ScopedTransactionResult> {
+                    [&](auto tx) -> drogon::Task<ScopedTransactionResult> {
                     try {
                         models::UserRoomRoles role;
                         role.setUserId(wsData->user->id);
@@ -322,18 +320,19 @@ public:
                         role.setRoleType(chat::UserRights_Name(chat::UserRights::REGULAR));
                         co_await drogon::orm::CoroMapper<models::UserRoomRoles>(tx).insert(role);
                         co_return std::nullopt;
-                    } catch(const drogon::orm::DrogonDbException& e) {
+                    }
+                    catch (const drogon::orm::DrogonDbException& e) {
                         const std::string w = e.base().what();
                         LOG_ERROR << "Failed to join room: " << w;
                         co_return "Database error during user_room_rules creation.";
                     }
                 });
-            if(err) {
-                setStatus(resp, chat::STATUS_FAILURE, *err);
-                co_return resp;
+                if (err) {
+                    setStatus(resp, chat::STATUS_FAILURE, *err);
+                    co_return resp;
+                }
             }
-            }
-            wsData->room = CurrentRoom{req.room_id(), co_await GetRoleType(wsData->user->id, req.room_id(), db)};
+            wsData->room = CurrentRoom{req.room_id(), role.value_or(chat::UserRights::REGULAR)};
             
             room_service.joinRoom();
             auto users = ChatRoomManager::instance().getUsersInRoom(req.room_id());
@@ -489,7 +488,7 @@ public:
         co_return resp;
     }
 
-    static drogon::Task<chat::UserRights> GetRoleType(uint32_t user_id, uint32_t room_id, const drogon::orm::DbClientPtr& db ) {
+    static drogon::Task<std::optional<chat::UserRights>> GetRoleType(uint32_t user_id, uint32_t room_id, const drogon::orm::DbClientPtr& db ) {
         using namespace drogon::orm;
         auto user = co_await CoroMapper<models::Users>(db)
             .findBy(
@@ -508,7 +507,7 @@ public:
                 Criteria(models::UserRoomRoles::Cols::_user_id, CompareOperator::EQ, user_id) &&
                 Criteria(models::UserRoomRoles::Cols::_room_id, CompareOperator::EQ, room_id));
         if (role.empty()) {
-            co_return chat::UserRights::REGULAR;
+            co_return std::nullopt;
         }
         chat::UserRights rights;
         if (chat::UserRights_Parse(*role.front().getRoleType(), &rights)) {
