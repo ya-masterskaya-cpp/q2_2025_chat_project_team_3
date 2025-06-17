@@ -308,6 +308,31 @@ public:
                 setStatus(resp, chat::STATUS_NOT_FOUND, "Room does not exist.");
                 co_return resp;
             }
+            auto regular = co_await CoroMapper<models::UserRoomRoles>(db)
+            .findBy(
+                Criteria(models::UserRoomRoles::Cols::_user_id, CompareOperator::EQ, wsData->user->id) &&
+                Criteria(models::UserRoomRoles::Cols::_room_id, CompareOperator::EQ, req.room_id()));
+            if (regular.empty()) {
+                auto err = co_await WithTransaction(
+                [&](auto tx) -> drogon::Task<ScopedTransactionResult> {
+                    try {
+                        models::UserRoomRoles role;
+                        role.setUserId(wsData->user->id);
+                        role.setRoomId(req.room_id());
+                        role.setRoleType(chat::UserRights_Name(chat::UserRights::REGULAR));
+                        co_await drogon::orm::CoroMapper<models::UserRoomRoles>(tx).insert(role);
+                        co_return std::nullopt;
+                    } catch(const drogon::orm::DrogonDbException& e) {
+                        const std::string w = e.base().what();
+                        LOG_ERROR << "Failed to join room: " << w;
+                        co_return "Database error during user_room_rules creation.";
+                    }
+                });
+            if(err) {
+                setStatus(resp, chat::STATUS_FAILURE, *err);
+                co_return resp;
+            }
+            }
             wsData->room = CurrentRoom{req.room_id(), co_await GetRoleType(wsData->user->id, req.room_id(), db)};
             
             room_service.joinRoom();
