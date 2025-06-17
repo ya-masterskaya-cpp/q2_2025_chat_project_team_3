@@ -391,7 +391,7 @@ public:
                         r.setRoomName(req.room_name());
                         r.setOwnerId(wsData->user->id);
                         r = co_await drogon::orm::CoroMapper<models::Rooms>(tx).insert(r);
-                        room_id = *r.getRoomId();                        
+                        room_id = *r.getRoomId();
                         co_return std::nullopt;
                     } catch(const drogon::orm::DrogonDbException& e) {
                         const std::string w = e.base().what();
