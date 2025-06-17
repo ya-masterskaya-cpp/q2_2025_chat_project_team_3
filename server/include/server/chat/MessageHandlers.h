@@ -5,7 +5,7 @@
 #include <server/chat/WsData.h>
 #include <server/chat/IChatRoomService.h>
 #include <server/chat/ChatRoomManager.h>
-#include <server/utils/utils.h>
+#include <common/utils/utils.h>
 #include <server/utils/scoped_coro_transaction.h>
 
 #include <server/models/Users.h>

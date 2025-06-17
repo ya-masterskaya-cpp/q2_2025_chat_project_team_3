@@ -8,10 +8,11 @@ class AuthPanel : public wxPanel {
 public:
     AuthPanel(MainWidget* parent);
 
-    wxTextCtrl* usernameInput;
-    wxTextCtrl* passwordInput;
-    wxButton* loginButton;
-    wxButton* registerButton;
+    wxTextCtrl* m_usernameInput;
+    wxTextCtrl* m_passwordInput;
+    wxButton* m_loginButton;
+    wxButton* m_registerButton;
+    wxButton* m_backButton;
 
     void SetButtonsEnabled(bool enabled);
     void HandleRegisterContinue();
@@ -20,7 +21,7 @@ public:
 private:
     void OnLogin(wxCommandEvent&);
     void OnRegister(wxCommandEvent&);
+    void OnBack(wxCommandEvent&);
     MainWidget* mainWin;
     wxString m_password;
-    wxDECLARE_EVENT_TABLE();
 };

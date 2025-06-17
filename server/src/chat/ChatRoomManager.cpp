@@ -1,5 +1,5 @@
 #include <server/chat/ChatRoomManager.h>
-#include <server/utils/utils.h>
+#include <common/utils/utils.h>
 #include <server/chat/WsData.h>
 
 ChatRoomManager& ChatRoomManager::instance() {

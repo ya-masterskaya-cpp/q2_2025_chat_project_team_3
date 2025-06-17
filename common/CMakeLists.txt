@@ -20,11 +20,16 @@ add_custom_command(
 
 add_library(common_lib STATIC
   ${PROTO_OUT_DIR}/chat.pb.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/utils/utils.cpp
 )
 
 target_include_directories(common_lib PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${PROTO_INCLUDE_DIR}
+)
+
+target_precompile_headers(common_lib PRIVATE
+    "${CMAKE_SOURCE_DIR}/common/include/pch.h"
 )
 
 target_link_libraries(common_lib PUBLIC Drogon::Drogon protobuf::libprotobuf-lite unofficial::argon2::libargon2)

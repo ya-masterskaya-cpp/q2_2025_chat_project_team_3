@@ -1,6 +1,6 @@
 #pragma once
 
-#include <server/utils/utils.h>
+#include <common/utils/utils.h>
 
 using ScopedTransactionResult =
     std::optional<std::string>;

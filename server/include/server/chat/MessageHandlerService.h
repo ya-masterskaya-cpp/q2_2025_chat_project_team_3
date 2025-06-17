@@ -1,7 +1,7 @@
 #pragma once
 
 #include <server/chat/WsData.h>
-#include <server/utils/utils.h>
+#include <common/utils/utils.h>
 #include <server/chat/MessageHandlers.h>
 #include <server/chat/IChatRoomService.h>
 

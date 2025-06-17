@@ -15,7 +15,8 @@ class WebSocketClient {
 public:
     explicit WebSocketClient(MainWidget* ui);
 
-    void start();
+    void start(const std::string& address);
+    void stop();
     
     void requestInitialRegister(const std::string& username);
     void requestInitialAuth(const std::string& username);
@@ -27,6 +28,7 @@ public:
     void sendMessage(const std::string& message);
     void getMessages(int32_t limit, int64_t offset_ts);
     void logout();
+    void getServers();
 
     static std::string formatMessageTimestamp(uint64_t timestamp);
 
@@ -44,9 +46,11 @@ private:
     void showMessageHistory(const std::vector<Message>& messages);
     void addUser(User user);
     void removeUser(User user);
+    void showAuth();
+    void showServers();
+    void SetServers(const std::vector<std::string> &servers);
     
     MainWidget* ui;
     std::shared_ptr<drogon::WebSocketConnection> conn;
     drogon::WebSocketClientPtr client;
-    bool connected = false;
 };

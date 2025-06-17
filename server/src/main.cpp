@@ -1,8 +1,11 @@
 
 #include <server/chat/WsChat.h>
 #include <server/db/migrations.h>
+#include <server/aggregator/WsClient.h>
 
 int main() {
+    WsClient aggregator_client{};
+
     std::filesystem::create_directory("logs");
 
     LOG_INFO << "Starting Drogon application...";
@@ -11,7 +14,7 @@ int main() {
                                                    //prevents jsoncpp from turning utf into escaped codepoints
 
     // Setup and run migrations before the app starts serving
-    drogon::app().registerBeginningAdvice([]() {
+    drogon::app().registerBeginningAdvice([&]() {
         LOG_INFO << "Preparing to apply migrations...";
 
         auto dbClient = drogon::app().getDbClient();
@@ -38,6 +41,8 @@ int main() {
             LOG_FATAL << "Unknown error during migrations. Aborting.";
             drogon::app().quit();
         }
+
+        aggregator_client.start(getEnvVar("AGGREGATOR_ADDR"));
     });
 
     LOG_INFO << "Entering main loop...";

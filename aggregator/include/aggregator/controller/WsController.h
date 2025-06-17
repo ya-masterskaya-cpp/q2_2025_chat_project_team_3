@@ -1,18 +1,17 @@
 #pragma once
 
 #include <drogon/WebSocketController.h>
-#include <common/utils/utils.h>
-#include <server/chat/WsRequestProcessor.h>
-#include <server/chat/WsData.h>
-#include <server/chat/ChatRoomManager.h>
+#include <aggregator/WsRequestProcessor.h>
+#include <aggregator/DrogonServerRegistry.h>
 
-class WsChat : public drogon::WebSocketController<WsChat> {
+class WsController : public drogon::WebSocketController<WsController> {
 public:
     void handleNewConnection(const drogon::HttpRequestPtr& req, const drogon::WebSocketConnectionPtr& conn) override {
         LOG_TRACE << "WS connect: " << conn->peerAddr().toIpPort();
         conn->setContext(std::make_shared<WsData>());
+        DrogonServerRegistry::instance().AddConnection(conn);
         chat::Envelope helloEnv;
-        helloEnv.mutable_server_hello()->set_type(chat::ServerType::TYPE_SERVER);
+        helloEnv.mutable_server_hello()->set_type(chat::ServerType::TYPE_AGGREGATOR);
         sendEnvelope(conn, helloEnv);
     }
 
@@ -27,7 +26,7 @@ public:
 
     void handleConnectionClosed(const drogon::WebSocketConnectionPtr& conn) override {
         LOG_TRACE << "WS closed: " << conn->peerAddr().toIpPort();
-        ChatRoomManager::instance().unregisterConnection(conn);
+        DrogonServerRegistry::instance().RemoveConnection(conn);
     }
 
     WS_PATH_LIST_BEGIN

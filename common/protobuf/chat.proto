@@ -3,6 +3,11 @@ package chat;
 
 option optimize_for = LITE_RUNTIME;
 
+enum ServerType {
+    TYPE_AGGREGATOR = 0;
+    TYPE_SERVER = 1;
+}
+
 enum StatusCode {
     STATUS_UNKNOWN = 0;
     STATUS_SUCCESS = 1;
@@ -41,12 +46,16 @@ message RoomInfo {
     optional UserInfo owner = 3;
 }
 
+message ServerNodeInfo {
+    string host = 1;
+}
+
 message GenericError {
     Status status = 1;
 }
 
 message ServerHello {
-    string message = 1;
+    ServerType type = 1;
 }
 
 message InitialAuthRequest {
@@ -134,6 +143,28 @@ message GetMessagesResponse{
     repeated MessageInfo message = 2;
 }
 
+
+message RegisterServerRequest {
+    string host = 1;
+}
+message RegisterServerResponse {
+    Status status = 1;
+}
+
+message GetServerNodesRequest {
+}
+message GetServerNodesResponse {
+    Status status = 1;
+    repeated ServerNodeInfo servers = 2;
+}
+
+message ServerAdded {
+    ServerNodeInfo server = 1;
+}
+message ServerRemoved {
+    ServerNodeInfo server = 1;
+}
+
 message NewRoomCreated {
     RoomInfo room = 1;
 }
@@ -166,5 +197,11 @@ message Envelope {
         UserJoinedRoom user_joined = 24;
         UserLeftRoom user_left = 25;
         NewRoomCreated new_room_created = 26;
+        RegisterServerRequest register_server_request = 27;
+        RegisterServerResponse register_server_response = 28;
+        GetServerNodesRequest get_servers_request = 29;
+        GetServerNodesResponse get_servers_response = 30;
+        ServerAdded server_added = 31;
+        ServerRemoved server_removed = 32;
     }
 }
