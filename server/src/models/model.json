@@ -30,14 +30,14 @@
         "enable_reverse": true
       },
       {
-        "type": "has one",
-        "original_table_name": "rooms",
-        "original_table_alias": "room",
-        "original_key": "owner_id",
-        "target_table_name": "users",
-        "target_table_alias": "owner",
-        "target_key": "user_id",
-        "enable_reverse": false
+        "type": "has many",
+        "original_table_name": "users",
+        "original_table_alias": "owner",
+        "original_key": "user_id",
+        "target_table_name": "rooms",
+        "target_table_alias": "room",
+        "target_key": "owner_id",
+        "enable_reverse": true
       },
       {
         "type": "has many",

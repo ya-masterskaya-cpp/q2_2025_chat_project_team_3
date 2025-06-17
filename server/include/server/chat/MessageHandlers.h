@@ -499,7 +499,7 @@ public:
         }
         auto room = co_await CoroMapper<models::Rooms>(db)
             .findOne(Criteria(models::Rooms::Cols::_room_id, CompareOperator::EQ, room_id));
-        if (*room.getOwnerId() == user_id) {
+        if (room.getOwnerId() && *room.getOwnerId() == user_id) {
             co_return chat::UserRights::OWNER;
         }
         auto role = co_await CoroMapper<models::UserRoomRoles>(db)

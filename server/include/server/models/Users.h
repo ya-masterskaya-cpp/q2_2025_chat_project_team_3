@@ -39,6 +39,7 @@ namespace drogon_model
 namespace drogon_test
 {
 class Messages;
+class Rooms;
 class UserRoomRoles;
 
 class Users
@@ -167,6 +168,10 @@ class Users
     void getMessages(const drogon::orm::DbClientPtr &clientPtr,
                      const std::function<void(std::vector<Messages>)> &rcb,
                      const drogon::orm::ExceptionCallback &ecb) const;
+    std::vector<Rooms> getRoom(const drogon::orm::DbClientPtr &clientPtr) const;
+    void getRoom(const drogon::orm::DbClientPtr &clientPtr,
+                 const std::function<void(std::vector<Rooms>)> &rcb,
+                 const drogon::orm::ExceptionCallback &ecb) const;
     std::vector<UserRoomRoles> getRoles(const drogon::orm::DbClientPtr &clientPtr) const;
     void getRoles(const drogon::orm::DbClientPtr &clientPtr,
                   const std::function<void(std::vector<UserRoomRoles>)> &rcb,
