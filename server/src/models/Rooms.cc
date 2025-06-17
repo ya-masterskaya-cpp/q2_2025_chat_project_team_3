@@ -7,6 +7,8 @@
 
 #include <server/models/Rooms.h>
 #include <server/models/Messages.h>
+#include <server/models/UserRoomRoles.h>
+#include <server/models/Users.h>
 #include <drogon/utils/Utilities.h>
 #include <string>
 
@@ -927,6 +929,85 @@ void Rooms::getMessages(const DbClientPtr &clientPtr,
                    for (auto const &row : r)
                    {
                        ret.emplace_back(Messages(row));
+                   }
+                   rcb(ret);
+               }
+               >> ecb;
+}
+Users Rooms::getOwner(const DbClientPtr &clientPtr) const {
+    static const std::string sql = "select * from users where user_id = $1";
+    Result r(nullptr);
+    {
+        auto binder = *clientPtr << sql;
+        binder << *ownerId_ << Mode::Blocking >>
+            [&r](const Result &result) { r = result; };
+        binder.exec();
+    }
+    if (r.size() == 0)
+    {
+        throw UnexpectedRows("0 rows found");
+    }
+    else if (r.size() > 1)
+    {
+        throw UnexpectedRows("Found more than one row");
+    }
+    return Users(r[0]);
+}
+
+void Rooms::getOwner(const DbClientPtr &clientPtr,
+                     const std::function<void(Users)> &rcb,
+                     const ExceptionCallback &ecb) const
+{
+    static const std::string sql = "select * from users where user_id = $1";
+    *clientPtr << sql
+               << *ownerId_
+               >> [rcb = std::move(rcb), ecb](const Result &r){
+                    if (r.size() == 0)
+                    {
+                        ecb(UnexpectedRows("0 rows found"));
+                    }
+                    else if (r.size() > 1)
+                    {
+                        ecb(UnexpectedRows("Found more than one row"));
+                    }
+                    else
+                    {
+                        rcb(Users(r[0]));
+                    }
+               }
+               >> ecb;
+}
+std::vector<UserRoomRoles> Rooms::getRoles(const DbClientPtr &clientPtr) const {
+    static const std::string sql = "select * from user_room_roles where room_id = $1";
+    Result r(nullptr);
+    {
+        auto binder = *clientPtr << sql;
+        binder << *roomId_ << Mode::Blocking >>
+            [&r](const Result &result) { r = result; };
+        binder.exec();
+    }
+    std::vector<UserRoomRoles> ret;
+    ret.reserve(r.size());
+    for (auto const &row : r)
+    {
+        ret.emplace_back(UserRoomRoles(row));
+    }
+    return ret;
+}
+
+void Rooms::getRoles(const DbClientPtr &clientPtr,
+                     const std::function<void(std::vector<UserRoomRoles>)> &rcb,
+                     const ExceptionCallback &ecb) const
+{
+    static const std::string sql = "select * from user_room_roles where room_id = $1";
+    *clientPtr << sql
+               << *roomId_
+               >> [rcb = std::move(rcb)](const Result &r){
+                   std::vector<UserRoomRoles> ret;
+                   ret.reserve(r.size());
+                   for (auto const &row : r)
+                   {
+                       ret.emplace_back(UserRoomRoles(row));
                    }
                    rcb(ret);
                }

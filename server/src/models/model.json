@@ -28,6 +28,36 @@
         "target_table_alias": "",
         "target_key": "user_id",
         "enable_reverse": true
+      },
+      {
+        "type": "has one",
+        "original_table_name": "rooms",
+        "original_table_alias": "room",
+        "original_key": "owner_id",
+        "target_table_name": "users",
+        "target_table_alias": "owner",
+        "target_key": "user_id",
+        "enable_reverse": false
+      },
+      {
+        "type": "has many",
+        "original_table_name": "users",
+        "original_table_alias": "user",
+        "original_key": "user_id",
+        "target_table_name": "user_room_roles",
+        "target_table_alias": "roles",
+        "target_key": "user_id",
+        "enable_reverse": true
+      },
+      {
+        "type": "has many",
+        "original_table_name": "rooms",
+        "original_table_alias": "room",
+        "original_key": "room_id",
+        "target_table_name": "user_room_roles",
+        "target_table_alias": "roles",
+        "target_key": "room_id",
+        "enable_reverse": true
       }
     ]
   }

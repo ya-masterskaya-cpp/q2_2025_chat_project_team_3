@@ -39,6 +39,8 @@ namespace drogon_model
 namespace drogon_test
 {
 class Messages;
+class UserRoomRoles;
+class Users;
 
 class Rooms
 {
@@ -146,6 +148,14 @@ class Rooms
     void getMessages(const drogon::orm::DbClientPtr &clientPtr,
                      const std::function<void(std::vector<Messages>)> &rcb,
                      const drogon::orm::ExceptionCallback &ecb) const;
+    Users getOwner(const drogon::orm::DbClientPtr &clientPtr) const;
+    void getOwner(const drogon::orm::DbClientPtr &clientPtr,
+                  const std::function<void(Users)> &rcb,
+                  const drogon::orm::ExceptionCallback &ecb) const;
+    std::vector<UserRoomRoles> getRoles(const drogon::orm::DbClientPtr &clientPtr) const;
+    void getRoles(const drogon::orm::DbClientPtr &clientPtr,
+                  const std::function<void(std::vector<UserRoomRoles>)> &rcb,
+                  const drogon::orm::ExceptionCallback &ecb) const;
   private:
     friend drogon::orm::Mapper<Rooms>;
     friend drogon::orm::BaseBuilder<Rooms, true, true>;

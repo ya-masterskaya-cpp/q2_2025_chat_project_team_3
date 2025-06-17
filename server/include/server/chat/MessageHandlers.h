@@ -498,8 +498,8 @@ public:
             co_return chat::UserRights::ADMIN;
         }
         auto room = co_await CoroMapper<models::Rooms>(db)
-            .findBy(Criteria(models::Rooms::Cols::_room_id, CompareOperator::EQ, room_id));
-        if (*room.front().getOwnerId() == user_id) {
+            .findOne(Criteria(models::Rooms::Cols::_room_id, CompareOperator::EQ, room_id));
+        if (*room.getOwnerId() == user_id) {
             co_return chat::UserRights::OWNER;
         }
         auto role = co_await CoroMapper<models::UserRoomRoles>(db)

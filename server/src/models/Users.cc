@@ -7,6 +7,7 @@
 
 #include <server/models/Users.h>
 #include <server/models/Messages.h>
+#include <server/models/UserRoomRoles.h>
 #include <drogon/utils/Utilities.h>
 #include <string>
 
@@ -1261,6 +1262,42 @@ void Users::getMessages(const DbClientPtr &clientPtr,
                    for (auto const &row : r)
                    {
                        ret.emplace_back(Messages(row));
+                   }
+                   rcb(ret);
+               }
+               >> ecb;
+}
+std::vector<UserRoomRoles> Users::getRoles(const DbClientPtr &clientPtr) const {
+    static const std::string sql = "select * from user_room_roles where user_id = $1";
+    Result r(nullptr);
+    {
+        auto binder = *clientPtr << sql;
+        binder << *userId_ << Mode::Blocking >>
+            [&r](const Result &result) { r = result; };
+        binder.exec();
+    }
+    std::vector<UserRoomRoles> ret;
+    ret.reserve(r.size());
+    for (auto const &row : r)
+    {
+        ret.emplace_back(UserRoomRoles(row));
+    }
+    return ret;
+}
+
+void Users::getRoles(const DbClientPtr &clientPtr,
+                     const std::function<void(std::vector<UserRoomRoles>)> &rcb,
+                     const ExceptionCallback &ecb) const
+{
+    static const std::string sql = "select * from user_room_roles where user_id = $1";
+    *clientPtr << sql
+               << *userId_
+               >> [rcb = std::move(rcb)](const Result &r){
+                   std::vector<UserRoomRoles> ret;
+                   ret.reserve(r.size());
+                   for (auto const &row : r)
+                   {
+                       ret.emplace_back(UserRoomRoles(row));
                    }
                    rcb(ret);
                }
