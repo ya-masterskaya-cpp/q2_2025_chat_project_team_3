@@ -10,7 +10,6 @@
 
 MainWidget::MainWidget() : wxFrame(NULL, wxID_ANY, "Drogon wxWidgets Chat Client", wxDefaultPosition, wxSize(450, 600)) {
     wsClient = new WebSocketClient(this);
-    //wsClient->start("ws://localhost:8848/ws");
     initialPanel = new InitialPanel(this);
     serversPanel = new ServersPanel(this);
     authPanel = new AuthPanel(this);
@@ -71,8 +70,6 @@ void MainWidget::ShowRooms() {
 }
 
 void MainWidget::ShowChat(std::vector<User> users) {
-    //users.emplace_back(1000, "admin", chat::UserRights::ADMIN);
-    //users.emplace_back(1001, "moderator", chat::UserRights::MODERATOR);
     initialPanel->Hide();
     serversPanel->Hide();
     authPanel->Hide();

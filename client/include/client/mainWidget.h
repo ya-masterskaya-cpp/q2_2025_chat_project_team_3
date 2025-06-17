@@ -3,11 +3,12 @@
 #include <wx/wx.h>
 
 class InitialPanel;
+class ServersPanel;
 class AuthPanel;
 class RoomsPanel;
 class ChatPanel;
 class WebSocketClient;
-class ServersPanel;
+
 struct User;
 
 class MainWidget : public wxFrame {
