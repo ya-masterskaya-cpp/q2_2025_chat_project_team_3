@@ -116,11 +116,12 @@ class UserRoomRoles
 
     /**  For column role_type  */
     ///Get the value of the column role_type, returns the default value if the column is null
-    const int32_t &getValueOfRoleType() const noexcept;
+    const std::string &getValueOfRoleType() const noexcept;
     ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
-    const std::shared_ptr<int32_t> &getRoleType() const noexcept;
+    const std::shared_ptr<std::string> &getRoleType() const noexcept;
     ///Set the value of the column role_type
-    void setRoleType(const int32_t &pRoleType) noexcept;
+    void setRoleType(const std::string &pRoleType) noexcept;
+    void setRoleType(std::string &&pRoleType) noexcept;
 
 
     static size_t getColumnNumber() noexcept {  return 3;  }
@@ -146,7 +147,7 @@ class UserRoomRoles
     void updateId(const uint64_t id);
     std::shared_ptr<int32_t> userId_;
     std::shared_ptr<int32_t> roomId_;
-    std::shared_ptr<int32_t> roleType_;
+    std::shared_ptr<std::string> roleType_;
     struct MetaData
     {
         const std::string colName_;
@@ -186,10 +187,11 @@ class UserRoomRoles
             sql += "room_id,";
             ++parametersCount;
         }
-        if(dirtyFlag_[2])
+        sql += "role_type,";
+        ++parametersCount;
+        if(!dirtyFlag_[2])
         {
-            sql += "role_type,";
-            ++parametersCount;
+            needSelection=true;
         }
         if(parametersCount > 0)
         {
@@ -216,6 +218,10 @@ class UserRoomRoles
         {
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);
+        }
+        else
+        {
+            sql +="default,";
         }
         if(parametersCount > 0)
         {

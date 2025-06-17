@@ -23,7 +23,7 @@ const std::string UserRoomRoles::tableName = "\"user_room_roles\"";
 const std::vector<typename UserRoomRoles::MetaData> UserRoomRoles::metaData_={
 {"user_id","int32_t","integer",4,0,1,1},
 {"room_id","int32_t","integer",4,0,1,1},
-{"role_type","int32_t","integer",4,0,0,1}
+{"role_type","std::string","USER-DEFINED",0,0,0,1}
 };
 const std::string &UserRoomRoles::getColumnName(size_t index) noexcept(false)
 {
@@ -44,7 +44,7 @@ UserRoomRoles::UserRoomRoles(const Row &r, const ssize_t indexOffset) noexcept
         }
         if(!r["role_type"].isNull())
         {
-            roleType_=std::make_shared<int32_t>(r["role_type"].as<int32_t>());
+            roleType_=std::make_shared<std::string>(r["role_type"].as<std::string>());
         }
     }
     else
@@ -69,7 +69,7 @@ UserRoomRoles::UserRoomRoles(const Row &r, const ssize_t indexOffset) noexcept
         index = offset + 2;
         if(!r[index].isNull())
         {
-            roleType_=std::make_shared<int32_t>(r[index].as<int32_t>());
+            roleType_=std::make_shared<std::string>(r[index].as<std::string>());
         }
     }
 
@@ -103,7 +103,7 @@ UserRoomRoles::UserRoomRoles(const Json::Value &pJson, const std::vector<std::st
         dirtyFlag_[2] = true;
         if(!pJson[pMasqueradingVector[2]].isNull())
         {
-            roleType_=std::make_shared<int32_t>((int32_t)pJson[pMasqueradingVector[2]].asInt64());
+            roleType_=std::make_shared<std::string>(pJson[pMasqueradingVector[2]].asString());
         }
     }
 }
@@ -131,7 +131,7 @@ UserRoomRoles::UserRoomRoles(const Json::Value &pJson) noexcept(false)
         dirtyFlag_[2]=true;
         if(!pJson["role_type"].isNull())
         {
-            roleType_=std::make_shared<int32_t>((int32_t)pJson["role_type"].asInt64());
+            roleType_=std::make_shared<std::string>(pJson["role_type"].asString());
         }
     }
 }
@@ -163,7 +163,7 @@ void UserRoomRoles::updateByMasqueradedJson(const Json::Value &pJson,
         dirtyFlag_[2] = true;
         if(!pJson[pMasqueradingVector[2]].isNull())
         {
-            roleType_=std::make_shared<int32_t>((int32_t)pJson[pMasqueradingVector[2]].asInt64());
+            roleType_=std::make_shared<std::string>(pJson[pMasqueradingVector[2]].asString());
         }
     }
 }
@@ -189,7 +189,7 @@ void UserRoomRoles::updateByJson(const Json::Value &pJson) noexcept(false)
         dirtyFlag_[2] = true;
         if(!pJson["role_type"].isNull())
         {
-            roleType_=std::make_shared<int32_t>((int32_t)pJson["role_type"].asInt64());
+            roleType_=std::make_shared<std::string>(pJson["role_type"].asString());
         }
     }
 }
@@ -228,20 +228,25 @@ void UserRoomRoles::setRoomId(const int32_t &pRoomId) noexcept
     dirtyFlag_[1] = true;
 }
 
-const int32_t &UserRoomRoles::getValueOfRoleType() const noexcept
+const std::string &UserRoomRoles::getValueOfRoleType() const noexcept
 {
-    static const int32_t defaultValue = int32_t();
+    static const std::string defaultValue = std::string();
     if(roleType_)
         return *roleType_;
     return defaultValue;
 }
-const std::shared_ptr<int32_t> &UserRoomRoles::getRoleType() const noexcept
+const std::shared_ptr<std::string> &UserRoomRoles::getRoleType() const noexcept
 {
     return roleType_;
 }
-void UserRoomRoles::setRoleType(const int32_t &pRoleType) noexcept
+void UserRoomRoles::setRoleType(const std::string &pRoleType) noexcept
 {
-    roleType_ = std::make_shared<int32_t>(pRoleType);
+    roleType_ = std::make_shared<std::string>(pRoleType);
+    dirtyFlag_[2] = true;
+}
+void UserRoomRoles::setRoleType(std::string &&pRoleType) noexcept
+{
+    roleType_ = std::make_shared<std::string>(std::move(pRoleType));
     dirtyFlag_[2] = true;
 }
 
@@ -480,11 +485,6 @@ bool UserRoomRoles::validateJsonForCreation(const Json::Value &pJson, std::strin
         if(!validJsonOfField(2, "role_type", pJson["role_type"], err, true))
             return false;
     }
-    else
-    {
-        err="The role_type column cannot be null";
-        return false;
-    }
     return true;
 }
 bool UserRoomRoles::validateMasqueradedJsonForCreation(const Json::Value &pJson,
@@ -530,11 +530,6 @@ bool UserRoomRoles::validateMasqueradedJsonForCreation(const Json::Value &pJson,
               if(!validJsonOfField(2, pMasqueradingVector[2], pJson[pMasqueradingVector[2]], err, true))
                   return false;
           }
-        else
-        {
-            err="The " + pMasqueradingVector[2] + " column cannot be null";
-            return false;
-        }
       }
     }
     catch(const Json::LogicError &e)
@@ -654,7 +649,7 @@ bool UserRoomRoles::validJsonOfField(size_t index,
                 err="The " + fieldName + " column cannot be null";
                 return false;
             }
-            if(!pJson.isInt())
+            if(!pJson.isString())
             {
                 err="Type error in the "+fieldName+" field";
                 return false;
