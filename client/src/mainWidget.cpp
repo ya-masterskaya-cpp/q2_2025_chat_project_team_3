@@ -34,6 +34,7 @@ void MainWidget::ShowPopup(const wxString& msg, long icon) {
 }
 
 void MainWidget::ShowInitial() {
+    wsClient->stop();
     initialPanel->Show();
     serversPanel->Hide();
     authPanel->Hide();

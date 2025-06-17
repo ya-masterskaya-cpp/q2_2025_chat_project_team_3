@@ -16,8 +16,8 @@ WebSocketClient::WebSocketClient(MainWidget* ui_) : ui(ui_) {}
 
 void WebSocketClient::stop() {
     LOG_INFO << "WebSocketClient::stop()";
-    client.reset();
     conn.reset();
+    client.reset();
 }
 
 void WebSocketClient::start(const std::string& address) {

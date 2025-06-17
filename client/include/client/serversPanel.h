@@ -12,6 +12,7 @@ public:
 private:
     // --- Event Handlers ---
     void OnConnect(wxCommandEvent& event);
+    void OnBack(wxCommandEvent& event);
     void OnListSelect(wxCommandEvent& event);
 
     // --- Helper function to manage button states ---
@@ -22,4 +23,5 @@ private:
     // --- Controls ---
     wxListBox* m_listBox;
     wxButton* m_connectButton;
+    wxButton* m_backButton;
 };
