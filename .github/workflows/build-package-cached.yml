@@ -1,5 +1,6 @@
 name: build-package-cached
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
