@@ -11,6 +11,7 @@
 #include <server/models/Users.h>
 #include <server/models/Rooms.h>
 #include <server/models/Messages.h>
+#include <server/models/UserRoomRoles.h>
 #include <utf8.h>
 
 namespace models = drogon_model::drogon_test;
@@ -213,7 +214,7 @@ public:
 
     static drogon::Task<chat::SendMessageResponse> handleSendMessage(const std::shared_ptr<WsData>& wsData, const chat::SendMessageRequest& req) {
         chat::SendMessageResponse resp;
-        if(!wsData->user) {
+        if(wsData->status != USER_STATUS::Authenticated) {
             setStatus(resp, chat::STATUS_UNAUTHORIZED, "User not authenticated.");
             co_return resp;
         }
@@ -290,7 +291,7 @@ public:
 
     static drogon::Task<chat::JoinRoomResponse> handleJoinRoom(const std::shared_ptr<WsData>& wsData, const chat::JoinRoomRequest& req, IChatRoomService& room_service) {
         chat::JoinRoomResponse resp;
-        if(!wsData->user) {
+        if(wsData->status != USER_STATUS::Authenticated) {
             setStatus(resp, chat::STATUS_UNAUTHORIZED, "User not authenticated.");
             co_return resp;
         }
@@ -307,7 +308,14 @@ public:
                 setStatus(resp, chat::STATUS_NOT_FOUND, "Room does not exist.");
                 co_return resp;
             }
-            wsData->room = CurrentRoom{req.room_id(), chat::UserRights::REGULAR};
+            auto roles = co_await CoroMapper<models::UserRoomRoles>(db)
+                .findBy(
+                    Criteria(models::UserRoomRoles::Cols::_user_id, CompareOperator::EQ, wsData->user->id) && 
+                    Criteria(models::UserRoomRoles::Cols::_room_id, CompareOperator::EQ, req.room_id())
+                );
+            chat::UserRights role = roles.empty() ? 
+            chat::UserRights::REGULAR : static_cast<chat::UserRights>(*roles.front().getRoleType());
+            wsData->room = CurrentRoom{req.room_id(), role};
 
             room_service.joinRoom();
 
@@ -331,7 +339,7 @@ public:
 
     static drogon::Task<chat::LeaveRoomResponse> handleLeaveRoom(const std::shared_ptr<WsData>& wsData, const chat::LeaveRoomRequest&, IChatRoomService& room_service) {
         chat::LeaveRoomResponse resp;
-        if(!wsData->user) {
+        if(wsData->status != USER_STATUS::Authenticated) {
             setStatus(resp, chat::STATUS_UNAUTHORIZED, "User not authenticated.");
             co_return resp;
         }
@@ -349,7 +357,7 @@ public:
 
     static drogon::Task<chat::CreateRoomResponse> handleCreateRoom(const std::shared_ptr<WsData>& wsData, const chat::CreateRoomRequest& req) {
         chat::CreateRoomResponse resp;
-        if(!wsData->user) {
+        if(wsData->status != USER_STATUS::Authenticated) {
             setStatus(resp, chat::STATUS_UNAUTHORIZED, "Not authenticated");
             co_return resp;
         }
@@ -358,6 +366,7 @@ public:
             co_return resp;
         }
         uint32_t room_id;
+        uint32_t creator_id = wsData->user->id;
         try {
             auto err = co_await WithTransaction(
                 [&](auto tx) -> drogon::Task<ScopedTransactionResult> {
@@ -366,6 +375,13 @@ public:
                         r.setRoomName(req.room_name());
                         r = co_await drogon::orm::CoroMapper<models::Rooms>(tx).insert(r);
                         room_id = *r.getRoomId();
+                        
+                        models::UserRoomRoles urr;
+                        urr.setUserId(creator_id);
+                        urr.setRoomId(room_id);
+                        urr.setRoleType(chat::UserRights::OWNER);
+                        co_await drogon::orm::CoroMapper<models::UserRoomRoles>(tx).insert(urr);
+                        
                         co_return std::nullopt;
                     } catch(const drogon::orm::DrogonDbException& e) {
                         const std::string w = e.base().what();
@@ -396,7 +412,7 @@ public:
 
     static drogon::Task<chat::GetMessagesResponse> handleGetMessages(const std::shared_ptr<WsData>& wsData, const chat::GetMessagesRequest& req) {
         chat::GetMessagesResponse resp;
-        if(!wsData->user) {
+        if(wsData->status != USER_STATUS::Authenticated) {
             setStatus(resp, chat::STATUS_UNAUTHORIZED, "User not authenticated.");
             co_return resp;
         }
