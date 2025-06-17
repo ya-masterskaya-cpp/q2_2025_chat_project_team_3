@@ -11,6 +11,7 @@ add_executable(server_app
     src/models/Users.cc
     src/models/Rooms.cc
     src/models/Messages.cc
+    src/models/UserRoomRoles.cc
 )
 
 target_include_directories(server_app PRIVATE

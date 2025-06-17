@@ -7,6 +7,8 @@
 
 #include <server/models/Rooms.h>
 #include <server/models/Messages.h>
+#include <server/models/UserRoomRoles.h>
+#include <server/models/Users.h>
 #include <drogon/utils/Utilities.h>
 #include <string>
 
@@ -17,6 +19,7 @@ using namespace drogon_model::drogon_test;
 const std::string Rooms::Cols::_room_id = "\"room_id\"";
 const std::string Rooms::Cols::_room_name = "\"room_name\"";
 const std::string Rooms::Cols::_created_at = "\"created_at\"";
+const std::string Rooms::Cols::_owner_id = "\"owner_id\"";
 const std::string Rooms::primaryKeyName = "room_id";
 const bool Rooms::hasPrimaryKey = true;
 const std::string Rooms::tableName = "\"rooms\"";
@@ -24,7 +27,8 @@ const std::string Rooms::tableName = "\"rooms\"";
 const std::vector<typename Rooms::MetaData> Rooms::metaData_={
 {"room_id","int32_t","integer",4,1,1,1},
 {"room_name","std::string","character varying",255,0,0,1},
-{"created_at","::trantor::Date","timestamp with time zone",0,0,0,0}
+{"created_at","::trantor::Date","timestamp with time zone",0,0,0,0},
+{"owner_id","int32_t","integer",4,0,0,0}
 };
 const std::string &Rooms::getColumnName(size_t index) noexcept(false)
 {
@@ -65,11 +69,15 @@ Rooms::Rooms(const Row &r, const ssize_t indexOffset) noexcept
                 createdAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
             }
         }
+        if(!r["owner_id"].isNull())
+        {
+            ownerId_=std::make_shared<int32_t>(r["owner_id"].as<int32_t>());
+        }
     }
     else
     {
         size_t offset = (size_t)indexOffset;
-        if(offset + 3 > r.size())
+        if(offset + 4 > r.size())
         {
             LOG_FATAL << "Invalid SQL result for this model";
             return;
@@ -108,13 +116,18 @@ Rooms::Rooms(const Row &r, const ssize_t indexOffset) noexcept
                 createdAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
             }
         }
+        index = offset + 3;
+        if(!r[index].isNull())
+        {
+            ownerId_=std::make_shared<int32_t>(r[index].as<int32_t>());
+        }
     }
 
 }
 
 Rooms::Rooms(const Json::Value &pJson, const std::vector<std::string> &pMasqueradingVector) noexcept(false)
 {
-    if(pMasqueradingVector.size() != 3)
+    if(pMasqueradingVector.size() != 4)
     {
         LOG_ERROR << "Bad masquerading vector";
         return;
@@ -159,6 +172,14 @@ Rooms::Rooms(const Json::Value &pJson, const std::vector<std::string> &pMasquera
                 }
                 createdAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
             }
+        }
+    }
+    if(!pMasqueradingVector[3].empty() && pJson.isMember(pMasqueradingVector[3]))
+    {
+        dirtyFlag_[3] = true;
+        if(!pJson[pMasqueradingVector[3]].isNull())
+        {
+            ownerId_=std::make_shared<int32_t>((int32_t)pJson[pMasqueradingVector[3]].asInt64());
         }
     }
 }
@@ -207,12 +228,20 @@ Rooms::Rooms(const Json::Value &pJson) noexcept(false)
             }
         }
     }
+    if(pJson.isMember("owner_id"))
+    {
+        dirtyFlag_[3]=true;
+        if(!pJson["owner_id"].isNull())
+        {
+            ownerId_=std::make_shared<int32_t>((int32_t)pJson["owner_id"].asInt64());
+        }
+    }
 }
 
 void Rooms::updateByMasqueradedJson(const Json::Value &pJson,
                                             const std::vector<std::string> &pMasqueradingVector) noexcept(false)
 {
-    if(pMasqueradingVector.size() != 3)
+    if(pMasqueradingVector.size() != 4)
     {
         LOG_ERROR << "Bad masquerading vector";
         return;
@@ -258,6 +287,14 @@ void Rooms::updateByMasqueradedJson(const Json::Value &pJson,
             }
         }
     }
+    if(!pMasqueradingVector[3].empty() && pJson.isMember(pMasqueradingVector[3]))
+    {
+        dirtyFlag_[3] = true;
+        if(!pJson[pMasqueradingVector[3]].isNull())
+        {
+            ownerId_=std::make_shared<int32_t>((int32_t)pJson[pMasqueradingVector[3]].asInt64());
+        }
+    }
 }
 
 void Rooms::updateByJson(const Json::Value &pJson) noexcept(false)
@@ -301,6 +338,14 @@ void Rooms::updateByJson(const Json::Value &pJson) noexcept(false)
                 }
                 createdAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
             }
+        }
+    }
+    if(pJson.isMember("owner_id"))
+    {
+        dirtyFlag_[3] = true;
+        if(!pJson["owner_id"].isNull())
+        {
+            ownerId_=std::make_shared<int32_t>((int32_t)pJson["owner_id"].asInt64());
         }
     }
 }
@@ -371,6 +416,28 @@ void Rooms::setCreatedAtToNull() noexcept
     dirtyFlag_[2] = true;
 }
 
+const int32_t &Rooms::getValueOfOwnerId() const noexcept
+{
+    static const int32_t defaultValue = int32_t();
+    if(ownerId_)
+        return *ownerId_;
+    return defaultValue;
+}
+const std::shared_ptr<int32_t> &Rooms::getOwnerId() const noexcept
+{
+    return ownerId_;
+}
+void Rooms::setOwnerId(const int32_t &pOwnerId) noexcept
+{
+    ownerId_ = std::make_shared<int32_t>(pOwnerId);
+    dirtyFlag_[3] = true;
+}
+void Rooms::setOwnerIdToNull() noexcept
+{
+    ownerId_.reset();
+    dirtyFlag_[3] = true;
+}
+
 void Rooms::updateId(const uint64_t id)
 {
 }
@@ -379,7 +446,8 @@ const std::vector<std::string> &Rooms::insertColumns() noexcept
 {
     static const std::vector<std::string> inCols={
         "room_name",
-        "created_at"
+        "created_at",
+        "owner_id"
     };
     return inCols;
 }
@@ -408,6 +476,17 @@ void Rooms::outputArgs(drogon::orm::internal::SqlBinder &binder) const
             binder << nullptr;
         }
     }
+    if(dirtyFlag_[3])
+    {
+        if(getOwnerId())
+        {
+            binder << getValueOfOwnerId();
+        }
+        else
+        {
+            binder << nullptr;
+        }
+    }
 }
 
 const std::vector<std::string> Rooms::updateColumns() const
@@ -420,6 +499,10 @@ const std::vector<std::string> Rooms::updateColumns() const
     if(dirtyFlag_[2])
     {
         ret.push_back(getColumnName(2));
+    }
+    if(dirtyFlag_[3])
+    {
+        ret.push_back(getColumnName(3));
     }
     return ret;
 }
@@ -442,6 +525,17 @@ void Rooms::updateArgs(drogon::orm::internal::SqlBinder &binder) const
         if(getCreatedAt())
         {
             binder << getValueOfCreatedAt();
+        }
+        else
+        {
+            binder << nullptr;
+        }
+    }
+    if(dirtyFlag_[3])
+    {
+        if(getOwnerId())
+        {
+            binder << getValueOfOwnerId();
         }
         else
         {
@@ -476,6 +570,14 @@ Json::Value Rooms::toJson() const
     {
         ret["created_at"]=Json::Value();
     }
+    if(getOwnerId())
+    {
+        ret["owner_id"]=getValueOfOwnerId();
+    }
+    else
+    {
+        ret["owner_id"]=Json::Value();
+    }
     return ret;
 }
 
@@ -483,7 +585,7 @@ Json::Value Rooms::toMasqueradedJson(
     const std::vector<std::string> &pMasqueradingVector) const
 {
     Json::Value ret;
-    if(pMasqueradingVector.size() == 3)
+    if(pMasqueradingVector.size() == 4)
     {
         if(!pMasqueradingVector[0].empty())
         {
@@ -518,6 +620,17 @@ Json::Value Rooms::toMasqueradedJson(
                 ret[pMasqueradingVector[2]]=Json::Value();
             }
         }
+        if(!pMasqueradingVector[3].empty())
+        {
+            if(getOwnerId())
+            {
+                ret[pMasqueradingVector[3]]=getValueOfOwnerId();
+            }
+            else
+            {
+                ret[pMasqueradingVector[3]]=Json::Value();
+            }
+        }
         return ret;
     }
     LOG_ERROR << "Masquerade failed";
@@ -545,6 +658,14 @@ Json::Value Rooms::toMasqueradedJson(
     {
         ret["created_at"]=Json::Value();
     }
+    if(getOwnerId())
+    {
+        ret["owner_id"]=getValueOfOwnerId();
+    }
+    else
+    {
+        ret["owner_id"]=Json::Value();
+    }
     return ret;
 }
 
@@ -570,13 +691,18 @@ bool Rooms::validateJsonForCreation(const Json::Value &pJson, std::string &err)
         if(!validJsonOfField(2, "created_at", pJson["created_at"], err, true))
             return false;
     }
+    if(pJson.isMember("owner_id"))
+    {
+        if(!validJsonOfField(3, "owner_id", pJson["owner_id"], err, true))
+            return false;
+    }
     return true;
 }
 bool Rooms::validateMasqueradedJsonForCreation(const Json::Value &pJson,
                                                const std::vector<std::string> &pMasqueradingVector,
                                                std::string &err)
 {
-    if(pMasqueradingVector.size() != 3)
+    if(pMasqueradingVector.size() != 4)
     {
         err = "Bad masquerading vector";
         return false;
@@ -611,6 +737,14 @@ bool Rooms::validateMasqueradedJsonForCreation(const Json::Value &pJson,
                   return false;
           }
       }
+      if(!pMasqueradingVector[3].empty())
+      {
+          if(pJson.isMember(pMasqueradingVector[3]))
+          {
+              if(!validJsonOfField(3, pMasqueradingVector[3], pJson[pMasqueradingVector[3]], err, true))
+                  return false;
+          }
+      }
     }
     catch(const Json::LogicError &e)
     {
@@ -641,13 +775,18 @@ bool Rooms::validateJsonForUpdate(const Json::Value &pJson, std::string &err)
         if(!validJsonOfField(2, "created_at", pJson["created_at"], err, false))
             return false;
     }
+    if(pJson.isMember("owner_id"))
+    {
+        if(!validJsonOfField(3, "owner_id", pJson["owner_id"], err, false))
+            return false;
+    }
     return true;
 }
 bool Rooms::validateMasqueradedJsonForUpdate(const Json::Value &pJson,
                                              const std::vector<std::string> &pMasqueradingVector,
                                              std::string &err)
 {
-    if(pMasqueradingVector.size() != 3)
+    if(pMasqueradingVector.size() != 4)
     {
         err = "Bad masquerading vector";
         return false;
@@ -671,6 +810,11 @@ bool Rooms::validateMasqueradedJsonForUpdate(const Json::Value &pJson,
       if(!pMasqueradingVector[2].empty() && pJson.isMember(pMasqueradingVector[2]))
       {
           if(!validJsonOfField(2, pMasqueradingVector[2], pJson[pMasqueradingVector[2]], err, false))
+              return false;
+      }
+      if(!pMasqueradingVector[3].empty() && pJson.isMember(pMasqueradingVector[3]))
+      {
+          if(!validJsonOfField(3, pMasqueradingVector[3], pJson[pMasqueradingVector[3]], err, false))
               return false;
       }
     }
@@ -737,6 +881,17 @@ bool Rooms::validJsonOfField(size_t index,
                 return false;
             }
             break;
+        case 3:
+            if(pJson.isNull())
+            {
+                return true;
+            }
+            if(!pJson.isInt())
+            {
+                err="Type error in the "+fieldName+" field";
+                return false;
+            }
+            break;
         default:
             err="Internal error in the server";
             return false;
@@ -774,6 +929,85 @@ void Rooms::getMessages(const DbClientPtr &clientPtr,
                    for (auto const &row : r)
                    {
                        ret.emplace_back(Messages(row));
+                   }
+                   rcb(ret);
+               }
+               >> ecb;
+}
+Users Rooms::getOwner(const DbClientPtr &clientPtr) const {
+    static const std::string sql = "select * from users where user_id = $1";
+    Result r(nullptr);
+    {
+        auto binder = *clientPtr << sql;
+        binder << *ownerId_ << Mode::Blocking >>
+            [&r](const Result &result) { r = result; };
+        binder.exec();
+    }
+    if (r.size() == 0)
+    {
+        throw UnexpectedRows("0 rows found");
+    }
+    else if (r.size() > 1)
+    {
+        throw UnexpectedRows("Found more than one row");
+    }
+    return Users(r[0]);
+}
+
+void Rooms::getOwner(const DbClientPtr &clientPtr,
+                     const std::function<void(Users)> &rcb,
+                     const ExceptionCallback &ecb) const
+{
+    static const std::string sql = "select * from users where user_id = $1";
+    *clientPtr << sql
+               << *ownerId_
+               >> [rcb = std::move(rcb), ecb](const Result &r){
+                    if (r.size() == 0)
+                    {
+                        ecb(UnexpectedRows("0 rows found"));
+                    }
+                    else if (r.size() > 1)
+                    {
+                        ecb(UnexpectedRows("Found more than one row"));
+                    }
+                    else
+                    {
+                        rcb(Users(r[0]));
+                    }
+               }
+               >> ecb;
+}
+std::vector<UserRoomRoles> Rooms::getRoles(const DbClientPtr &clientPtr) const {
+    static const std::string sql = "select * from user_room_roles where room_id = $1";
+    Result r(nullptr);
+    {
+        auto binder = *clientPtr << sql;
+        binder << *roomId_ << Mode::Blocking >>
+            [&r](const Result &result) { r = result; };
+        binder.exec();
+    }
+    std::vector<UserRoomRoles> ret;
+    ret.reserve(r.size());
+    for (auto const &row : r)
+    {
+        ret.emplace_back(UserRoomRoles(row));
+    }
+    return ret;
+}
+
+void Rooms::getRoles(const DbClientPtr &clientPtr,
+                     const std::function<void(std::vector<UserRoomRoles>)> &rcb,
+                     const ExceptionCallback &ecb) const
+{
+    static const std::string sql = "select * from user_room_roles where room_id = $1";
+    *clientPtr << sql
+               << *roomId_
+               >> [rcb = std::move(rcb)](const Result &r){
+                   std::vector<UserRoomRoles> ret;
+                   ret.reserve(r.size());
+                   for (auto const &row : r)
+                   {
+                       ret.emplace_back(UserRoomRoles(row));
                    }
                    rcb(ret);
                }

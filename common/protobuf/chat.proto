@@ -17,10 +17,10 @@ message Status {
 }
 
 enum UserRights {
-    ADMIN = 0;
-    OWNER = 1;
-    MODERATOR = 2;
-    REGULAR = 3;
+    REGULAR = 0;
+    MODERATOR = 1;
+    OWNER = 2;
+    ADMIN = 3;
 }
 
 message UserInfo {
