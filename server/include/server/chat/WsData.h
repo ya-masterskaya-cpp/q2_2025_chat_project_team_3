@@ -1,7 +1,4 @@
 #pragma once
-#include <optional>
-#include <stdint.h>
-#include <string>
 
 enum class USER_STATUS {
     Unauthenticated, // any ws conn
