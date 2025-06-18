@@ -170,6 +170,28 @@ message NewRoomCreated {
     RoomInfo room = 1;
 }
 
+message RenameRoomRequest {
+    int32 room_id = 1;
+    string name = 2;
+}
+message RenameRoomResponse {
+    Status status = 1;
+}
+message NewRoomName {
+    int32 room_id = 1;
+    string name = 2;
+}
+
+message DeleteRoomRequest {
+    int32 room_id = 1;
+}
+message DeleteRoomResponse {
+    Status status = 1;
+}
+message RoomDeleted {
+    int32 room_id = 1;
+}
+
 message Envelope {
     oneof payload {
         ServerHello server_hello = 1;
@@ -204,5 +226,11 @@ message Envelope {
         GetServerNodesResponse get_servers_response = 30;
         ServerAdded server_added = 31;
         ServerRemoved server_removed = 32;
+        RenameRoomRequest rename_room_request = 33;
+        RenameRoomResponse rename_room_response = 34;
+        NewRoomName new_room_name = 35;
+        DeleteRoomRequest delete_room_request = 36;
+        DeleteRoomResponse delete_room_response = 37;
+        RoomDeleted room_deleted = 38;
     }
 }

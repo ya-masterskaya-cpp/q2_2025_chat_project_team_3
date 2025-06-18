@@ -29,7 +29,9 @@ public:
     void getMessages(int32_t limit, int64_t offset_ts);
     void logout();
     void getServers();
-
+    void renameRoom(int32_t roomId, const std::string& newName);
+    void deleteRoom(int32_t roomId);
+    
     static std::string formatMessageTimestamp(uint64_t timestamp);
 
 private:

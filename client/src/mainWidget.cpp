@@ -7,6 +7,7 @@
 #include <client/messageView.h>
 #include <client/initialPanel.h>
 #include <client/serversPanel.h>
+#include <client/roomHeaderPanel.h>
 
 MainWidget::MainWidget() : wxFrame(NULL, wxID_ANY, "Slightly Pretty Chat", wxDefaultPosition, wxSize(450, 600)) {
     wsClient = new WebSocketClient(this);
@@ -72,6 +73,7 @@ void MainWidget::ShowChat(std::vector<User> users) {
     authPanel->Hide();
     roomsPanel->Hide();
     chatPanel->Show();
+    chatPanel->m_roomHeaderPanel->SetRoom(roomsPanel->GetSelectedRoom().value());
     chatPanel->m_userListPanel->SetUserList(std::move(users));
     chatPanel->m_messageView->Start();
     Layout();

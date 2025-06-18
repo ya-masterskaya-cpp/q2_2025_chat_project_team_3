@@ -7,8 +7,16 @@
 #include <client/messageView.h>
 #include <client/textUtil.h>
 #include <common/utils/limits.h>
+#include <client/roomHeaderPanel.h>
+#include <client/roomSettingsPanel.h>
 
-enum { ID_SEND = wxID_HIGHEST+30, ID_LEAVE, ID_JUMP_TO_PRESENT };
+enum { ID_SEND = wxID_HIGHEST+30,
+    ID_LEAVE,
+    ID_JUMP_TO_PRESENT,
+    ID_RENAME_ROOM,
+    ID_DELETE_ROOM,
+    ID_BACK_FROM_SETTINGS
+};
 
 wxDEFINE_EVENT(wxEVT_SNAP_STATE_CHANGED, wxCommandEvent);
 
@@ -18,6 +26,7 @@ wxBEGIN_EVENT_TABLE(ChatPanel, wxPanel)
     EVT_BUTTON(ID_JUMP_TO_PRESENT, ChatPanel::JumpToPresent)
     //EVT_TIMER(ID_RESIZE_TIMER, ChatPanel::OnResizeTimerTick)
     //EVT_SIZE(ChatPanel::OnChatPanelSize)
+    //EVT_LEFT_DOWN(ChatPanel::OnRoomHeaderClicked)
 wxEND_EVENT_TABLE()
 
 ChatPanel::ChatPanel(MainWidget* parent)
@@ -29,10 +38,15 @@ ChatPanel::ChatPanel(MainWidget* parent)
     m_mainSizer = new wxBoxSizer(wxHORIZONTAL);
     SetSizer(m_mainSizer);
 
-    // --- Left side: Chat area (messages + input) ---
+    // --- Left side: Chat area (header + messages + input) ---
     m_chatSizer = new wxBoxSizer(wxVERTICAL);
     // Add the chat area to the main sizer, expanding horizontally and taking all available vertical space.
     m_mainSizer->Add(m_chatSizer, 1, wxEXPAND | wxALL, FromDIP(5));
+
+    // Add Room Header Panel
+    m_roomHeaderPanel = new RoomHeaderPanel(this);
+
+    m_chatSizer->Add(m_roomHeaderPanel, 0, wxEXPAND | wxALL, FromDIP(5));
 
     m_messageView = new MessageView(this);
     // Add the new message view directly to the chat sizer. It will fill the available space.
@@ -71,6 +85,14 @@ ChatPanel::ChatPanel(MainWidget* parent)
     m_jumpToPresentButton->Hide();
 
     Bind(wxEVT_SNAP_STATE_CHANGED, &ChatPanel::OnSnapStateChanged, this);
+    
+    m_roomHeaderPanel->Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent& event) {
+    ShowSettingsPanel();
+    event.Skip();});
+
+    Bind(wxEVT_ROOM_RENAME, &ChatPanel::OnRoomRename, this);
+    Bind(wxEVT_ROOM_DELETE, &ChatPanel::OnRoomDelete, this);
+    Bind(wxEVT_ROOM_BACK, &ChatPanel::OnRoomBack, this);
 }
 
 // Event handler for when the message container (wxScrolledWindow) changes size.

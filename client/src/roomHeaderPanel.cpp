@@ -1,0 +1,54 @@
+#include <client/roomHeaderPanel.h>
+#include <client/roomsPanel.h>
+
+RoomHeaderPanel::RoomHeaderPanel(wxWindow* parent)
+    : wxPanel(parent, wxID_ANY) {
+
+    SetBackgroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW));
+    auto* headerSizer = new wxBoxSizer(wxHORIZONTAL);
+    
+    m_roomName = new wxStaticText(this, wxID_ANY, "",
+                                        wxDefaultPosition, wxDefaultSize,
+                                        wxALIGN_LEFT);
+    m_roomName->SetFont(m_roomName->GetFont().Bold());
+    m_roomName->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
+
+    headerSizer->Add(m_roomName, 1, wxALIGN_CENTER_VERTICAL | wxLEFT, FromDIP(10));
+
+    SetSizer(headerSizer);
+    SetCursor(wxCURSOR_OPEN_HAND);
+    Bind(wxEVT_LEFT_DOWN, &RoomHeaderPanel::OnClick, this);
+    m_roomName->Bind(wxEVT_LEFT_DOWN, &RoomHeaderPanel::OnClick, this);
+
+    Bind(wxEVT_ENTER_WINDOW, &RoomHeaderPanel::OnEnterWindow, this);
+    m_roomName->Bind(wxEVT_ENTER_WINDOW, &RoomHeaderPanel::OnEnterWindow, this);
+
+    Bind(wxEVT_LEAVE_WINDOW, &RoomHeaderPanel::OnLeaveWindow, this);
+    m_roomName->Bind(wxEVT_LEAVE_WINDOW, &RoomHeaderPanel::OnLeaveWindow, this);
+}
+    
+void RoomHeaderPanel::SetRoom(const Room& room) {
+    m_roomName->SetLabel(wxString(room.room_name));
+    m_roomId = room.room_id;
+    Layout();
+}
+
+void RoomHeaderPanel::OnClick(wxMouseEvent& event) {
+    wxCommandEvent evt(wxEVT_LEFT_DOWN, GetId());
+    evt.SetEventObject(this);
+    GetParent()->GetEventHandler()->ProcessEvent(evt);
+    
+    event.Skip();
+}
+
+void RoomHeaderPanel::OnEnterWindow(wxMouseEvent& event) {
+    SetBackgroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_BTNFACE));
+    Refresh();
+    event.Skip();
+}
+
+void RoomHeaderPanel::OnLeaveWindow(wxMouseEvent& event) {
+    SetBackgroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW));
+    Refresh();
+    event.Skip();
+}
