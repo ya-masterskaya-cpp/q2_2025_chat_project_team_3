@@ -17,8 +17,15 @@ RoomHeaderPanel::RoomHeaderPanel(wxWindow* parent)
 
     SetSizer(headerSizer);
     SetCursor(wxCURSOR_OPEN_HAND);
-    Bind(wxEVT_LEFT_DOWN, &RoomHeaderPanel::OnClick, this);
-    m_roomName->Bind(wxEVT_LEFT_DOWN, &RoomHeaderPanel::OnClick, this);
+
+    Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent& event) {
+        event.Skip();
+    });
+
+    m_roomName->Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent& event) {
+        wxPostEvent(this, event);
+        event.Skip();
+    });
 
     Bind(wxEVT_ENTER_WINDOW, &RoomHeaderPanel::OnEnterWindow, this);
     m_roomName->Bind(wxEVT_ENTER_WINDOW, &RoomHeaderPanel::OnEnterWindow, this);
@@ -31,14 +38,6 @@ void RoomHeaderPanel::SetRoom(const Room& room) {
     m_roomName->SetLabel(wxString(room.room_name));
     m_roomId = room.room_id;
     Layout();
-}
-
-void RoomHeaderPanel::OnClick(wxMouseEvent& event) {
-    wxCommandEvent evt(wxEVT_LEFT_DOWN, GetId());
-    evt.SetEventObject(this);
-    GetParent()->GetEventHandler()->ProcessEvent(evt);
-    
-    event.Skip();
 }
 
 void RoomHeaderPanel::OnEnterWindow(wxMouseEvent& event) {

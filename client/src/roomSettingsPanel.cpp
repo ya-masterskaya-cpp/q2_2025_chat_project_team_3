@@ -46,31 +46,25 @@ RoomSettingsPanel::RoomSettingsPanel(wxWindow* parent, const wxString& roomName,
 }
 
 void RoomSettingsPanel::OnRename(wxCommandEvent& event) {
-    // Создаём событие переименования
     wxCommandEvent evt(wxEVT_ROOM_RENAME);
     evt.SetEventObject(this);
-    evt.SetString(m_roomNameCtrl->GetValue()); // Передаём новое имя комнаты
-    evt.SetInt(m_roomId); // Передаём ID комнаты
+    evt.SetString(m_roomNameCtrl->GetValue());
+    evt.SetInt(m_roomId);
     
-    // Отправляем событие родителю (ChatPanel)
     GetParent()->GetEventHandler()->ProcessEvent(evt);
 }
 
 void RoomSettingsPanel::OnDelete(wxCommandEvent& event) {
-    // Создаём событие удаления
     wxCommandEvent evt(wxEVT_ROOM_DELETE);
     evt.SetEventObject(this);
-    evt.SetInt(m_roomId); // Передаём ID комнаты
+    evt.SetInt(m_roomId);
     
-    // Отправляем событие родителю
     GetParent()->GetEventHandler()->ProcessEvent(evt);
 }
 
 void RoomSettingsPanel::OnBack(wxCommandEvent& event) {
-    // Создаём событие возврата
     wxCommandEvent evt(wxEVT_ROOM_BACK);
     evt.SetEventObject(this);
     
-    // Отправляем событие родителю
     GetParent()->GetEventHandler()->ProcessEvent(evt);
 }
