@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
-project(MyProjectAggregatorSubproject LANGUAGES CXX)
+project(SlightlyPrettyChatAggregator LANGUAGES CXX)
 
 add_executable(aggregator_app
     src/main.cpp

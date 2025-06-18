@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
-project(MyProjectV2 LANGUAGES CXX VERSION 0.0.1)
+project(SlightlyPrettyChat LANGUAGES CXX VERSION 0.0.1)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
-project(MyProjectClientSubproject LANGUAGES CXX)
+project(SlightlyPrettyChatClient LANGUAGES CXX)
 
 find_package(wxWidgets CONFIG REQUIRED)
 
