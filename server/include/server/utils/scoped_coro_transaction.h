@@ -1,6 +1,7 @@
 #pragma once
 
 #include <common/utils/utils.h>
+#include <server/utils/switch_to_io_loop.h>
 
 using ScopedTransactionResult =
     std::optional<std::string>;
@@ -45,7 +46,7 @@ inline drogon::Task<ScopedTransactionResult> WithTransaction(ScopedTransactionFu
             co_return "Internal: DB client unavailable";
         }
 
-        tx = co_await db->newTransactionCoro();
+        tx = co_await switch_to_io_loop(db->newTransactionCoro());
         LOG_TRACE << "Transaction started";
 
         if(auto err = co_await userLambda(tx)) {
@@ -54,8 +55,7 @@ inline drogon::Task<ScopedTransactionResult> WithTransaction(ScopedTransactionFu
             co_return err;
         }
 
-        CommitAwaiter waiter{std::move(tx)};
-        if(!co_await waiter) {
+        if(!co_await switch_to_io_loop(CommitAwaiter{std::move(tx)})) {
             LOG_ERROR << "Commit failed via callback";
             co_return "Transaction commit failed";
         }

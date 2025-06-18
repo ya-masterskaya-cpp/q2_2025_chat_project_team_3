@@ -7,6 +7,7 @@
 #include <server/chat/ChatRoomManager.h>
 #include <common/utils/utils.h>
 #include <server/utils/scoped_coro_transaction.h>
+#include <server/utils/switch_to_io_loop.h>
 
 #include <server/models/Users.h>
 #include <server/models/Rooms.h>
@@ -31,8 +32,8 @@ public:
         }
         try {
             using namespace drogon::orm;
-            auto users = co_await drogon::orm::CoroMapper<models::Users>(db)
-                .findBy(Criteria(models::Users::Cols::_username, CompareOperator::EQ, req.username()));
+            auto users = co_await switch_to_io_loop(CoroMapper<models::Users>(db)
+                .findBy(Criteria(models::Users::Cols::_username, CompareOperator::EQ, req.username())));
             if(users.empty()) {
                 setStatus(resp, chat::STATUS_UNAUTHORIZED, "Invalid credentials.");
                 co_return resp;
@@ -62,8 +63,8 @@ public:
         }
         try {
             using namespace drogon::orm;
-            auto users = co_await drogon::orm::CoroMapper<models::Users>(db)
-                .findBy(Criteria(models::Users::Cols::_username, CompareOperator::EQ, req.username()));
+            auto users = co_await switch_to_io_loop(CoroMapper<models::Users>(db)
+                .findBy(Criteria(models::Users::Cols::_username, CompareOperator::EQ, req.username())));
             if(!users.empty()) {
                 setStatus(resp, chat::STATUS_FAILURE, "Username already exists.");
                 co_return resp;
@@ -95,8 +96,8 @@ public:
         using namespace drogon::orm;
         auto db = drogon::app().getDbClient();
 
-        auto users = co_await CoroMapper<models::Users>(db)
-            .findBy(Criteria(models::Users::Cols::_username, CompareOperator::EQ, wsData->user->name));
+        auto users = co_await switch_to_io_loop(CoroMapper<models::Users>(db)
+            .findBy(Criteria(models::Users::Cols::_username, CompareOperator::EQ, wsData->user->name)));
 
         if (users.empty()) {
             wsData->status = USER_STATUS::Unauthenticated;
@@ -118,7 +119,7 @@ public:
                         try {
                             user.setHashPassword(req.hash());
                             user.setSalt(req.salt());
-                            co_await CoroMapper<models::Users>(tx).update(user);
+                            co_await switch_to_io_loop(CoroMapper<models::Users>(tx).update(user));
                             co_return std::nullopt;
                         } catch (const drogon::orm::DrogonDbException& e) {
                             LOG_ERROR << "User update error: " << e.base().what();
@@ -147,7 +148,7 @@ public:
             }
         }
         
-        auto rooms = co_await drogon::orm::CoroMapper<models::Rooms>(db).findAll();
+        auto rooms = co_await switch_to_io_loop(CoroMapper<models::Rooms>(db).findAll());
         for(const auto& room : rooms) {
             chat::RoomInfo* room_info = resp.add_rooms();
             room_info->set_room_id(room.getValueOfRoomId());
@@ -184,7 +185,7 @@ public:
                         u.setUsername(wsData->user->name);
                         u.setHashPassword(req.hash());
                         u.setSalt(req.salt());
-                        co_await drogon::orm::CoroMapper<models::Users>(tx).insert(u);
+                        co_await switch_to_io_loop(drogon::orm::CoroMapper<models::Users>(tx).insert(u));
                         co_return std::nullopt;
                     } catch(const drogon::orm::DrogonDbException& e) {
                         const std::string w = e.base().what();
@@ -252,7 +253,7 @@ public:
                         m.setMessageText(req.message());
                         m.setRoomId(wsData->room->id);
                         m.setUserId(wsData->user->id);
-                        co_await drogon::orm::CoroMapper<models::Messages>(tx).insert(m);
+                        co_await switch_to_io_loop(drogon::orm::CoroMapper<models::Messages>(tx).insert(m));
                         co_return std::nullopt;
                     } catch(const drogon::orm::DrogonDbException& e) {
                         const std::string w = e.base().what();
@@ -302,8 +303,8 @@ public:
         }
         try {
             using namespace drogon::orm;
-            auto rooms = co_await CoroMapper<models::Rooms>(db)
-                .findBy(Criteria(models::Rooms::Cols::_room_id, CompareOperator::EQ, req.room_id()));
+            auto rooms = co_await switch_to_io_loop(CoroMapper<models::Rooms>(db)
+                .findBy(Criteria(models::Rooms::Cols::_room_id, CompareOperator::EQ, req.room_id())));
             if(rooms.empty()) {
                 setStatus(resp, chat::STATUS_NOT_FOUND, "Room does not exist.");
                 co_return resp;
@@ -318,10 +319,10 @@ public:
                         role.setUserId(wsData->user->id);
                         role.setRoomId(req.room_id());
                         role.setRoleType(chat::UserRights_Name(chat::UserRights::REGULAR));
-                        co_await drogon::orm::CoroMapper<models::UserRoomRoles>(tx).insert(role);
+                        co_await switch_to_io_loop(CoroMapper<models::UserRoomRoles>(tx).insert(role));
                         co_return std::nullopt;
                     }
-                    catch (const drogon::orm::DrogonDbException& e) {
+                    catch (const DrogonDbException& e) {
                         const std::string w = e.base().what();
                         LOG_ERROR << "Failed to join room: " << w;
                         co_return "Database error during user_room_rules creation.";
@@ -389,7 +390,7 @@ public:
                         models::Rooms r;
                         r.setRoomName(req.room_name());
                         r.setOwnerId(wsData->user->id);
-                        r = co_await drogon::orm::CoroMapper<models::Rooms>(tx).insert(r);
+                        r = co_await switch_to_io_loop(drogon::orm::CoroMapper<models::Rooms>(tx).insert(r));
                         room_id = *r.getRoomId();
                         co_return std::nullopt;
                     } catch(const drogon::orm::DrogonDbException& e) {
@@ -436,12 +437,11 @@ public:
         }
         try {
             using namespace drogon::orm;
-            auto mapper = drogon::orm::CoroMapper<models::Messages>(db);
 
             auto limit = req.limit();
 
-            LOG_DEBUG << "Limit: " + std::to_string(limit);
-            LOG_DEBUG << "Ts: " + std::to_string(req.offset_ts());
+            LOG_TRACE << "Limit: " + std::to_string(limit);
+            LOG_TRACE << "Ts: " + std::to_string(req.offset_ts());
 
             auto criteria = Criteria(models::Messages::Cols::_created_at, 
                                     limit > 0 ? CompareOperator::LT : CompareOperator::GT, 
@@ -449,17 +449,17 @@ public:
             auto order = limit > 0 ? SortOrder::DESC : SortOrder::ASC;
             limit = std::abs(limit);
 
-            auto messages = co_await mapper
+            auto messages = co_await switch_to_io_loop(CoroMapper<models::Messages>(db)
                 .orderBy(models::Messages::Cols::_created_at, order)
                 .limit(limit)
-                .findBy(Criteria(models::Messages::Cols::_room_id, CompareOperator::EQ, wsData->room->id) && criteria);
+                .findBy(Criteria(models::Messages::Cols::_room_id, CompareOperator::EQ, wsData->room->id) && criteria));
 
             for(const auto& message : messages) {
                 auto* message_info = resp.add_message();
                 message_info->set_message(message.getValueOfMessageText());
-                LOG_DEBUG << std::string("Message text \"") + message.getValueOfMessageText() + "\"";
+                LOG_TRACE << std::string("Message text \"") + message.getValueOfMessageText() + "\"";
                 message_info->set_timestamp(message.getValueOfCreatedAt().microSecondsSinceEpoch());
-                LOG_DEBUG << std::string("Message timestamp \"") + std::to_string(message.getValueOfCreatedAt().microSecondsSinceEpoch()) + "\"";
+                LOG_TRACE << std::string("Message timestamp \"") + std::to_string(message.getValueOfCreatedAt().microSecondsSinceEpoch()) + "\"";
                 auto* user_info = message_info->mutable_from();
                 auto user = message.getUser(db); //TODO this is blocking
 
@@ -490,22 +490,22 @@ public:
 
     static drogon::Task<std::optional<chat::UserRights>> GetRoleType(uint32_t user_id, uint32_t room_id, const drogon::orm::DbClientPtr& db ) {
         using namespace drogon::orm;
-        auto user = co_await CoroMapper<models::Users>(db)
+        auto user = co_await switch_to_io_loop(CoroMapper<models::Users>(db)
             .findBy(
                 Criteria(models::Users::Cols::_user_id, CompareOperator::EQ, user_id) &&
-                Criteria(models::Users::Cols::_is_admin, CompareOperator::EQ, true));
+                Criteria(models::Users::Cols::_is_admin, CompareOperator::EQ, true)));
         if (!user.empty()){
             co_return chat::UserRights::ADMIN;
         }
-        auto room = co_await CoroMapper<models::Rooms>(db)
-            .findOne(Criteria(models::Rooms::Cols::_room_id, CompareOperator::EQ, room_id));
+        auto room = co_await switch_to_io_loop(CoroMapper<models::Rooms>(db)
+            .findOne(Criteria(models::Rooms::Cols::_room_id, CompareOperator::EQ, room_id)));
         if (room.getOwnerId() && *room.getOwnerId() == user_id) {
             co_return chat::UserRights::OWNER;
         }
-        auto role = co_await CoroMapper<models::UserRoomRoles>(db)
+        auto role = co_await switch_to_io_loop(CoroMapper<models::UserRoomRoles>(db)
             .findBy(
                 Criteria(models::UserRoomRoles::Cols::_user_id, CompareOperator::EQ, user_id) &&
-                Criteria(models::UserRoomRoles::Cols::_room_id, CompareOperator::EQ, room_id));
+                Criteria(models::UserRoomRoles::Cols::_room_id, CompareOperator::EQ, room_id)));
         if (role.empty()) {
             co_return std::nullopt;
         }
