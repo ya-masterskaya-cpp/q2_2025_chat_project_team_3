@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
-project(MyProjectServerSubproject LANGUAGES CXX)
+project(SlightlyPrettyChatServer LANGUAGES CXX)
 
 add_executable(server_app
     src/main.cpp

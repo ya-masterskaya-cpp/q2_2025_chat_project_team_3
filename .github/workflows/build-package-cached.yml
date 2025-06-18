@@ -79,7 +79,7 @@ jobs:
           cat > AppDir/usr/share/applications/client_app.desktop << EOF
           [Desktop Entry]
           Type=Application
-          Name=My Client App
+          Name=Slightly Pretty Chat
           Exec=client_app
           Categories=Utility;
           Icon=appname
