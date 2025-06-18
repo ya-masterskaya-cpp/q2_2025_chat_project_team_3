@@ -20,6 +20,8 @@ add_executable(client_app
     src/passwordUtil.cpp
     src/initialPanel.cpp
     src/serversPanel.cpp
+    src/roomHeaderPanel.cpp
+    src/roomSettingsPanel.cpp
 )
 
 target_include_directories(client_app PRIVATE

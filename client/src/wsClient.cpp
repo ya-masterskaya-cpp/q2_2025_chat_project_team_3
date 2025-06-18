@@ -142,6 +142,22 @@ void WebSocketClient::getServers() {
     sendEnvelope(env);
 }
 
+void WebSocketClient::renameRoom(int32_t roomId, const std::string& newName) {
+    chat::Envelope env;
+    auto* request = env.mutable_rename_room_request();
+    request->set_room_id(roomId);
+    request->set_name(newName);
+    sendEnvelope(env);
+}
+
+void WebSocketClient::deleteRoom(int32_t roomId) {
+    chat::Envelope env;
+    auto* request = env.mutable_delete_room_request();
+    request->set_room_id(roomId);
+    sendEnvelope(env);
+}
+
+
 void WebSocketClient::handleMessage(const std::string& msg) {
     chat::Envelope env;
     if(!env.ParseFromString(msg)) {
@@ -299,6 +315,35 @@ void WebSocketClient::handleMessage(const std::string& msg) {
             });
             break;
         }
+        case chat::Envelope::kRenameRoomResponse: {
+            if (!statusOk(env.rename_room_response().status())) {
+                    showError("Failed to rename room: " + wxString(env.rename_room_response().status().message()));
+            }
+            break;
+        }
+        case chat::Envelope::kNewRoomName: {
+            wxTheApp->CallAfter([this, response = env.new_room_name()] {
+            if (ui->chatPanel->IsShown() && ui->chatPanel->GetRoomId() == response.room_id()) {
+                ui->chatPanel->SetRoomName(wxString(response.name()));
+            }
+            ui->roomsPanel->RenameRoom(response.room_id(), response.name());
+            });
+            break;
+        }
+        case chat::Envelope::kDeleteRoomResponse: {
+            if (statusOk(env.delete_room_response().status())) {
+                wxTheApp->CallAfter([this] { ui->ShowRooms(); });
+            } else {
+                showError("Failed to delete room: " + wxString(env.delete_room_response().status().message()));
+            }
+            break;
+        }
+        case chat::Envelope::kRoomDeleted: {
+            wxTheApp->CallAfter([this, roomId = env.room_deleted().room_id()] {
+                ui->roomsPanel->RemoveRoom(roomId);
+            });
+            break;
+        }
         default: {
             showError("Unknown message received from server!");
             break;
@@ -405,3 +450,4 @@ std::string WebSocketClient::formatMessageTimestamp(uint64_t timestamp) {
         return "[" + msgDate.toCustomFormattedStringLocal("%d.%m.%Y %H:%M") + "]";
     }
 }
+
