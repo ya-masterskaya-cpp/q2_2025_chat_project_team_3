@@ -17,7 +17,7 @@ private:
     wxStaticText* m_roomName = nullptr;
     int32_t m_roomId;
 
-    void OnClick(wxMouseEvent& event);
+    //void OnClick(wxMouseEvent& event);
     void OnEnterWindow(wxMouseEvent& event);
     void OnLeaveWindow(wxMouseEvent& event);
 };

@@ -87,8 +87,9 @@ ChatPanel::ChatPanel(MainWidget* parent)
     Bind(wxEVT_SNAP_STATE_CHANGED, &ChatPanel::OnSnapStateChanged, this);
     
     m_roomHeaderPanel->Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent& event) {
-    ShowSettingsPanel();
-    event.Skip();});
+        ShowSettingsPanel();
+        event.Skip();
+    });
 
     Bind(wxEVT_ROOM_RENAME, &ChatPanel::OnRoomRename, this);
     Bind(wxEVT_ROOM_DELETE, &ChatPanel::OnRoomDelete, this);
@@ -164,6 +165,51 @@ void ChatPanel::OnSnapStateChanged(wxCommandEvent& event) {
 void ChatPanel::OnInputText(wxCommandEvent& event) {
     event.Skip();
     TextUtil::LimitTextLength(m_input_ctrl, limits::MAX_MESSAGE_LENGTH);
+}
+
+void ChatPanel::ShowSettingsPanel() {
+    if (m_roomSettingsPanel) return;
+    
+    m_roomSettingsPanel = new RoomSettingsPanel(this, 
+                                              m_roomHeaderPanel->GetLabel(),
+                                              m_roomHeaderPanel->GetRoomId());
+    
+    m_chatSizer->Replace(m_roomHeaderPanel, m_roomSettingsPanel);
+    Layout();
+}
+
+void ChatPanel::ShowChatPanel() {
+    if (!m_roomSettingsPanel) return;
+    
+    m_chatSizer->Replace(m_roomSettingsPanel, m_roomHeaderPanel);
+    m_roomSettingsPanel->Destroy();
+    m_roomSettingsPanel = nullptr;
+    Layout();
+}
+
+void ChatPanel::SetRoomName(wxString name) {
+    m_roomHeaderPanel->SetLabel(name);
+}
+
+int32_t ChatPanel::GetRoomId() {
+    return m_roomHeaderPanel->GetRoomId();
+}
+
+void ChatPanel::OnRoomRename(wxCommandEvent &event) {
+    if (!m_parent || !m_parent->wsClient) return;
+    wxString newName = event.GetString();
+    int32_t roomId = event.GetInt();
+    m_parent->wsClient->renameRoom(roomId, std::string(newName.ToUTF8()));
+}
+
+void ChatPanel::OnRoomDelete(wxCommandEvent& event) {
+    if (!m_parent || !m_parent->wsClient) return;
+    int32_t roomId = event.GetInt();
+    m_parent->wsClient->deleteRoom(roomId);
+}
+
+void ChatPanel::OnRoomBack(wxCommandEvent& event) {
+    ShowChatPanel();
 }
 
 void ChatPanel::OnInputKeyDown(wxKeyEvent& event) {
