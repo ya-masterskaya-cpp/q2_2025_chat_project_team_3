@@ -18,8 +18,8 @@ using namespace drogon_model::drogon_test;
 
 const std::string Rooms::Cols::_room_id = "\"room_id\"";
 const std::string Rooms::Cols::_room_name = "\"room_name\"";
-const std::string Rooms::Cols::_created_at = "\"created_at\"";
 const std::string Rooms::Cols::_owner_id = "\"owner_id\"";
+const std::string Rooms::Cols::_created_at = "\"created_at\"";
 const std::string Rooms::primaryKeyName = "room_id";
 const bool Rooms::hasPrimaryKey = true;
 const std::string Rooms::tableName = "\"rooms\"";
@@ -27,8 +27,8 @@ const std::string Rooms::tableName = "\"rooms\"";
 const std::vector<typename Rooms::MetaData> Rooms::metaData_={
 {"room_id","int32_t","integer",4,1,1,1},
 {"room_name","std::string","character varying",255,0,0,1},
-{"created_at","::trantor::Date","timestamp with time zone",0,0,0,0},
-{"owner_id","int32_t","integer",4,0,0,0}
+{"owner_id","int32_t","integer",4,0,0,0},
+{"created_at","int64_t","bigint",8,0,0,0}
 };
 const std::string &Rooms::getColumnName(size_t index) noexcept(false)
 {
@@ -47,31 +47,13 @@ Rooms::Rooms(const Row &r, const ssize_t indexOffset) noexcept
         {
             roomName_=std::make_shared<std::string>(r["room_name"].as<std::string>());
         }
-        if(!r["created_at"].isNull())
-        {
-            auto timeStr = r["created_at"].as<std::string>();
-            struct tm stm;
-            memset(&stm,0,sizeof(stm));
-            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
-            time_t t = mktime(&stm);
-            size_t decimalNum = 0;
-            if(p)
-            {
-                if(*p=='.')
-                {
-                    std::string decimals(p+1,&timeStr[timeStr.length()]);
-                    while(decimals.length()<6)
-                    {
-                        decimals += "0";
-                    }
-                    decimalNum = (size_t)atol(decimals.c_str());
-                }
-                createdAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
-            }
-        }
         if(!r["owner_id"].isNull())
         {
             ownerId_=std::make_shared<int32_t>(r["owner_id"].as<int32_t>());
+        }
+        if(!r["created_at"].isNull())
+        {
+            createdAt_=std::make_shared<int64_t>(r["created_at"].as<int64_t>());
         }
     }
     else
@@ -96,30 +78,12 @@ Rooms::Rooms(const Row &r, const ssize_t indexOffset) noexcept
         index = offset + 2;
         if(!r[index].isNull())
         {
-            auto timeStr = r[index].as<std::string>();
-            struct tm stm;
-            memset(&stm,0,sizeof(stm));
-            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
-            time_t t = mktime(&stm);
-            size_t decimalNum = 0;
-            if(p)
-            {
-                if(*p=='.')
-                {
-                    std::string decimals(p+1,&timeStr[timeStr.length()]);
-                    while(decimals.length()<6)
-                    {
-                        decimals += "0";
-                    }
-                    decimalNum = (size_t)atol(decimals.c_str());
-                }
-                createdAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
-            }
+            ownerId_=std::make_shared<int32_t>(r[index].as<int32_t>());
         }
         index = offset + 3;
         if(!r[index].isNull())
         {
-            ownerId_=std::make_shared<int32_t>(r[index].as<int32_t>());
+            createdAt_=std::make_shared<int64_t>(r[index].as<int64_t>());
         }
     }
 
@@ -153,25 +117,7 @@ Rooms::Rooms(const Json::Value &pJson, const std::vector<std::string> &pMasquera
         dirtyFlag_[2] = true;
         if(!pJson[pMasqueradingVector[2]].isNull())
         {
-            auto timeStr = pJson[pMasqueradingVector[2]].asString();
-            struct tm stm;
-            memset(&stm,0,sizeof(stm));
-            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
-            time_t t = mktime(&stm);
-            size_t decimalNum = 0;
-            if(p)
-            {
-                if(*p=='.')
-                {
-                    std::string decimals(p+1,&timeStr[timeStr.length()]);
-                    while(decimals.length()<6)
-                    {
-                        decimals += "0";
-                    }
-                    decimalNum = (size_t)atol(decimals.c_str());
-                }
-                createdAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
-            }
+            ownerId_=std::make_shared<int32_t>((int32_t)pJson[pMasqueradingVector[2]].asInt64());
         }
     }
     if(!pMasqueradingVector[3].empty() && pJson.isMember(pMasqueradingVector[3]))
@@ -179,7 +125,7 @@ Rooms::Rooms(const Json::Value &pJson, const std::vector<std::string> &pMasquera
         dirtyFlag_[3] = true;
         if(!pJson[pMasqueradingVector[3]].isNull())
         {
-            ownerId_=std::make_shared<int32_t>((int32_t)pJson[pMasqueradingVector[3]].asInt64());
+            createdAt_=std::make_shared<int64_t>((int64_t)pJson[pMasqueradingVector[3]].asInt64());
         }
     }
 }
@@ -202,38 +148,20 @@ Rooms::Rooms(const Json::Value &pJson) noexcept(false)
             roomName_=std::make_shared<std::string>(pJson["room_name"].asString());
         }
     }
-    if(pJson.isMember("created_at"))
-    {
-        dirtyFlag_[2]=true;
-        if(!pJson["created_at"].isNull())
-        {
-            auto timeStr = pJson["created_at"].asString();
-            struct tm stm;
-            memset(&stm,0,sizeof(stm));
-            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
-            time_t t = mktime(&stm);
-            size_t decimalNum = 0;
-            if(p)
-            {
-                if(*p=='.')
-                {
-                    std::string decimals(p+1,&timeStr[timeStr.length()]);
-                    while(decimals.length()<6)
-                    {
-                        decimals += "0";
-                    }
-                    decimalNum = (size_t)atol(decimals.c_str());
-                }
-                createdAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
-            }
-        }
-    }
     if(pJson.isMember("owner_id"))
     {
-        dirtyFlag_[3]=true;
+        dirtyFlag_[2]=true;
         if(!pJson["owner_id"].isNull())
         {
             ownerId_=std::make_shared<int32_t>((int32_t)pJson["owner_id"].asInt64());
+        }
+    }
+    if(pJson.isMember("created_at"))
+    {
+        dirtyFlag_[3]=true;
+        if(!pJson["created_at"].isNull())
+        {
+            createdAt_=std::make_shared<int64_t>((int64_t)pJson["created_at"].asInt64());
         }
     }
 }
@@ -266,25 +194,7 @@ void Rooms::updateByMasqueradedJson(const Json::Value &pJson,
         dirtyFlag_[2] = true;
         if(!pJson[pMasqueradingVector[2]].isNull())
         {
-            auto timeStr = pJson[pMasqueradingVector[2]].asString();
-            struct tm stm;
-            memset(&stm,0,sizeof(stm));
-            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
-            time_t t = mktime(&stm);
-            size_t decimalNum = 0;
-            if(p)
-            {
-                if(*p=='.')
-                {
-                    std::string decimals(p+1,&timeStr[timeStr.length()]);
-                    while(decimals.length()<6)
-                    {
-                        decimals += "0";
-                    }
-                    decimalNum = (size_t)atol(decimals.c_str());
-                }
-                createdAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
-            }
+            ownerId_=std::make_shared<int32_t>((int32_t)pJson[pMasqueradingVector[2]].asInt64());
         }
     }
     if(!pMasqueradingVector[3].empty() && pJson.isMember(pMasqueradingVector[3]))
@@ -292,7 +202,7 @@ void Rooms::updateByMasqueradedJson(const Json::Value &pJson,
         dirtyFlag_[3] = true;
         if(!pJson[pMasqueradingVector[3]].isNull())
         {
-            ownerId_=std::make_shared<int32_t>((int32_t)pJson[pMasqueradingVector[3]].asInt64());
+            createdAt_=std::make_shared<int64_t>((int64_t)pJson[pMasqueradingVector[3]].asInt64());
         }
     }
 }
@@ -314,38 +224,20 @@ void Rooms::updateByJson(const Json::Value &pJson) noexcept(false)
             roomName_=std::make_shared<std::string>(pJson["room_name"].asString());
         }
     }
-    if(pJson.isMember("created_at"))
-    {
-        dirtyFlag_[2] = true;
-        if(!pJson["created_at"].isNull())
-        {
-            auto timeStr = pJson["created_at"].asString();
-            struct tm stm;
-            memset(&stm,0,sizeof(stm));
-            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
-            time_t t = mktime(&stm);
-            size_t decimalNum = 0;
-            if(p)
-            {
-                if(*p=='.')
-                {
-                    std::string decimals(p+1,&timeStr[timeStr.length()]);
-                    while(decimals.length()<6)
-                    {
-                        decimals += "0";
-                    }
-                    decimalNum = (size_t)atol(decimals.c_str());
-                }
-                createdAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
-            }
-        }
-    }
     if(pJson.isMember("owner_id"))
     {
-        dirtyFlag_[3] = true;
+        dirtyFlag_[2] = true;
         if(!pJson["owner_id"].isNull())
         {
             ownerId_=std::make_shared<int32_t>((int32_t)pJson["owner_id"].asInt64());
+        }
+    }
+    if(pJson.isMember("created_at"))
+    {
+        dirtyFlag_[3] = true;
+        if(!pJson["created_at"].isNull())
+        {
+            createdAt_=std::make_shared<int64_t>((int64_t)pJson["created_at"].asInt64());
         }
     }
 }
@@ -394,28 +286,6 @@ void Rooms::setRoomName(std::string &&pRoomName) noexcept
     dirtyFlag_[1] = true;
 }
 
-const ::trantor::Date &Rooms::getValueOfCreatedAt() const noexcept
-{
-    static const ::trantor::Date defaultValue = ::trantor::Date();
-    if(createdAt_)
-        return *createdAt_;
-    return defaultValue;
-}
-const std::shared_ptr<::trantor::Date> &Rooms::getCreatedAt() const noexcept
-{
-    return createdAt_;
-}
-void Rooms::setCreatedAt(const ::trantor::Date &pCreatedAt) noexcept
-{
-    createdAt_ = std::make_shared<::trantor::Date>(pCreatedAt);
-    dirtyFlag_[2] = true;
-}
-void Rooms::setCreatedAtToNull() noexcept
-{
-    createdAt_.reset();
-    dirtyFlag_[2] = true;
-}
-
 const int32_t &Rooms::getValueOfOwnerId() const noexcept
 {
     static const int32_t defaultValue = int32_t();
@@ -430,11 +300,33 @@ const std::shared_ptr<int32_t> &Rooms::getOwnerId() const noexcept
 void Rooms::setOwnerId(const int32_t &pOwnerId) noexcept
 {
     ownerId_ = std::make_shared<int32_t>(pOwnerId);
-    dirtyFlag_[3] = true;
+    dirtyFlag_[2] = true;
 }
 void Rooms::setOwnerIdToNull() noexcept
 {
     ownerId_.reset();
+    dirtyFlag_[2] = true;
+}
+
+const int64_t &Rooms::getValueOfCreatedAt() const noexcept
+{
+    static const int64_t defaultValue = int64_t();
+    if(createdAt_)
+        return *createdAt_;
+    return defaultValue;
+}
+const std::shared_ptr<int64_t> &Rooms::getCreatedAt() const noexcept
+{
+    return createdAt_;
+}
+void Rooms::setCreatedAt(const int64_t &pCreatedAt) noexcept
+{
+    createdAt_ = std::make_shared<int64_t>(pCreatedAt);
+    dirtyFlag_[3] = true;
+}
+void Rooms::setCreatedAtToNull() noexcept
+{
+    createdAt_.reset();
     dirtyFlag_[3] = true;
 }
 
@@ -446,8 +338,8 @@ const std::vector<std::string> &Rooms::insertColumns() noexcept
 {
     static const std::vector<std::string> inCols={
         "room_name",
-        "created_at",
-        "owner_id"
+        "owner_id",
+        "created_at"
     };
     return inCols;
 }
@@ -467,9 +359,9 @@ void Rooms::outputArgs(drogon::orm::internal::SqlBinder &binder) const
     }
     if(dirtyFlag_[2])
     {
-        if(getCreatedAt())
+        if(getOwnerId())
         {
-            binder << getValueOfCreatedAt();
+            binder << getValueOfOwnerId();
         }
         else
         {
@@ -478,9 +370,9 @@ void Rooms::outputArgs(drogon::orm::internal::SqlBinder &binder) const
     }
     if(dirtyFlag_[3])
     {
-        if(getOwnerId())
+        if(getCreatedAt())
         {
-            binder << getValueOfOwnerId();
+            binder << getValueOfCreatedAt();
         }
         else
         {
@@ -522,9 +414,9 @@ void Rooms::updateArgs(drogon::orm::internal::SqlBinder &binder) const
     }
     if(dirtyFlag_[2])
     {
-        if(getCreatedAt())
+        if(getOwnerId())
         {
-            binder << getValueOfCreatedAt();
+            binder << getValueOfOwnerId();
         }
         else
         {
@@ -533,9 +425,9 @@ void Rooms::updateArgs(drogon::orm::internal::SqlBinder &binder) const
     }
     if(dirtyFlag_[3])
     {
-        if(getOwnerId())
+        if(getCreatedAt())
         {
-            binder << getValueOfOwnerId();
+            binder << getValueOfCreatedAt();
         }
         else
         {
@@ -562,14 +454,6 @@ Json::Value Rooms::toJson() const
     {
         ret["room_name"]=Json::Value();
     }
-    if(getCreatedAt())
-    {
-        ret["created_at"]=getCreatedAt()->toDbStringLocal();
-    }
-    else
-    {
-        ret["created_at"]=Json::Value();
-    }
     if(getOwnerId())
     {
         ret["owner_id"]=getValueOfOwnerId();
@@ -577,6 +461,14 @@ Json::Value Rooms::toJson() const
     else
     {
         ret["owner_id"]=Json::Value();
+    }
+    if(getCreatedAt())
+    {
+        ret["created_at"]=(Json::Int64)getValueOfCreatedAt();
+    }
+    else
+    {
+        ret["created_at"]=Json::Value();
     }
     return ret;
 }
@@ -611,9 +503,9 @@ Json::Value Rooms::toMasqueradedJson(
         }
         if(!pMasqueradingVector[2].empty())
         {
-            if(getCreatedAt())
+            if(getOwnerId())
             {
-                ret[pMasqueradingVector[2]]=getCreatedAt()->toDbStringLocal();
+                ret[pMasqueradingVector[2]]=getValueOfOwnerId();
             }
             else
             {
@@ -622,9 +514,9 @@ Json::Value Rooms::toMasqueradedJson(
         }
         if(!pMasqueradingVector[3].empty())
         {
-            if(getOwnerId())
+            if(getCreatedAt())
             {
-                ret[pMasqueradingVector[3]]=getValueOfOwnerId();
+                ret[pMasqueradingVector[3]]=(Json::Int64)getValueOfCreatedAt();
             }
             else
             {
@@ -650,14 +542,6 @@ Json::Value Rooms::toMasqueradedJson(
     {
         ret["room_name"]=Json::Value();
     }
-    if(getCreatedAt())
-    {
-        ret["created_at"]=getCreatedAt()->toDbStringLocal();
-    }
-    else
-    {
-        ret["created_at"]=Json::Value();
-    }
     if(getOwnerId())
     {
         ret["owner_id"]=getValueOfOwnerId();
@@ -665,6 +549,14 @@ Json::Value Rooms::toMasqueradedJson(
     else
     {
         ret["owner_id"]=Json::Value();
+    }
+    if(getCreatedAt())
+    {
+        ret["created_at"]=(Json::Int64)getValueOfCreatedAt();
+    }
+    else
+    {
+        ret["created_at"]=Json::Value();
     }
     return ret;
 }
@@ -686,14 +578,14 @@ bool Rooms::validateJsonForCreation(const Json::Value &pJson, std::string &err)
         err="The room_name column cannot be null";
         return false;
     }
-    if(pJson.isMember("created_at"))
-    {
-        if(!validJsonOfField(2, "created_at", pJson["created_at"], err, true))
-            return false;
-    }
     if(pJson.isMember("owner_id"))
     {
-        if(!validJsonOfField(3, "owner_id", pJson["owner_id"], err, true))
+        if(!validJsonOfField(2, "owner_id", pJson["owner_id"], err, true))
+            return false;
+    }
+    if(pJson.isMember("created_at"))
+    {
+        if(!validJsonOfField(3, "created_at", pJson["created_at"], err, true))
             return false;
     }
     return true;
@@ -770,14 +662,14 @@ bool Rooms::validateJsonForUpdate(const Json::Value &pJson, std::string &err)
         if(!validJsonOfField(1, "room_name", pJson["room_name"], err, false))
             return false;
     }
-    if(pJson.isMember("created_at"))
-    {
-        if(!validJsonOfField(2, "created_at", pJson["created_at"], err, false))
-            return false;
-    }
     if(pJson.isMember("owner_id"))
     {
-        if(!validJsonOfField(3, "owner_id", pJson["owner_id"], err, false))
+        if(!validJsonOfField(2, "owner_id", pJson["owner_id"], err, false))
+            return false;
+    }
+    if(pJson.isMember("created_at"))
+    {
+        if(!validJsonOfField(3, "created_at", pJson["created_at"], err, false))
             return false;
     }
     return true;
@@ -875,7 +767,7 @@ bool Rooms::validJsonOfField(size_t index,
             {
                 return true;
             }
-            if(!pJson.isString())
+            if(!pJson.isInt())
             {
                 err="Type error in the "+fieldName+" field";
                 return false;
@@ -886,7 +778,7 @@ bool Rooms::validJsonOfField(size_t index,
             {
                 return true;
             }
-            if(!pJson.isInt())
+            if(!pJson.isInt64())
             {
                 err="Type error in the "+fieldName+" field";
                 return false;

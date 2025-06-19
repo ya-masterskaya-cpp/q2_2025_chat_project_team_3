@@ -137,11 +137,11 @@ class Messages
 
     /**  For column created_at  */
     ///Get the value of the column created_at, returns the default value if the column is null
-    const ::trantor::Date &getValueOfCreatedAt() const noexcept;
+    const int64_t &getValueOfCreatedAt() const noexcept;
     ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
-    const std::shared_ptr<::trantor::Date> &getCreatedAt() const noexcept;
+    const std::shared_ptr<int64_t> &getCreatedAt() const noexcept;
     ///Set the value of the column created_at
-    void setCreatedAt(const ::trantor::Date &pCreatedAt) noexcept;
+    void setCreatedAt(const int64_t &pCreatedAt) noexcept;
     void setCreatedAtToNull() noexcept;
 
 
@@ -178,7 +178,7 @@ class Messages
     std::shared_ptr<int32_t> roomId_;
     std::shared_ptr<int32_t> userId_;
     std::shared_ptr<std::string> messageText_;
-    std::shared_ptr<::trantor::Date> createdAt_;
+    std::shared_ptr<int64_t> createdAt_;
     struct MetaData
     {
         const std::string colName_;

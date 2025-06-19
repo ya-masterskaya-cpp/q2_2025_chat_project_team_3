@@ -25,7 +25,7 @@ const std::vector<typename Migrations::MetaData> Migrations::metaData_={
 {"id","int32_t","integer",4,1,1,1},
 {"timestamp","int64_t","bigint",8,0,0,1},
 {"name","std::string","character varying",255,0,0,1},
-{"applied_at","::trantor::Date","timestamp with time zone",0,0,0,0}
+{"applied_at","int64_t","bigint",8,0,0,0}
 };
 const std::string &Migrations::getColumnName(size_t index) noexcept(false)
 {
@@ -50,25 +50,7 @@ Migrations::Migrations(const Row &r, const ssize_t indexOffset) noexcept
         }
         if(!r["applied_at"].isNull())
         {
-            auto timeStr = r["applied_at"].as<std::string>();
-            struct tm stm;
-            memset(&stm,0,sizeof(stm));
-            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
-            time_t t = mktime(&stm);
-            size_t decimalNum = 0;
-            if(p)
-            {
-                if(*p=='.')
-                {
-                    std::string decimals(p+1,&timeStr[timeStr.length()]);
-                    while(decimals.length()<6)
-                    {
-                        decimals += "0";
-                    }
-                    decimalNum = (size_t)atol(decimals.c_str());
-                }
-                appliedAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
-            }
+            appliedAt_=std::make_shared<int64_t>(r["applied_at"].as<int64_t>());
         }
     }
     else
@@ -98,25 +80,7 @@ Migrations::Migrations(const Row &r, const ssize_t indexOffset) noexcept
         index = offset + 3;
         if(!r[index].isNull())
         {
-            auto timeStr = r[index].as<std::string>();
-            struct tm stm;
-            memset(&stm,0,sizeof(stm));
-            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
-            time_t t = mktime(&stm);
-            size_t decimalNum = 0;
-            if(p)
-            {
-                if(*p=='.')
-                {
-                    std::string decimals(p+1,&timeStr[timeStr.length()]);
-                    while(decimals.length()<6)
-                    {
-                        decimals += "0";
-                    }
-                    decimalNum = (size_t)atol(decimals.c_str());
-                }
-                appliedAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
-            }
+            appliedAt_=std::make_shared<int64_t>(r[index].as<int64_t>());
         }
     }
 
@@ -158,25 +122,7 @@ Migrations::Migrations(const Json::Value &pJson, const std::vector<std::string> 
         dirtyFlag_[3] = true;
         if(!pJson[pMasqueradingVector[3]].isNull())
         {
-            auto timeStr = pJson[pMasqueradingVector[3]].asString();
-            struct tm stm;
-            memset(&stm,0,sizeof(stm));
-            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
-            time_t t = mktime(&stm);
-            size_t decimalNum = 0;
-            if(p)
-            {
-                if(*p=='.')
-                {
-                    std::string decimals(p+1,&timeStr[timeStr.length()]);
-                    while(decimals.length()<6)
-                    {
-                        decimals += "0";
-                    }
-                    decimalNum = (size_t)atol(decimals.c_str());
-                }
-                appliedAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
-            }
+            appliedAt_=std::make_shared<int64_t>((int64_t)pJson[pMasqueradingVector[3]].asInt64());
         }
     }
 }
@@ -212,25 +158,7 @@ Migrations::Migrations(const Json::Value &pJson) noexcept(false)
         dirtyFlag_[3]=true;
         if(!pJson["applied_at"].isNull())
         {
-            auto timeStr = pJson["applied_at"].asString();
-            struct tm stm;
-            memset(&stm,0,sizeof(stm));
-            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
-            time_t t = mktime(&stm);
-            size_t decimalNum = 0;
-            if(p)
-            {
-                if(*p=='.')
-                {
-                    std::string decimals(p+1,&timeStr[timeStr.length()]);
-                    while(decimals.length()<6)
-                    {
-                        decimals += "0";
-                    }
-                    decimalNum = (size_t)atol(decimals.c_str());
-                }
-                appliedAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
-            }
+            appliedAt_=std::make_shared<int64_t>((int64_t)pJson["applied_at"].asInt64());
         }
     }
 }
@@ -271,25 +199,7 @@ void Migrations::updateByMasqueradedJson(const Json::Value &pJson,
         dirtyFlag_[3] = true;
         if(!pJson[pMasqueradingVector[3]].isNull())
         {
-            auto timeStr = pJson[pMasqueradingVector[3]].asString();
-            struct tm stm;
-            memset(&stm,0,sizeof(stm));
-            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
-            time_t t = mktime(&stm);
-            size_t decimalNum = 0;
-            if(p)
-            {
-                if(*p=='.')
-                {
-                    std::string decimals(p+1,&timeStr[timeStr.length()]);
-                    while(decimals.length()<6)
-                    {
-                        decimals += "0";
-                    }
-                    decimalNum = (size_t)atol(decimals.c_str());
-                }
-                appliedAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
-            }
+            appliedAt_=std::make_shared<int64_t>((int64_t)pJson[pMasqueradingVector[3]].asInt64());
         }
     }
 }
@@ -324,25 +234,7 @@ void Migrations::updateByJson(const Json::Value &pJson) noexcept(false)
         dirtyFlag_[3] = true;
         if(!pJson["applied_at"].isNull())
         {
-            auto timeStr = pJson["applied_at"].asString();
-            struct tm stm;
-            memset(&stm,0,sizeof(stm));
-            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
-            time_t t = mktime(&stm);
-            size_t decimalNum = 0;
-            if(p)
-            {
-                if(*p=='.')
-                {
-                    std::string decimals(p+1,&timeStr[timeStr.length()]);
-                    while(decimals.length()<6)
-                    {
-                        decimals += "0";
-                    }
-                    decimalNum = (size_t)atol(decimals.c_str());
-                }
-                appliedAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
-            }
+            appliedAt_=std::make_shared<int64_t>((int64_t)pJson["applied_at"].asInt64());
         }
     }
 }
@@ -408,20 +300,20 @@ void Migrations::setName(std::string &&pName) noexcept
     dirtyFlag_[2] = true;
 }
 
-const ::trantor::Date &Migrations::getValueOfAppliedAt() const noexcept
+const int64_t &Migrations::getValueOfAppliedAt() const noexcept
 {
-    static const ::trantor::Date defaultValue = ::trantor::Date();
+    static const int64_t defaultValue = int64_t();
     if(appliedAt_)
         return *appliedAt_;
     return defaultValue;
 }
-const std::shared_ptr<::trantor::Date> &Migrations::getAppliedAt() const noexcept
+const std::shared_ptr<int64_t> &Migrations::getAppliedAt() const noexcept
 {
     return appliedAt_;
 }
-void Migrations::setAppliedAt(const ::trantor::Date &pAppliedAt) noexcept
+void Migrations::setAppliedAt(const int64_t &pAppliedAt) noexcept
 {
-    appliedAt_ = std::make_shared<::trantor::Date>(pAppliedAt);
+    appliedAt_ = std::make_shared<int64_t>(pAppliedAt);
     dirtyFlag_[3] = true;
 }
 void Migrations::setAppliedAtToNull() noexcept
@@ -564,7 +456,7 @@ Json::Value Migrations::toJson() const
     }
     if(getAppliedAt())
     {
-        ret["applied_at"]=getAppliedAt()->toDbStringLocal();
+        ret["applied_at"]=(Json::Int64)getValueOfAppliedAt();
     }
     else
     {
@@ -616,7 +508,7 @@ Json::Value Migrations::toMasqueradedJson(
         {
             if(getAppliedAt())
             {
-                ret[pMasqueradingVector[3]]=getAppliedAt()->toDbStringLocal();
+                ret[pMasqueradingVector[3]]=(Json::Int64)getValueOfAppliedAt();
             }
             else
             {
@@ -652,7 +544,7 @@ Json::Value Migrations::toMasqueradedJson(
     }
     if(getAppliedAt())
     {
-        ret["applied_at"]=getAppliedAt()->toDbStringLocal();
+        ret["applied_at"]=(Json::Int64)getValueOfAppliedAt();
     }
     else
     {
@@ -889,7 +781,7 @@ bool Migrations::validJsonOfField(size_t index,
             {
                 return true;
             }
-            if(!pJson.isString())
+            if(!pJson.isInt64())
             {
                 err="Type error in the "+fieldName+" field";
                 return false;

@@ -19,9 +19,9 @@ using namespace drogon_model::drogon_test;
 const std::string Users::Cols::_user_id = "\"user_id\"";
 const std::string Users::Cols::_username = "\"username\"";
 const std::string Users::Cols::_hash_password = "\"hash_password\"";
-const std::string Users::Cols::_created_at = "\"created_at\"";
 const std::string Users::Cols::_salt = "\"salt\"";
 const std::string Users::Cols::_is_admin = "\"is_admin\"";
+const std::string Users::Cols::_created_at = "\"created_at\"";
 const std::string Users::primaryKeyName = "user_id";
 const bool Users::hasPrimaryKey = true;
 const std::string Users::tableName = "\"users\"";
@@ -30,9 +30,9 @@ const std::vector<typename Users::MetaData> Users::metaData_={
 {"user_id","int32_t","integer",4,1,1,1},
 {"username","std::string","character varying",255,0,0,1},
 {"hash_password","std::string","character varying",255,0,0,1},
-{"created_at","::trantor::Date","timestamp with time zone",0,0,0,0},
 {"salt","std::string","character varying",255,0,0,0},
-{"is_admin","bool","boolean",1,0,0,1}
+{"is_admin","bool","boolean",1,0,0,1},
+{"created_at","int64_t","bigint",8,0,0,0}
 };
 const std::string &Users::getColumnName(size_t index) noexcept(false)
 {
@@ -55,28 +55,6 @@ Users::Users(const Row &r, const ssize_t indexOffset) noexcept
         {
             hashPassword_=std::make_shared<std::string>(r["hash_password"].as<std::string>());
         }
-        if(!r["created_at"].isNull())
-        {
-            auto timeStr = r["created_at"].as<std::string>();
-            struct tm stm;
-            memset(&stm,0,sizeof(stm));
-            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
-            time_t t = mktime(&stm);
-            size_t decimalNum = 0;
-            if(p)
-            {
-                if(*p=='.')
-                {
-                    std::string decimals(p+1,&timeStr[timeStr.length()]);
-                    while(decimals.length()<6)
-                    {
-                        decimals += "0";
-                    }
-                    decimalNum = (size_t)atol(decimals.c_str());
-                }
-                createdAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
-            }
-        }
         if(!r["salt"].isNull())
         {
             salt_=std::make_shared<std::string>(r["salt"].as<std::string>());
@@ -84,6 +62,10 @@ Users::Users(const Row &r, const ssize_t indexOffset) noexcept
         if(!r["is_admin"].isNull())
         {
             isAdmin_=std::make_shared<bool>(r["is_admin"].as<bool>());
+        }
+        if(!r["created_at"].isNull())
+        {
+            createdAt_=std::make_shared<int64_t>(r["created_at"].as<int64_t>());
         }
     }
     else
@@ -113,35 +95,17 @@ Users::Users(const Row &r, const ssize_t indexOffset) noexcept
         index = offset + 3;
         if(!r[index].isNull())
         {
-            auto timeStr = r[index].as<std::string>();
-            struct tm stm;
-            memset(&stm,0,sizeof(stm));
-            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
-            time_t t = mktime(&stm);
-            size_t decimalNum = 0;
-            if(p)
-            {
-                if(*p=='.')
-                {
-                    std::string decimals(p+1,&timeStr[timeStr.length()]);
-                    while(decimals.length()<6)
-                    {
-                        decimals += "0";
-                    }
-                    decimalNum = (size_t)atol(decimals.c_str());
-                }
-                createdAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
-            }
+            salt_=std::make_shared<std::string>(r[index].as<std::string>());
         }
         index = offset + 4;
         if(!r[index].isNull())
         {
-            salt_=std::make_shared<std::string>(r[index].as<std::string>());
+            isAdmin_=std::make_shared<bool>(r[index].as<bool>());
         }
         index = offset + 5;
         if(!r[index].isNull())
         {
-            isAdmin_=std::make_shared<bool>(r[index].as<bool>());
+            createdAt_=std::make_shared<int64_t>(r[index].as<int64_t>());
         }
     }
 
@@ -183,25 +147,7 @@ Users::Users(const Json::Value &pJson, const std::vector<std::string> &pMasquera
         dirtyFlag_[3] = true;
         if(!pJson[pMasqueradingVector[3]].isNull())
         {
-            auto timeStr = pJson[pMasqueradingVector[3]].asString();
-            struct tm stm;
-            memset(&stm,0,sizeof(stm));
-            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
-            time_t t = mktime(&stm);
-            size_t decimalNum = 0;
-            if(p)
-            {
-                if(*p=='.')
-                {
-                    std::string decimals(p+1,&timeStr[timeStr.length()]);
-                    while(decimals.length()<6)
-                    {
-                        decimals += "0";
-                    }
-                    decimalNum = (size_t)atol(decimals.c_str());
-                }
-                createdAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
-            }
+            salt_=std::make_shared<std::string>(pJson[pMasqueradingVector[3]].asString());
         }
     }
     if(!pMasqueradingVector[4].empty() && pJson.isMember(pMasqueradingVector[4]))
@@ -209,7 +155,7 @@ Users::Users(const Json::Value &pJson, const std::vector<std::string> &pMasquera
         dirtyFlag_[4] = true;
         if(!pJson[pMasqueradingVector[4]].isNull())
         {
-            salt_=std::make_shared<std::string>(pJson[pMasqueradingVector[4]].asString());
+            isAdmin_=std::make_shared<bool>(pJson[pMasqueradingVector[4]].asBool());
         }
     }
     if(!pMasqueradingVector[5].empty() && pJson.isMember(pMasqueradingVector[5]))
@@ -217,7 +163,7 @@ Users::Users(const Json::Value &pJson, const std::vector<std::string> &pMasquera
         dirtyFlag_[5] = true;
         if(!pJson[pMasqueradingVector[5]].isNull())
         {
-            isAdmin_=std::make_shared<bool>(pJson[pMasqueradingVector[5]].asBool());
+            createdAt_=std::make_shared<int64_t>((int64_t)pJson[pMasqueradingVector[5]].asInt64());
         }
     }
 }
@@ -248,35 +194,9 @@ Users::Users(const Json::Value &pJson) noexcept(false)
             hashPassword_=std::make_shared<std::string>(pJson["hash_password"].asString());
         }
     }
-    if(pJson.isMember("created_at"))
-    {
-        dirtyFlag_[3]=true;
-        if(!pJson["created_at"].isNull())
-        {
-            auto timeStr = pJson["created_at"].asString();
-            struct tm stm;
-            memset(&stm,0,sizeof(stm));
-            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
-            time_t t = mktime(&stm);
-            size_t decimalNum = 0;
-            if(p)
-            {
-                if(*p=='.')
-                {
-                    std::string decimals(p+1,&timeStr[timeStr.length()]);
-                    while(decimals.length()<6)
-                    {
-                        decimals += "0";
-                    }
-                    decimalNum = (size_t)atol(decimals.c_str());
-                }
-                createdAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
-            }
-        }
-    }
     if(pJson.isMember("salt"))
     {
-        dirtyFlag_[4]=true;
+        dirtyFlag_[3]=true;
         if(!pJson["salt"].isNull())
         {
             salt_=std::make_shared<std::string>(pJson["salt"].asString());
@@ -284,10 +204,18 @@ Users::Users(const Json::Value &pJson) noexcept(false)
     }
     if(pJson.isMember("is_admin"))
     {
-        dirtyFlag_[5]=true;
+        dirtyFlag_[4]=true;
         if(!pJson["is_admin"].isNull())
         {
             isAdmin_=std::make_shared<bool>(pJson["is_admin"].asBool());
+        }
+    }
+    if(pJson.isMember("created_at"))
+    {
+        dirtyFlag_[5]=true;
+        if(!pJson["created_at"].isNull())
+        {
+            createdAt_=std::make_shared<int64_t>((int64_t)pJson["created_at"].asInt64());
         }
     }
 }
@@ -328,25 +256,7 @@ void Users::updateByMasqueradedJson(const Json::Value &pJson,
         dirtyFlag_[3] = true;
         if(!pJson[pMasqueradingVector[3]].isNull())
         {
-            auto timeStr = pJson[pMasqueradingVector[3]].asString();
-            struct tm stm;
-            memset(&stm,0,sizeof(stm));
-            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
-            time_t t = mktime(&stm);
-            size_t decimalNum = 0;
-            if(p)
-            {
-                if(*p=='.')
-                {
-                    std::string decimals(p+1,&timeStr[timeStr.length()]);
-                    while(decimals.length()<6)
-                    {
-                        decimals += "0";
-                    }
-                    decimalNum = (size_t)atol(decimals.c_str());
-                }
-                createdAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
-            }
+            salt_=std::make_shared<std::string>(pJson[pMasqueradingVector[3]].asString());
         }
     }
     if(!pMasqueradingVector[4].empty() && pJson.isMember(pMasqueradingVector[4]))
@@ -354,7 +264,7 @@ void Users::updateByMasqueradedJson(const Json::Value &pJson,
         dirtyFlag_[4] = true;
         if(!pJson[pMasqueradingVector[4]].isNull())
         {
-            salt_=std::make_shared<std::string>(pJson[pMasqueradingVector[4]].asString());
+            isAdmin_=std::make_shared<bool>(pJson[pMasqueradingVector[4]].asBool());
         }
     }
     if(!pMasqueradingVector[5].empty() && pJson.isMember(pMasqueradingVector[5]))
@@ -362,7 +272,7 @@ void Users::updateByMasqueradedJson(const Json::Value &pJson,
         dirtyFlag_[5] = true;
         if(!pJson[pMasqueradingVector[5]].isNull())
         {
-            isAdmin_=std::make_shared<bool>(pJson[pMasqueradingVector[5]].asBool());
+            createdAt_=std::make_shared<int64_t>((int64_t)pJson[pMasqueradingVector[5]].asInt64());
         }
     }
 }
@@ -392,35 +302,9 @@ void Users::updateByJson(const Json::Value &pJson) noexcept(false)
             hashPassword_=std::make_shared<std::string>(pJson["hash_password"].asString());
         }
     }
-    if(pJson.isMember("created_at"))
-    {
-        dirtyFlag_[3] = true;
-        if(!pJson["created_at"].isNull())
-        {
-            auto timeStr = pJson["created_at"].asString();
-            struct tm stm;
-            memset(&stm,0,sizeof(stm));
-            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
-            time_t t = mktime(&stm);
-            size_t decimalNum = 0;
-            if(p)
-            {
-                if(*p=='.')
-                {
-                    std::string decimals(p+1,&timeStr[timeStr.length()]);
-                    while(decimals.length()<6)
-                    {
-                        decimals += "0";
-                    }
-                    decimalNum = (size_t)atol(decimals.c_str());
-                }
-                createdAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
-            }
-        }
-    }
     if(pJson.isMember("salt"))
     {
-        dirtyFlag_[4] = true;
+        dirtyFlag_[3] = true;
         if(!pJson["salt"].isNull())
         {
             salt_=std::make_shared<std::string>(pJson["salt"].asString());
@@ -428,10 +312,18 @@ void Users::updateByJson(const Json::Value &pJson) noexcept(false)
     }
     if(pJson.isMember("is_admin"))
     {
-        dirtyFlag_[5] = true;
+        dirtyFlag_[4] = true;
         if(!pJson["is_admin"].isNull())
         {
             isAdmin_=std::make_shared<bool>(pJson["is_admin"].asBool());
+        }
+    }
+    if(pJson.isMember("created_at"))
+    {
+        dirtyFlag_[5] = true;
+        if(!pJson["created_at"].isNull())
+        {
+            createdAt_=std::make_shared<int64_t>((int64_t)pJson["created_at"].asInt64());
         }
     }
 }
@@ -502,28 +394,6 @@ void Users::setHashPassword(std::string &&pHashPassword) noexcept
     dirtyFlag_[2] = true;
 }
 
-const ::trantor::Date &Users::getValueOfCreatedAt() const noexcept
-{
-    static const ::trantor::Date defaultValue = ::trantor::Date();
-    if(createdAt_)
-        return *createdAt_;
-    return defaultValue;
-}
-const std::shared_ptr<::trantor::Date> &Users::getCreatedAt() const noexcept
-{
-    return createdAt_;
-}
-void Users::setCreatedAt(const ::trantor::Date &pCreatedAt) noexcept
-{
-    createdAt_ = std::make_shared<::trantor::Date>(pCreatedAt);
-    dirtyFlag_[3] = true;
-}
-void Users::setCreatedAtToNull() noexcept
-{
-    createdAt_.reset();
-    dirtyFlag_[3] = true;
-}
-
 const std::string &Users::getValueOfSalt() const noexcept
 {
     static const std::string defaultValue = std::string();
@@ -538,17 +408,17 @@ const std::shared_ptr<std::string> &Users::getSalt() const noexcept
 void Users::setSalt(const std::string &pSalt) noexcept
 {
     salt_ = std::make_shared<std::string>(pSalt);
-    dirtyFlag_[4] = true;
+    dirtyFlag_[3] = true;
 }
 void Users::setSalt(std::string &&pSalt) noexcept
 {
     salt_ = std::make_shared<std::string>(std::move(pSalt));
-    dirtyFlag_[4] = true;
+    dirtyFlag_[3] = true;
 }
 void Users::setSaltToNull() noexcept
 {
     salt_.reset();
-    dirtyFlag_[4] = true;
+    dirtyFlag_[3] = true;
 }
 
 const bool &Users::getValueOfIsAdmin() const noexcept
@@ -565,6 +435,28 @@ const std::shared_ptr<bool> &Users::getIsAdmin() const noexcept
 void Users::setIsAdmin(const bool &pIsAdmin) noexcept
 {
     isAdmin_ = std::make_shared<bool>(pIsAdmin);
+    dirtyFlag_[4] = true;
+}
+
+const int64_t &Users::getValueOfCreatedAt() const noexcept
+{
+    static const int64_t defaultValue = int64_t();
+    if(createdAt_)
+        return *createdAt_;
+    return defaultValue;
+}
+const std::shared_ptr<int64_t> &Users::getCreatedAt() const noexcept
+{
+    return createdAt_;
+}
+void Users::setCreatedAt(const int64_t &pCreatedAt) noexcept
+{
+    createdAt_ = std::make_shared<int64_t>(pCreatedAt);
+    dirtyFlag_[5] = true;
+}
+void Users::setCreatedAtToNull() noexcept
+{
+    createdAt_.reset();
     dirtyFlag_[5] = true;
 }
 
@@ -577,9 +469,9 @@ const std::vector<std::string> &Users::insertColumns() noexcept
     static const std::vector<std::string> inCols={
         "username",
         "hash_password",
-        "created_at",
         "salt",
-        "is_admin"
+        "is_admin",
+        "created_at"
     };
     return inCols;
 }
@@ -610,17 +502,6 @@ void Users::outputArgs(drogon::orm::internal::SqlBinder &binder) const
     }
     if(dirtyFlag_[3])
     {
-        if(getCreatedAt())
-        {
-            binder << getValueOfCreatedAt();
-        }
-        else
-        {
-            binder << nullptr;
-        }
-    }
-    if(dirtyFlag_[4])
-    {
         if(getSalt())
         {
             binder << getValueOfSalt();
@@ -630,11 +511,22 @@ void Users::outputArgs(drogon::orm::internal::SqlBinder &binder) const
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[5])
+    if(dirtyFlag_[4])
     {
         if(getIsAdmin())
         {
             binder << getValueOfIsAdmin();
+        }
+        else
+        {
+            binder << nullptr;
+        }
+    }
+    if(dirtyFlag_[5])
+    {
+        if(getCreatedAt())
+        {
+            binder << getValueOfCreatedAt();
         }
         else
         {
@@ -695,17 +587,6 @@ void Users::updateArgs(drogon::orm::internal::SqlBinder &binder) const
     }
     if(dirtyFlag_[3])
     {
-        if(getCreatedAt())
-        {
-            binder << getValueOfCreatedAt();
-        }
-        else
-        {
-            binder << nullptr;
-        }
-    }
-    if(dirtyFlag_[4])
-    {
         if(getSalt())
         {
             binder << getValueOfSalt();
@@ -715,11 +596,22 @@ void Users::updateArgs(drogon::orm::internal::SqlBinder &binder) const
             binder << nullptr;
         }
     }
-    if(dirtyFlag_[5])
+    if(dirtyFlag_[4])
     {
         if(getIsAdmin())
         {
             binder << getValueOfIsAdmin();
+        }
+        else
+        {
+            binder << nullptr;
+        }
+    }
+    if(dirtyFlag_[5])
+    {
+        if(getCreatedAt())
+        {
+            binder << getValueOfCreatedAt();
         }
         else
         {
@@ -754,14 +646,6 @@ Json::Value Users::toJson() const
     {
         ret["hash_password"]=Json::Value();
     }
-    if(getCreatedAt())
-    {
-        ret["created_at"]=getCreatedAt()->toDbStringLocal();
-    }
-    else
-    {
-        ret["created_at"]=Json::Value();
-    }
     if(getSalt())
     {
         ret["salt"]=getValueOfSalt();
@@ -777,6 +661,14 @@ Json::Value Users::toJson() const
     else
     {
         ret["is_admin"]=Json::Value();
+    }
+    if(getCreatedAt())
+    {
+        ret["created_at"]=(Json::Int64)getValueOfCreatedAt();
+    }
+    else
+    {
+        ret["created_at"]=Json::Value();
     }
     return ret;
 }
@@ -822,9 +714,9 @@ Json::Value Users::toMasqueradedJson(
         }
         if(!pMasqueradingVector[3].empty())
         {
-            if(getCreatedAt())
+            if(getSalt())
             {
-                ret[pMasqueradingVector[3]]=getCreatedAt()->toDbStringLocal();
+                ret[pMasqueradingVector[3]]=getValueOfSalt();
             }
             else
             {
@@ -833,9 +725,9 @@ Json::Value Users::toMasqueradedJson(
         }
         if(!pMasqueradingVector[4].empty())
         {
-            if(getSalt())
+            if(getIsAdmin())
             {
-                ret[pMasqueradingVector[4]]=getValueOfSalt();
+                ret[pMasqueradingVector[4]]=getValueOfIsAdmin();
             }
             else
             {
@@ -844,9 +736,9 @@ Json::Value Users::toMasqueradedJson(
         }
         if(!pMasqueradingVector[5].empty())
         {
-            if(getIsAdmin())
+            if(getCreatedAt())
             {
-                ret[pMasqueradingVector[5]]=getValueOfIsAdmin();
+                ret[pMasqueradingVector[5]]=(Json::Int64)getValueOfCreatedAt();
             }
             else
             {
@@ -880,14 +772,6 @@ Json::Value Users::toMasqueradedJson(
     {
         ret["hash_password"]=Json::Value();
     }
-    if(getCreatedAt())
-    {
-        ret["created_at"]=getCreatedAt()->toDbStringLocal();
-    }
-    else
-    {
-        ret["created_at"]=Json::Value();
-    }
     if(getSalt())
     {
         ret["salt"]=getValueOfSalt();
@@ -903,6 +787,14 @@ Json::Value Users::toMasqueradedJson(
     else
     {
         ret["is_admin"]=Json::Value();
+    }
+    if(getCreatedAt())
+    {
+        ret["created_at"]=(Json::Int64)getValueOfCreatedAt();
+    }
+    else
+    {
+        ret["created_at"]=Json::Value();
     }
     return ret;
 }
@@ -934,19 +826,19 @@ bool Users::validateJsonForCreation(const Json::Value &pJson, std::string &err)
         err="The hash_password column cannot be null";
         return false;
     }
-    if(pJson.isMember("created_at"))
-    {
-        if(!validJsonOfField(3, "created_at", pJson["created_at"], err, true))
-            return false;
-    }
     if(pJson.isMember("salt"))
     {
-        if(!validJsonOfField(4, "salt", pJson["salt"], err, true))
+        if(!validJsonOfField(3, "salt", pJson["salt"], err, true))
             return false;
     }
     if(pJson.isMember("is_admin"))
     {
-        if(!validJsonOfField(5, "is_admin", pJson["is_admin"], err, true))
+        if(!validJsonOfField(4, "is_admin", pJson["is_admin"], err, true))
+            return false;
+    }
+    if(pJson.isMember("created_at"))
+    {
+        if(!validJsonOfField(5, "created_at", pJson["created_at"], err, true))
             return false;
     }
     return true;
@@ -1049,19 +941,19 @@ bool Users::validateJsonForUpdate(const Json::Value &pJson, std::string &err)
         if(!validJsonOfField(2, "hash_password", pJson["hash_password"], err, false))
             return false;
     }
-    if(pJson.isMember("created_at"))
-    {
-        if(!validJsonOfField(3, "created_at", pJson["created_at"], err, false))
-            return false;
-    }
     if(pJson.isMember("salt"))
     {
-        if(!validJsonOfField(4, "salt", pJson["salt"], err, false))
+        if(!validJsonOfField(3, "salt", pJson["salt"], err, false))
             return false;
     }
     if(pJson.isMember("is_admin"))
     {
-        if(!validJsonOfField(5, "is_admin", pJson["is_admin"], err, false))
+        if(!validJsonOfField(4, "is_admin", pJson["is_admin"], err, false))
+            return false;
+    }
+    if(pJson.isMember("created_at"))
+    {
+        if(!validJsonOfField(5, "created_at", pJson["created_at"], err, false))
             return false;
     }
     return true;
@@ -1194,17 +1086,6 @@ bool Users::validJsonOfField(size_t index,
                 err="Type error in the "+fieldName+" field";
                 return false;
             }
-            break;
-        case 4:
-            if(pJson.isNull())
-            {
-                return true;
-            }
-            if(!pJson.isString())
-            {
-                err="Type error in the "+fieldName+" field";
-                return false;
-            }
             if(pJson.isString() && std::strlen(pJson.asCString()) > 255)
             {
                 err="String length exceeds limit for the " +
@@ -1214,13 +1095,24 @@ bool Users::validJsonOfField(size_t index,
             }
 
             break;
-        case 5:
+        case 4:
             if(pJson.isNull())
             {
                 err="The " + fieldName + " column cannot be null";
                 return false;
             }
             if(!pJson.isBool())
+            {
+                err="Type error in the "+fieldName+" field";
+                return false;
+            }
+            break;
+        case 5:
+            if(pJson.isNull())
+            {
+                return true;
+            }
+            if(!pJson.isInt64())
             {
                 err="Type error in the "+fieldName+" field";
                 return false;

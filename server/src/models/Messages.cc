@@ -29,7 +29,7 @@ const std::vector<typename Messages::MetaData> Messages::metaData_={
 {"room_id","int32_t","integer",4,0,0,1},
 {"user_id","int32_t","integer",4,0,0,1},
 {"message_text","std::string","text",0,0,0,1},
-{"created_at","::trantor::Date","timestamp with time zone",0,0,0,0}
+{"created_at","int64_t","bigint",8,0,0,0}
 };
 const std::string &Messages::getColumnName(size_t index) noexcept(false)
 {
@@ -58,25 +58,7 @@ Messages::Messages(const Row &r, const ssize_t indexOffset) noexcept
         }
         if(!r["created_at"].isNull())
         {
-            auto timeStr = r["created_at"].as<std::string>();
-            struct tm stm;
-            memset(&stm,0,sizeof(stm));
-            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
-            time_t t = mktime(&stm);
-            size_t decimalNum = 0;
-            if(p)
-            {
-                if(*p=='.')
-                {
-                    std::string decimals(p+1,&timeStr[timeStr.length()]);
-                    while(decimals.length()<6)
-                    {
-                        decimals += "0";
-                    }
-                    decimalNum = (size_t)atol(decimals.c_str());
-                }
-                createdAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
-            }
+            createdAt_=std::make_shared<int64_t>(r["created_at"].as<int64_t>());
         }
     }
     else
@@ -111,25 +93,7 @@ Messages::Messages(const Row &r, const ssize_t indexOffset) noexcept
         index = offset + 4;
         if(!r[index].isNull())
         {
-            auto timeStr = r[index].as<std::string>();
-            struct tm stm;
-            memset(&stm,0,sizeof(stm));
-            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
-            time_t t = mktime(&stm);
-            size_t decimalNum = 0;
-            if(p)
-            {
-                if(*p=='.')
-                {
-                    std::string decimals(p+1,&timeStr[timeStr.length()]);
-                    while(decimals.length()<6)
-                    {
-                        decimals += "0";
-                    }
-                    decimalNum = (size_t)atol(decimals.c_str());
-                }
-                createdAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
-            }
+            createdAt_=std::make_shared<int64_t>(r[index].as<int64_t>());
         }
     }
 
@@ -179,25 +143,7 @@ Messages::Messages(const Json::Value &pJson, const std::vector<std::string> &pMa
         dirtyFlag_[4] = true;
         if(!pJson[pMasqueradingVector[4]].isNull())
         {
-            auto timeStr = pJson[pMasqueradingVector[4]].asString();
-            struct tm stm;
-            memset(&stm,0,sizeof(stm));
-            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
-            time_t t = mktime(&stm);
-            size_t decimalNum = 0;
-            if(p)
-            {
-                if(*p=='.')
-                {
-                    std::string decimals(p+1,&timeStr[timeStr.length()]);
-                    while(decimals.length()<6)
-                    {
-                        decimals += "0";
-                    }
-                    decimalNum = (size_t)atol(decimals.c_str());
-                }
-                createdAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
-            }
+            createdAt_=std::make_shared<int64_t>((int64_t)pJson[pMasqueradingVector[4]].asInt64());
         }
     }
 }
@@ -241,25 +187,7 @@ Messages::Messages(const Json::Value &pJson) noexcept(false)
         dirtyFlag_[4]=true;
         if(!pJson["created_at"].isNull())
         {
-            auto timeStr = pJson["created_at"].asString();
-            struct tm stm;
-            memset(&stm,0,sizeof(stm));
-            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
-            time_t t = mktime(&stm);
-            size_t decimalNum = 0;
-            if(p)
-            {
-                if(*p=='.')
-                {
-                    std::string decimals(p+1,&timeStr[timeStr.length()]);
-                    while(decimals.length()<6)
-                    {
-                        decimals += "0";
-                    }
-                    decimalNum = (size_t)atol(decimals.c_str());
-                }
-                createdAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
-            }
+            createdAt_=std::make_shared<int64_t>((int64_t)pJson["created_at"].asInt64());
         }
     }
 }
@@ -308,25 +236,7 @@ void Messages::updateByMasqueradedJson(const Json::Value &pJson,
         dirtyFlag_[4] = true;
         if(!pJson[pMasqueradingVector[4]].isNull())
         {
-            auto timeStr = pJson[pMasqueradingVector[4]].asString();
-            struct tm stm;
-            memset(&stm,0,sizeof(stm));
-            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
-            time_t t = mktime(&stm);
-            size_t decimalNum = 0;
-            if(p)
-            {
-                if(*p=='.')
-                {
-                    std::string decimals(p+1,&timeStr[timeStr.length()]);
-                    while(decimals.length()<6)
-                    {
-                        decimals += "0";
-                    }
-                    decimalNum = (size_t)atol(decimals.c_str());
-                }
-                createdAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
-            }
+            createdAt_=std::make_shared<int64_t>((int64_t)pJson[pMasqueradingVector[4]].asInt64());
         }
     }
 }
@@ -369,25 +279,7 @@ void Messages::updateByJson(const Json::Value &pJson) noexcept(false)
         dirtyFlag_[4] = true;
         if(!pJson["created_at"].isNull())
         {
-            auto timeStr = pJson["created_at"].asString();
-            struct tm stm;
-            memset(&stm,0,sizeof(stm));
-            auto p = strptime(timeStr.c_str(),"%Y-%m-%d %H:%M:%S",&stm);
-            time_t t = mktime(&stm);
-            size_t decimalNum = 0;
-            if(p)
-            {
-                if(*p=='.')
-                {
-                    std::string decimals(p+1,&timeStr[timeStr.length()]);
-                    while(decimals.length()<6)
-                    {
-                        decimals += "0";
-                    }
-                    decimalNum = (size_t)atol(decimals.c_str());
-                }
-                createdAt_=std::make_shared<::trantor::Date>(t*1000000+decimalNum);
-            }
+            createdAt_=std::make_shared<int64_t>((int64_t)pJson["created_at"].asInt64());
         }
     }
 }
@@ -470,20 +362,20 @@ void Messages::setMessageText(std::string &&pMessageText) noexcept
     dirtyFlag_[3] = true;
 }
 
-const ::trantor::Date &Messages::getValueOfCreatedAt() const noexcept
+const int64_t &Messages::getValueOfCreatedAt() const noexcept
 {
-    static const ::trantor::Date defaultValue = ::trantor::Date();
+    static const int64_t defaultValue = int64_t();
     if(createdAt_)
         return *createdAt_;
     return defaultValue;
 }
-const std::shared_ptr<::trantor::Date> &Messages::getCreatedAt() const noexcept
+const std::shared_ptr<int64_t> &Messages::getCreatedAt() const noexcept
 {
     return createdAt_;
 }
-void Messages::setCreatedAt(const ::trantor::Date &pCreatedAt) noexcept
+void Messages::setCreatedAt(const int64_t &pCreatedAt) noexcept
 {
-    createdAt_ = std::make_shared<::trantor::Date>(pCreatedAt);
+    createdAt_ = std::make_shared<int64_t>(pCreatedAt);
     dirtyFlag_[4] = true;
 }
 void Messages::setCreatedAtToNull() noexcept
@@ -661,7 +553,7 @@ Json::Value Messages::toJson() const
     }
     if(getCreatedAt())
     {
-        ret["created_at"]=getCreatedAt()->toDbStringLocal();
+        ret["created_at"]=(Json::Int64)getValueOfCreatedAt();
     }
     else
     {
@@ -724,7 +616,7 @@ Json::Value Messages::toMasqueradedJson(
         {
             if(getCreatedAt())
             {
-                ret[pMasqueradingVector[4]]=getCreatedAt()->toDbStringLocal();
+                ret[pMasqueradingVector[4]]=(Json::Int64)getValueOfCreatedAt();
             }
             else
             {
@@ -768,7 +660,7 @@ Json::Value Messages::toMasqueradedJson(
     }
     if(getCreatedAt())
     {
-        ret["created_at"]=getCreatedAt()->toDbStringLocal();
+        ret["created_at"]=(Json::Int64)getValueOfCreatedAt();
     }
     else
     {
@@ -1042,7 +934,7 @@ bool Messages::validJsonOfField(size_t index,
             {
                 return true;
             }
-            if(!pJson.isString())
+            if(!pJson.isInt64())
             {
                 err="Type error in the "+fieldName+" field";
                 return false;

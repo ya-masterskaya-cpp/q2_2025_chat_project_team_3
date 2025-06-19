@@ -49,8 +49,8 @@ class Rooms
     {
         static const std::string _room_id;
         static const std::string _room_name;
-        static const std::string _created_at;
         static const std::string _owner_id;
+        static const std::string _created_at;
     };
 
     static const int primaryKeyNumber;
@@ -119,15 +119,6 @@ class Rooms
     void setRoomName(const std::string &pRoomName) noexcept;
     void setRoomName(std::string &&pRoomName) noexcept;
 
-    /**  For column created_at  */
-    ///Get the value of the column created_at, returns the default value if the column is null
-    const ::trantor::Date &getValueOfCreatedAt() const noexcept;
-    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
-    const std::shared_ptr<::trantor::Date> &getCreatedAt() const noexcept;
-    ///Set the value of the column created_at
-    void setCreatedAt(const ::trantor::Date &pCreatedAt) noexcept;
-    void setCreatedAtToNull() noexcept;
-
     /**  For column owner_id  */
     ///Get the value of the column owner_id, returns the default value if the column is null
     const int32_t &getValueOfOwnerId() const noexcept;
@@ -136,6 +127,15 @@ class Rooms
     ///Set the value of the column owner_id
     void setOwnerId(const int32_t &pOwnerId) noexcept;
     void setOwnerIdToNull() noexcept;
+
+    /**  For column created_at  */
+    ///Get the value of the column created_at, returns the default value if the column is null
+    const int64_t &getValueOfCreatedAt() const noexcept;
+    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
+    const std::shared_ptr<int64_t> &getCreatedAt() const noexcept;
+    ///Set the value of the column created_at
+    void setCreatedAt(const int64_t &pCreatedAt) noexcept;
+    void setCreatedAtToNull() noexcept;
 
 
     static size_t getColumnNumber() noexcept {  return 4;  }
@@ -173,8 +173,8 @@ class Rooms
     void updateId(const uint64_t id);
     std::shared_ptr<int32_t> roomId_;
     std::shared_ptr<std::string> roomName_;
-    std::shared_ptr<::trantor::Date> createdAt_;
     std::shared_ptr<int32_t> ownerId_;
+    std::shared_ptr<int64_t> createdAt_;
     struct MetaData
     {
         const std::string colName_;
@@ -211,16 +211,16 @@ class Rooms
             sql += "room_name,";
             ++parametersCount;
         }
-        sql += "created_at,";
-        ++parametersCount;
-        if(!dirtyFlag_[2])
-        {
-            needSelection=true;
-        }
-        if(dirtyFlag_[3])
+        if(dirtyFlag_[2])
         {
             sql += "owner_id,";
             ++parametersCount;
+        }
+        sql += "created_at,";
+        ++parametersCount;
+        if(!dirtyFlag_[3])
+        {
+            needSelection=true;
         }
         needSelection=true;
         if(parametersCount > 0)
@@ -245,14 +245,14 @@ class Rooms
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);
         }
-        else
-        {
-            sql +="default,";
-        }
         if(dirtyFlag_[3])
         {
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);
+        }
+        else
+        {
+            sql +="default,";
         }
         if(parametersCount > 0)
         {

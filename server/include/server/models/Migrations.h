@@ -126,11 +126,11 @@ class Migrations
 
     /**  For column applied_at  */
     ///Get the value of the column applied_at, returns the default value if the column is null
-    const ::trantor::Date &getValueOfAppliedAt() const noexcept;
+    const int64_t &getValueOfAppliedAt() const noexcept;
     ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
-    const std::shared_ptr<::trantor::Date> &getAppliedAt() const noexcept;
+    const std::shared_ptr<int64_t> &getAppliedAt() const noexcept;
     ///Set the value of the column applied_at
-    void setAppliedAt(const ::trantor::Date &pAppliedAt) noexcept;
+    void setAppliedAt(const int64_t &pAppliedAt) noexcept;
     void setAppliedAtToNull() noexcept;
 
 
@@ -158,7 +158,7 @@ class Migrations
     std::shared_ptr<int32_t> id_;
     std::shared_ptr<int64_t> timestamp_;
     std::shared_ptr<std::string> name_;
-    std::shared_ptr<::trantor::Date> appliedAt_;
+    std::shared_ptr<int64_t> appliedAt_;
     struct MetaData
     {
         const std::string colName_;
