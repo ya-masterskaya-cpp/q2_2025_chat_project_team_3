@@ -51,7 +51,7 @@ drogon::Task<chat::Envelope> MessageHandlerService::processMessage(const std::sh
             break;
         }
         case chat::Envelope::kRenameRoomRequest: {
-            *respEnv.mutable_rename_room_response() = co_await MessageHandlers::handleRenameRoom(wsData, env.rename_room_request());
+            *respEnv.mutable_rename_room_response() = co_await m_handlers->MessageHandlers::handleRenameRoom(wsData, env.rename_room_request());
             break;
         }
         default: {
