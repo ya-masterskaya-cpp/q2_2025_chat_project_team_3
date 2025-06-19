@@ -27,6 +27,10 @@ drogon::Task<chat::InitialAuthResponse> MessageHandlers::handleAuthInitial(const
         setStatus(resp, chat::STATUS_FAILURE, "Empty username.");
         co_return resp;
     }
+    if (auto error = validateUtf8String(req.username(), 64, "username")) {
+        setStatus(resp, chat::STATUS_FAILURE, *error);
+        co_return resp;
+    }
     try {
         auto users = co_await switch_to_io_loop(CoroMapper<models::Users>(m_dbClient)
             .findBy(Criteria(models::Users::Cols::_username, CompareOperator::EQ, req.username())));
@@ -50,6 +54,10 @@ drogon::Task<chat::InitialRegisterResponse> MessageHandlers::handleRegisterIniti
     chat::InitialRegisterResponse resp;
     if(req.username().empty()) {
         setStatus(resp, chat::STATUS_FAILURE, "Empty username or password.");
+        co_return resp;
+    }
+    if (auto error = validateUtf8String(req.username(), 16, "username")) {
+        setStatus(resp, chat::STATUS_FAILURE, *error);
         co_return resp;
     }
     try {
@@ -214,15 +222,8 @@ drogon::Task<chat::SendMessageResponse> MessageHandlers::handleSendMessage(const
         setStatus(resp, chat::STATUS_FAILURE, "Empty 'message' field.");
         co_return resp;
     }
-
-    try {
-        if (size_t dist = utf8::distance(req.message().begin(), req.message().end()); dist > 512) {
-            setStatus(resp, chat::STATUS_FAILURE, "Big message (>512ch).");
-            co_return resp;
-        }
-    }
-    catch (const std::exception& e) {
-        setStatus(resp, chat::STATUS_FAILURE, "Invalid UTF-8 message.");
+    if (auto error = validateUtf8String(req.message(), 512, "message")) {
+        setStatus(resp, chat::STATUS_FAILURE, *error);
         co_return resp;
     }
 
@@ -486,4 +487,22 @@ drogon::Task<std::optional<chat::UserRights>> MessageHandlers::GetRoleType(uint3
         co_return rights;
     }
     co_return chat::UserRights::REGULAR;
+}
+
+std::optional<std::string> MessageHandlers::validateUtf8String(const std::string& textToValidate,
+    size_t maxLength,
+    const std::string& fieldName) const {
+    try {
+        size_t length = utf8::distance(textToValidate.begin(), textToValidate.end());
+        if (length > maxLength) {
+            return "Field '" + fieldName + "' is too long. Max length: " + std::to_string(maxLength) + " chars.";
+        }
+    }
+    catch (const utf8::invalid_utf8&) {
+        return "Field '" + fieldName + "' contains invalid UTF-8 characters.";
+    }
+    catch (const std::exception& e) {
+        return "An unexpected error occurred during " + fieldName + " validation: " + e.what();
+    }
+    return std::nullopt;
 }
