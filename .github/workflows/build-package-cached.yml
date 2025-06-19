@@ -16,6 +16,11 @@ jobs:
       _VCPKG_: ${{ github.workspace }}/vcpkg
       VCPKG_DEFAULT_BINARY_CACHE: ${{ github.workspace }}/vcpkg/bincache
 
+    # Grant permissions to write to the GitHub Packages container registry
+    permissions:
+      contents: read
+      packages: write
+
     steps:
       - uses: actions/checkout@v4
         with:
@@ -36,8 +41,13 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: ${{ env.VCPKG_DEFAULT_BINARY_CACHE }}
-          key: ${{ runner.os }}-vcpkg-${{ hashFiles('.git/modules/vcpkg/HEAD') }}
-          restore-keys: ${{ runner.os }}-vcpkg-
+          # The key we will SAVE to is new and unique for this run.
+          key: ${{ runner.os }}-vcpkg-${{ hashFiles('.git/modules/vcpkg/HEAD') }}-${{ github.run_id }}
+          # The keys we RESTORE from are the most recent successful run
+          restore-keys: |
+            ${{ runner.os }}-vcpkg-${{ hashFiles('.git/modules/vcpkg/HEAD') }}-
+            ${{ runner.os }}-vcpkg-${{ hashFiles('.git/modules/vcpkg/HEAD') }}
+            ${{ runner.os }}-vcpkg-
 
       # On Windows runners, let's ensure to have the Developer Command Prompt environment setup correctly.
       # As used here the Developer Command Prompt created is targeting x64 and using the default the Windows SDK.
@@ -53,13 +63,35 @@ jobs:
         run: |
           cmake --preset ninja-multi-vcpkg
 
-      # Save vcpkg cache (always runs, even if later steps fail)
+      - name: Check for vcpkg rebuild
+        id: check_vcpkg_rebuild
+        shell: bash
+        run: |
+          LOG_FILE="build/vcpkg-manifest-install.log"
+          echo "should_save=false" > $GITHUB_OUTPUT
+          
+          echo "Checking for log file at: $LOG_FILE"
+          # First, check if the log file actually exists
+          if [ -f "$LOG_FILE" ]; then
+            # If it exists, check for the key phrase that indicates a package was built
+            if grep -q "Starting submission of .*" "$LOG_FILE"; then
+              echo "SUCCESS: vcpkg rebuild detected. Marking cache for saving."
+              echo "should_save=true" > $GITHUB_OUTPUT
+            else
+              echo "INFO: vcpkg log found, but no rebuild was indicated."
+            fi
+          else
+            echo "INFO: vcpkg log file not found. Assuming no rebuild."
+          fi
+
       - name: Save vcpkg cache
-        if: always() && steps.vcpkg-cache.outputs.cache-hit != 'true'
+        # The condition is simple: if a rebuild happened, we save.
+        if: always() && steps.check_vcpkg_rebuild.outputs.should_save == 'true'
         uses: actions/cache/save@v4
         with:
           path: ${{ env.VCPKG_DEFAULT_BINARY_CACHE }}
-          key: ${{ runner.os }}-vcpkg-${{ hashFiles('.git/modules/vcpkg/HEAD') }}
+          # We save to the unique key for THIS run.
+          key: ${{ steps.vcpkg-cache.outputs.cache-primary-key }}
 
       - name: Build (Release configuration)
         run: |
@@ -104,3 +136,64 @@ jobs:
             build/*.zip
             build/*.tar.gz
             build/*.AppImage
+
+      - name: Log in to GitHub Container Registry
+        if: runner.os == 'Linux'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Prepare Docker build contexts
+        if: runner.os == 'Linux'
+        run: |
+          echo "Preparing Docker build contexts from CPack output..."
+          
+          # Use `find ... | head -n 1` to guarantee we only get one result.
+          SERVER_TARBALL=$(find build -name '*-server.tar.gz' | head -n 1)
+          AGGREGATOR_TARBALL=$(find build -name '*-aggregator.tar.gz' | head -n 1)
+
+          # Add checks to ensure the files were actually found before proceeding.
+          if [ -z "$SERVER_TARBALL" ]; then
+            echo "::error::Server tarball not found in build directory!"
+            exit 1
+          fi
+          if [ -z "$AGGREGATOR_TARBALL" ]; then
+            echo "::error::Aggregator tarball not found in build directory!"
+            exit 1
+          fi
+
+          echo "Found Server Tarball: $SERVER_TARBALL"
+          echo "Found Aggregator Tarball: $AGGREGATOR_TARBALL"
+          
+          mkdir -p docker_contexts/server docker_contexts/aggregator
+          tar -xvf "$SERVER_TARBALL" -C docker_contexts/server
+          tar -xvf "$AGGREGATOR_TARBALL" -C docker_contexts/aggregator
+
+      - name: Set repository name to lowercase
+        if: runner.os == 'Linux'
+        id: set_repo_lc
+        shell: bash
+        run: |
+          # 'tr' is a standard, reliable tool for translating characters.
+          # Here it converts all uppercase characters to lowercase.
+          echo "repo_lc=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
+
+      - name: Build and push Server Docker image
+        if: runner.os == 'Linux'
+        uses: docker/build-push-action@v5
+        with:
+          context: docker_contexts/server
+          file: ./Dockerfile.server
+          push: true
+          tags: ghcr.io/${{ steps.set_repo_lc.outputs.repo_lc }}-server:latest
+
+      - name: Build and push Aggregator Docker image
+        if: runner.os == 'Linux'
+        uses: docker/build-push-action@v5
+        with:
+          context: docker_contexts/aggregator
+          file: ./Dockerfile.aggregator
+          push: true
+          tags: ghcr.io/${{ steps.set_repo_lc.outputs.repo_lc }}-aggregator:latest
