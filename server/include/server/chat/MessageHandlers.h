@@ -3,7 +3,7 @@
 #include <drogon/orm/DbClient.h>
 
 class IChatRoomService;
-class WsData;
+struct WsData;
 
 class MessageHandlers {
 public:

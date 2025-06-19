@@ -3,7 +3,7 @@
 #include <drogon/orm/DbClient.h>
 
 class IServerRegistry;
-class WsData;
+struct WsData;
 
 class MessageHandlers {
 public:

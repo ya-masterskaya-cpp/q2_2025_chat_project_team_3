@@ -2,7 +2,7 @@
 
 class MessageHandlers;
 class IChatRoomService;
-class WsData;
+struct WsData;
 
 class MessageHandlerService {
 public:
