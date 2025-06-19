@@ -19,7 +19,6 @@ public:
     UserListPanel* m_userListPanel = nullptr;
     MessageView* m_messageView = nullptr;
 private:
-    static constexpr std::size_t MAX_MESSAGE_LENGTH = 512;
     MainWidget* m_parent = nullptr;
     wxTextCtrl* m_input_ctrl = nullptr;
     wxBoxSizer* m_mainSizer = nullptr;         // Horizontal sizer for the entire ChatPanel

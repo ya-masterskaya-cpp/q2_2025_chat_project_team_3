@@ -12,6 +12,7 @@
 #include <server/utils/scoped_coro_transaction.h>
 #include <server/utils/switch_to_io_loop.h>
 #include <common/utils/utils.h>
+#include <common/utils/limits.h>
 
 #include <utf8.h>
 
@@ -27,7 +28,7 @@ drogon::Task<chat::InitialAuthResponse> MessageHandlers::handleAuthInitial(const
         setStatus(resp, chat::STATUS_FAILURE, "Empty username.");
         co_return resp;
     }
-    if (auto error = validateUtf8String(req.username(), MAX_USERNAME_LENGTH, "username")) {
+    if (auto error = validateUtf8String(req.username(), limits::MAX_USERNAME_LENGTH, "username")) {
         setStatus(resp, chat::STATUS_FAILURE, *error);
         co_return resp;
     }
@@ -56,7 +57,7 @@ drogon::Task<chat::InitialRegisterResponse> MessageHandlers::handleRegisterIniti
         setStatus(resp, chat::STATUS_FAILURE, "Empty username or password.");
         co_return resp;
     }
-    if (auto error = validateUtf8String(req.username(), MAX_USERNAME_LENGTH, "username")) {
+    if (auto error = validateUtf8String(req.username(), limits::MAX_USERNAME_LENGTH, "username")) {
         setStatus(resp, chat::STATUS_FAILURE, *error);
         co_return resp;
     }
@@ -222,7 +223,7 @@ drogon::Task<chat::SendMessageResponse> MessageHandlers::handleSendMessage(const
         setStatus(resp, chat::STATUS_FAILURE, "Empty 'message' field.");
         co_return resp;
     }
-    if (auto error = validateUtf8String(req.message(), MAX_MESSAGE_LENGTH, "message")) {
+    if (auto error = validateUtf8String(req.message(), limits::MAX_MESSAGE_LENGTH, "message")) {
         setStatus(resp, chat::STATUS_FAILURE, *error);
         co_return resp;
     }

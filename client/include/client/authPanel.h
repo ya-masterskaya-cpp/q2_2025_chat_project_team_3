@@ -19,7 +19,6 @@ public:
     void HandleAuthContinue(const std::string& salt);
 
 private:
-    static constexpr std::size_t MAX_USERNAME_LENGTH = 16;
     void OnLogin(wxCommandEvent&);
     void OnRegister(wxCommandEvent&);
     void OnBack(wxCommandEvent&);

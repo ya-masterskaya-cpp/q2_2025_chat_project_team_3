@@ -5,6 +5,7 @@
 #include <client/wsClient.h>
 #include <client/message.h>
 #include <client/messageView.h>
+#include <common/utils/limits.h>
 
 enum { ID_SEND = wxID_HIGHEST+30, ID_LEAVE, ID_JUMP_TO_PRESENT };
 
@@ -139,12 +140,12 @@ void ChatPanel::OnSnapStateChanged(wxCommandEvent& event) {
 void ChatPanel::OnInputText(wxCommandEvent& event) {
     event.Skip();
     wxString val = m_input_ctrl->GetValue();
-    if (val.length() > MAX_MESSAGE_LENGTH) {
+    if (val.length() > limits::MAX_MESSAGE_LENGTH) {
         size_t pos = static_cast<size_t>(m_input_ctrl->GetInsertionPoint());
-        wxString cated_str = val.Left(MAX_MESSAGE_LENGTH);
+        wxString cated_str = val.Left(limits::MAX_MESSAGE_LENGTH);
         CallAfter([this, cated_str, pos]() {
             m_input_ctrl->SetValue(cated_str);
-            m_input_ctrl->SetInsertionPoint((std::min)(pos, MAX_MESSAGE_LENGTH));
+            m_input_ctrl->SetInsertionPoint((std::min)(pos, limits::MAX_MESSAGE_LENGTH));
             wxBell();
         });
     }
