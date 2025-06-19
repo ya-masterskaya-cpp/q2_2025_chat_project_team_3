@@ -27,7 +27,7 @@ drogon::Task<chat::InitialAuthResponse> MessageHandlers::handleAuthInitial(const
         setStatus(resp, chat::STATUS_FAILURE, "Empty username.");
         co_return resp;
     }
-    if (auto error = validateUtf8String(req.username(), 64, "username")) {
+    if (auto error = validateUtf8String(req.username(), MAX_USERNAME_LENGTH, "username")) {
         setStatus(resp, chat::STATUS_FAILURE, *error);
         co_return resp;
     }
@@ -56,7 +56,7 @@ drogon::Task<chat::InitialRegisterResponse> MessageHandlers::handleRegisterIniti
         setStatus(resp, chat::STATUS_FAILURE, "Empty username or password.");
         co_return resp;
     }
-    if (auto error = validateUtf8String(req.username(), 16, "username")) {
+    if (auto error = validateUtf8String(req.username(), MAX_USERNAME_LENGTH, "username")) {
         setStatus(resp, chat::STATUS_FAILURE, *error);
         co_return resp;
     }
@@ -222,7 +222,7 @@ drogon::Task<chat::SendMessageResponse> MessageHandlers::handleSendMessage(const
         setStatus(resp, chat::STATUS_FAILURE, "Empty 'message' field.");
         co_return resp;
     }
-    if (auto error = validateUtf8String(req.message(), 512, "message")) {
+    if (auto error = validateUtf8String(req.message(), MAX_MESSAGE_LENGTH, "message")) {
         setStatus(resp, chat::STATUS_FAILURE, *error);
         co_return resp;
     }

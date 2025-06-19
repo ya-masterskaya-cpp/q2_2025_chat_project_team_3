@@ -139,12 +139,12 @@ void ChatPanel::OnSnapStateChanged(wxCommandEvent& event) {
 void ChatPanel::OnInputText(wxCommandEvent& event) {
     event.Skip();
     wxString val = m_input_ctrl->GetValue();
-    if (val.length() > 512) {
-        long pos = m_input_ctrl->GetInsertionPoint();
-        wxString cated_str = val.Left(512);
+    if (val.length() > MAX_MESSAGE_LENGTH) {
+        size_t pos = static_cast<size_t>(m_input_ctrl->GetInsertionPoint());
+        wxString cated_str = val.Left(MAX_MESSAGE_LENGTH);
         CallAfter([this, cated_str, pos]() {
             m_input_ctrl->SetValue(cated_str);
-            m_input_ctrl->SetInsertionPoint((std::min)(pos, 512L));
+            m_input_ctrl->SetInsertionPoint((std::min)(pos, MAX_MESSAGE_LENGTH));
             wxBell();
         });
     }

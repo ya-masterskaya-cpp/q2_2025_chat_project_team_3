@@ -68,12 +68,12 @@ void AuthPanel::OnBack(wxCommandEvent&) {
 void AuthPanel::OnInputLogin(wxCommandEvent& event) {
     event.Skip();
     wxString val = m_usernameInput->GetValue();
-    if (val.length() > 16) {
-        long pos = m_usernameInput->GetInsertionPoint();
-        wxString cated_str = val.Left(16);
+    if (val.length() > MAX_USERNAME_LENGTH) {
+        size_t pos = static_cast<size_t>(m_usernameInput->GetInsertionPoint());
+        wxString cated_str = val.Left(MAX_USERNAME_LENGTH);
         CallAfter([this, cated_str, pos]() {
             m_usernameInput->SetValue(cated_str);
-            m_usernameInput->SetInsertionPoint((std::min)(pos, 16L));
+            m_usernameInput->SetInsertionPoint((std::min)(pos, MAX_USERNAME_LENGTH));
             wxBell();
         });
     }
