@@ -3,17 +3,17 @@
 enum {
     ID_RENAME = wxID_HIGHEST + 100,
     ID_DELETE,
-    ID_BACK
+    ID_CLOSE
 };
 
 wxDEFINE_EVENT(wxEVT_ROOM_RENAME, wxCommandEvent);
 wxDEFINE_EVENT(wxEVT_ROOM_DELETE, wxCommandEvent);
-wxDEFINE_EVENT(wxEVT_ROOM_BACK, wxCommandEvent);
+wxDEFINE_EVENT(wxEVT_ROOM_CLOSE, wxCommandEvent);
 
 wxBEGIN_EVENT_TABLE(RoomSettingsPanel, wxPanel)
     EVT_BUTTON(ID_RENAME, RoomSettingsPanel::OnRename)
     EVT_BUTTON(ID_DELETE, RoomSettingsPanel::OnDelete)
-    EVT_BUTTON(ID_BACK, RoomSettingsPanel::OnBack)
+    EVT_BUTTON(ID_CLOSE, RoomSettingsPanel::OnClose)
 wxEND_EVENT_TABLE()
 
 RoomSettingsPanel::RoomSettingsPanel(wxWindow* parent, const wxString& roomName, int32_t roomId)
@@ -37,8 +37,8 @@ RoomSettingsPanel::RoomSettingsPanel(wxWindow* parent, const wxString& roomName,
     m_deleteButton = new wxButton(this, ID_DELETE, "Delete");
     buttonSizer->Add(m_deleteButton, 0, wxALL, FromDIP(5));
     
-    m_backButton = new wxButton(this, ID_BACK, "Back");
-    buttonSizer->Add(m_backButton, 0, wxALL, FromDIP(5));
+    m_closeButton = new wxButton(this, ID_CLOSE, "Close");
+    buttonSizer->Add(m_closeButton, 0, wxALL, FromDIP(5));
     
     sizer->Add(buttonSizer, 0, wxALIGN_CENTER | wxTOP | wxBOTTOM, FromDIP(10));
     
@@ -62,8 +62,8 @@ void RoomSettingsPanel::OnDelete(wxCommandEvent& event) {
     GetParent()->GetEventHandler()->ProcessEvent(evt);
 }
 
-void RoomSettingsPanel::OnBack(wxCommandEvent& event) {
-    wxCommandEvent evt(wxEVT_ROOM_BACK);
+void RoomSettingsPanel::OnClose(wxCommandEvent& event) {
+    wxCommandEvent evt(wxEVT_ROOM_CLOSE);
     evt.SetEventObject(this);
     
     GetParent()->GetEventHandler()->ProcessEvent(evt);

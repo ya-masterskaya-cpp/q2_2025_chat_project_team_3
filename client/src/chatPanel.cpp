@@ -93,7 +93,7 @@ ChatPanel::ChatPanel(MainWidget* parent)
 
     Bind(wxEVT_ROOM_RENAME, &ChatPanel::OnRoomRename, this);
     Bind(wxEVT_ROOM_DELETE, &ChatPanel::OnRoomDelete, this);
-    Bind(wxEVT_ROOM_BACK, &ChatPanel::OnRoomBack, this);
+    Bind(wxEVT_ROOM_CLOSE, &ChatPanel::OnRoomClose, this);
 }
 
 // Event handler for when the message container (wxScrolledWindow) changes size.
@@ -141,6 +141,9 @@ void ChatPanel::OnSend(wxCommandEvent&) {
 }
 
 void ChatPanel::OnLeave(wxCommandEvent&) {
+    if (m_roomSettingsPanel) {
+        ShowChatPanel();
+    }
     m_messageView->Clear();
     m_parent->wsClient->leaveRoom();
 }
@@ -169,18 +172,21 @@ void ChatPanel::OnInputText(wxCommandEvent& event) {
 
 void ChatPanel::ShowSettingsPanel() {
     if (m_roomSettingsPanel) return;
-    
-    m_roomSettingsPanel = new RoomSettingsPanel(this, 
+    m_roomSettingsPanel = new RoomSettingsPanel(this,
                                               m_roomHeaderPanel->GetLabel(),
                                               m_roomHeaderPanel->GetRoomId());
     
+    m_roomHeaderPanel->Hide();
     m_chatSizer->Replace(m_roomHeaderPanel, m_roomSettingsPanel);
+    m_roomSettingsPanel->Show();
     Layout();
 }
 
 void ChatPanel::ShowChatPanel() {
     if (!m_roomSettingsPanel) return;
-    
+
+    m_roomHeaderPanel->Show();
+    m_roomSettingsPanel->Hide();
     m_chatSizer->Replace(m_roomSettingsPanel, m_roomHeaderPanel);
     m_roomSettingsPanel->Destroy();
     m_roomSettingsPanel = nullptr;
@@ -208,7 +214,7 @@ void ChatPanel::OnRoomDelete(wxCommandEvent& event) {
     m_parent->wsClient->deleteRoom(roomId);
 }
 
-void ChatPanel::OnRoomBack(wxCommandEvent& event) {
+void ChatPanel::OnRoomClose(wxCommandEvent& event) {
     ShowChatPanel();
 }
 
