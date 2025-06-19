@@ -467,6 +467,65 @@ drogon::Task<chat::LogoutResponse> MessageHandlers::handleLogoutUser(const std::
     co_return resp;
 }
 
+drogon::Task<chat::RenameRoomResponse> MessageHandlers::handleRenameRoom(const std::shared_ptr<WsData>& wsData, const chat::RenameRoomRequest& req) {
+    chat::RenameRoomResponse resp;
+    if(wsData->status != USER_STATUS::Authenticated) {
+        setStatus(resp, chat::STATUS_UNAUTHORIZED, "Not authenticated");
+        o_return resp;
+    }
+    if(req.name().empty()) {
+        setStatus(resp, chat::STATUS_FAILURE, "Empty room name or id.");
+        co_return resp;
+    }
+    if(!wsData->room) {
+        setStatus(resp, chat::STATUS_FAILURE, "User is not in any room.");
+        co_return resp;
+    }
+    auto db = drogon::app().getDbClient();
+    if(!db) {
+        setStatus(resp, chat::STATUS_FAILURE, "DB not available.");
+        co_return resp;
+    }
+    try {
+        if ((co_await GetRoleType(wsData->user->id, wsData->room->id, db)).value() < chat::UserRights::OWNER) {
+            setStatus(resp, chat::STATUS_FAILURE, "Insufficient rights to rename room.");
+            co_return resp;
+        }
+        auto err = co_await WithTransaction(
+            [&](auto tx) -> drogon::Task<ScopedTransactionResult> {
+                try {
+                    using namespace drogon::orm;
+                    auto room = co_await CoroMapper<models::Rooms>(tx)
+                        .findOne(Criteria(models::Rooms::Cols::_room_id, CompareOperator::EQ, wsData->room->id));
+                    room.setRoomName(req.name());
+                    co_await CoroMapper<models::Rooms>(tx).update(room);
+                    co_return std::nullopt;
+                } catch(const drogon::orm::DrogonDbException& e) {
+                    const std::string w = e.base().what();
+                    LOG_ERROR << "Room insert error: " << w;
+                    co_return "Database error during room creation.";
+                }
+            });
+
+        if(err) {
+            setStatus(resp, chat::STATUS_FAILURE, *err);
+            co_return resp;
+        }
+
+        chat::Envelope env;
+        auto* new_name = env.mutable_new_room_name();
+        new_name->set_room_id(wsData->room->id);
+        new_name->set_name(req.name());
+        ChatRoomManager::instance().sendToAll(env);
+        setStatus(resp, chat::STATUS_SUCCESS);
+        co_return resp;
+    } catch(const std::exception& e) {
+        LOG_ERROR << "Create room error: " << e.what();
+        setStatus(resp, chat::STATUS_FAILURE, std::string("Create room failed: ") + e.what());
+        co_return resp;
+    }
+}
+
 drogon::Task<std::optional<chat::UserRights>> MessageHandlers::GetRoleType(uint32_t user_id, uint32_t room_id) const {
     auto user = co_await switch_to_io_loop(CoroMapper<models::Users>(m_dbClient)
         .findBy(
