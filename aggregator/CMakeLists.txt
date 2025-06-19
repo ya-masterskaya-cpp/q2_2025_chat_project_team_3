@@ -3,6 +3,10 @@ project(SlightlyPrettyChatAggregator LANGUAGES CXX)
 
 add_executable(aggregator_app
     src/main.cpp
+    src/controller/WsController.cpp
+    src/WsRequestProcessor.cpp
+    src/MessageHandlerService.cpp
+    src/MessageHandlers.cpp
     src/DrogonServerRegistry.cpp
     src/ServerRegistry.cpp
 )

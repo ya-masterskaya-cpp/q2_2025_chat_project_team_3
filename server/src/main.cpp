@@ -1,5 +1,5 @@
 
-#include <server/chat/WsChat.h>
+#include <server/controller/WsController.h>
 #include <server/db/migrations.h>
 #include <server/aggregator/WsClient.h>
 

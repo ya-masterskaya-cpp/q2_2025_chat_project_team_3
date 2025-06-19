@@ -3,6 +3,10 @@ project(SlightlyPrettyChatServer LANGUAGES CXX)
 
 add_executable(server_app
     src/main.cpp
+    src/controller/WsController.cpp
+    src/WsRequestProcessor.cpp
+    src/MessageHandlerService.cpp
+    src/MessageHandlers.cpp
     src/chat/ChatRoomManager.cpp
     src/chat/DrogonRoomService.cpp
     src/chat/HttpCtrl.cpp
