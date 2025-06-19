@@ -4,7 +4,7 @@
 
 wxDECLARE_EVENT(wxEVT_ROOM_RENAME, wxCommandEvent);
 wxDECLARE_EVENT(wxEVT_ROOM_DELETE, wxCommandEvent);
-wxDECLARE_EVENT(wxEVT_ROOM_BACK, wxCommandEvent);
+wxDECLARE_EVENT(wxEVT_ROOM_CLOSE, wxCommandEvent);
 
 class RoomSettingsPanel : public wxPanel {
 public:
@@ -17,12 +17,12 @@ private:
     wxTextCtrl* m_roomNameCtrl = nullptr;
     wxButton* m_renameButton = nullptr;
     wxButton* m_deleteButton = nullptr;
-    wxButton* m_backButton = nullptr;
+    wxButton* m_closeButton = nullptr;
     int32_t m_roomId;
 
     void OnRename(wxCommandEvent& event);
     void OnDelete(wxCommandEvent& event);
-    void OnBack(wxCommandEvent& event);
+    void OnClose(wxCommandEvent& event);
 
     wxDECLARE_EVENT_TABLE();
 };

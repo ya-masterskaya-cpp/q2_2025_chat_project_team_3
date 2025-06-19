@@ -496,7 +496,7 @@ private:
                         auto room = co_await CoroMapper<models::Rooms>(tx)
                             .findOne(Criteria(models::Rooms::Cols::_room_id, CompareOperator::EQ, wsData->room->id));
                         room.setRoomName(req.name());
-                        co_await CoroMapper<models::Rooms>(tx).update(room);
+                        co_await switch_to_io_loop(CoroMapper<models::Rooms>(tx).update(room));
                         co_return std::nullopt;
                     } catch(const drogon::orm::DrogonDbException& e) {
                         const std::string w = e.base().what();

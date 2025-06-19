@@ -53,7 +53,7 @@ private:
     void OnInputKeyDown(wxKeyEvent& event);
     void OnRoomRename(wxCommandEvent& event);
     void OnRoomDelete(wxCommandEvent& event);
-    void OnRoomBack(wxCommandEvent& event);
+    void OnRoomClose(wxCommandEvent& event);
 
     wxDECLARE_EVENT_TABLE();
 };
