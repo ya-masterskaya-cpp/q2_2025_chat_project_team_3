@@ -8,7 +8,7 @@
 #include <client/initialPanel.h>
 #include <client/serversPanel.h>
 
-MainWidget::MainWidget() : wxFrame(NULL, wxID_ANY, "Slightly Pretty Chat", wxDefaultPosition, wxSize(FromDIP(450), FromDIP(600))) {
+MainWidget::MainWidget() : wxFrame(NULL, wxID_ANY, "Slightly Pretty Chat", wxDefaultPosition, wxSize(450, 600)) {
     wsClient = new WebSocketClient(this);
     initialPanel = new InitialPanel(this);
     serversPanel = new ServersPanel(this);
