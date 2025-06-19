@@ -226,6 +226,8 @@ drogon::Task<chat::SendMessageResponse> MessageHandlers::handleSendMessage(const
         co_return resp;
     }
 
+    models::Messages inserted_message;
+
     try {
         auto err = co_await WithTransaction(
             [&](auto tx) -> drogon::Task<ScopedTransactionResult> {
@@ -234,7 +236,7 @@ drogon::Task<chat::SendMessageResponse> MessageHandlers::handleSendMessage(const
                     m.setMessageText(req.message());
                     m.setRoomId(wsData->room->id);
                     m.setUserId(wsData->user->id);
-                    co_await switch_to_io_loop(CoroMapper<models::Messages>(tx).insert(m));
+                    inserted_message = co_await switch_to_io_loop(CoroMapper<models::Messages>(tx).insert(m));
                     co_return std::nullopt;
                 } catch(const DrogonDbException& e) {
                     const std::string w = e.base().what();
@@ -260,7 +262,7 @@ drogon::Task<chat::SendMessageResponse> MessageHandlers::handleSendMessage(const
     auto* user_info = message_info->mutable_from();
 
     message_info->set_message(req.message());
-    message_info->set_timestamp(trantor::Date::now().microSecondsSinceEpoch());
+    message_info->set_timestamp(inserted_message.getValueOfCreatedAt());
 
     user_info->set_user_id(wsData->user->id);
     user_info->set_user_name(wsData->user->name);
@@ -416,7 +418,7 @@ drogon::Task<chat::GetMessagesResponse> MessageHandlers::handleGetMessages(const
 
         auto criteria = Criteria(models::Messages::Cols::_created_at, 
                                 limit > 0 ? CompareOperator::LT : CompareOperator::GT, 
-                                trantor::Date(req.offset_ts()));
+                                req.offset_ts());
         auto order = limit > 0 ? SortOrder::DESC : SortOrder::ASC;
         limit = std::abs(limit);
 
@@ -429,8 +431,8 @@ drogon::Task<chat::GetMessagesResponse> MessageHandlers::handleGetMessages(const
             auto* message_info = resp.add_message();
             message_info->set_message(message.getValueOfMessageText());
             LOG_TRACE << std::string("Message text \"") + message.getValueOfMessageText() + "\"";
-            message_info->set_timestamp(message.getValueOfCreatedAt().microSecondsSinceEpoch());
-            LOG_TRACE << std::string("Message timestamp \"") + std::to_string(message.getValueOfCreatedAt().microSecondsSinceEpoch()) + "\"";
+            message_info->set_timestamp(message.getValueOfCreatedAt());
+            LOG_TRACE << std::string("Message timestamp \"") + std::to_string(message.getValueOfCreatedAt()) + "\"";
             auto* user_info = message_info->mutable_from();
             auto user = message.getUser(m_dbClient); //TODO this is blocking
 

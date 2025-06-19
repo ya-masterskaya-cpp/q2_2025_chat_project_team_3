@@ -50,9 +50,9 @@ class Users
         static const std::string _user_id;
         static const std::string _username;
         static const std::string _hash_password;
-        static const std::string _created_at;
         static const std::string _salt;
         static const std::string _is_admin;
+        static const std::string _created_at;
     };
 
     static const int primaryKeyNumber;
@@ -130,15 +130,6 @@ class Users
     void setHashPassword(const std::string &pHashPassword) noexcept;
     void setHashPassword(std::string &&pHashPassword) noexcept;
 
-    /**  For column created_at  */
-    ///Get the value of the column created_at, returns the default value if the column is null
-    const ::trantor::Date &getValueOfCreatedAt() const noexcept;
-    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
-    const std::shared_ptr<::trantor::Date> &getCreatedAt() const noexcept;
-    ///Set the value of the column created_at
-    void setCreatedAt(const ::trantor::Date &pCreatedAt) noexcept;
-    void setCreatedAtToNull() noexcept;
-
     /**  For column salt  */
     ///Get the value of the column salt, returns the default value if the column is null
     const std::string &getValueOfSalt() const noexcept;
@@ -156,6 +147,15 @@ class Users
     const std::shared_ptr<bool> &getIsAdmin() const noexcept;
     ///Set the value of the column is_admin
     void setIsAdmin(const bool &pIsAdmin) noexcept;
+
+    /**  For column created_at  */
+    ///Get the value of the column created_at, returns the default value if the column is null
+    const int64_t &getValueOfCreatedAt() const noexcept;
+    ///Return a shared_ptr object pointing to the column const value, or an empty shared_ptr object if the column is null
+    const std::shared_ptr<int64_t> &getCreatedAt() const noexcept;
+    ///Set the value of the column created_at
+    void setCreatedAt(const int64_t &pCreatedAt) noexcept;
+    void setCreatedAtToNull() noexcept;
 
 
     static size_t getColumnNumber() noexcept {  return 6;  }
@@ -194,9 +194,9 @@ class Users
     std::shared_ptr<int32_t> userId_;
     std::shared_ptr<std::string> username_;
     std::shared_ptr<std::string> hashPassword_;
-    std::shared_ptr<::trantor::Date> createdAt_;
     std::shared_ptr<std::string> salt_;
     std::shared_ptr<bool> isAdmin_;
+    std::shared_ptr<int64_t> createdAt_;
     struct MetaData
     {
         const std::string colName_;
@@ -238,18 +238,18 @@ class Users
             sql += "hash_password,";
             ++parametersCount;
         }
-        sql += "created_at,";
-        ++parametersCount;
-        if(!dirtyFlag_[3])
-        {
-            needSelection=true;
-        }
-        if(dirtyFlag_[4])
+        if(dirtyFlag_[3])
         {
             sql += "salt,";
             ++parametersCount;
         }
         sql += "is_admin,";
+        ++parametersCount;
+        if(!dirtyFlag_[4])
+        {
+            needSelection=true;
+        }
+        sql += "created_at,";
         ++parametersCount;
         if(!dirtyFlag_[5])
         {
@@ -283,14 +283,14 @@ class Users
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);
         }
-        else
-        {
-            sql +="default,";
-        }
         if(dirtyFlag_[4])
         {
             n = snprintf(placeholderStr,sizeof(placeholderStr),"$%d,",placeholder++);
             sql.append(placeholderStr, n);
+        }
+        else
+        {
+            sql +="default,";
         }
         if(dirtyFlag_[5])
         {
