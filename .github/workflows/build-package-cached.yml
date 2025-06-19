@@ -52,6 +52,8 @@ jobs:
       # On Windows runners, let's ensure to have the Developer Command Prompt environment setup correctly.
       # As used here the Developer Command Prompt created is targeting x64 and using the default the Windows SDK.
       - uses: ilammy/msvc-dev-cmd@v1
+        with:
+          toolset: 14.43.34808
 
       - name: Get required deps on Ubntu
         if: runner.os == 'Linux'
