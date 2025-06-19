@@ -2,7 +2,7 @@
 
 class MessageHandlers;
 class IServerRegistry;
-class WsData;
+struct WsData;
 
 class MessageHandlerService {
 public:
