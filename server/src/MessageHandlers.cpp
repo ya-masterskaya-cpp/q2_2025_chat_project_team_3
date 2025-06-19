@@ -290,7 +290,7 @@ drogon::Task<chat::JoinRoomResponse> MessageHandlers::handleJoinRoom(const std::
             co_return resp;
         }
 
-        std::optional<chat::UserRights> role = co_await GetRoleType(wsData->user->id, req.room_id());
+        std::optional<chat::UserRights> role = co_await getUserRights(wsData->user->id, req.room_id(), rooms.front());
         if (!role.has_value()) {
             auto err = co_await WithTransaction(
                 [&](auto tx) -> drogon::Task<ScopedTransactionResult> {
@@ -471,7 +471,7 @@ drogon::Task<chat::RenameRoomResponse> MessageHandlers::handleRenameRoom(const s
     chat::RenameRoomResponse resp;
     if(wsData->status != USER_STATUS::Authenticated) {
         setStatus(resp, chat::STATUS_UNAUTHORIZED, "Not authenticated");
-        o_return resp;
+        co_return resp;
     }
     if(req.name().empty()) {
         setStatus(resp, chat::STATUS_FAILURE, "Empty room name or id.");
@@ -481,13 +481,8 @@ drogon::Task<chat::RenameRoomResponse> MessageHandlers::handleRenameRoom(const s
         setStatus(resp, chat::STATUS_FAILURE, "User is not in any room.");
         co_return resp;
     }
-    auto db = drogon::app().getDbClient();
-    if(!db) {
-        setStatus(resp, chat::STATUS_FAILURE, "DB not available.");
-        co_return resp;
-    }
     try {
-        if ((co_await GetRoleType(wsData->user->id, wsData->room->id, db)).value() < chat::UserRights::OWNER) {
+        if ((co_await getUserRights(wsData->user->id, wsData->room->id)).value() < chat::UserRights::OWNER) {
             setStatus(resp, chat::STATUS_FAILURE, "Insufficient rights to rename room.");
             co_return resp;
         }
@@ -498,7 +493,7 @@ drogon::Task<chat::RenameRoomResponse> MessageHandlers::handleRenameRoom(const s
                     auto room = co_await CoroMapper<models::Rooms>(tx)
                         .findOne(Criteria(models::Rooms::Cols::_room_id, CompareOperator::EQ, wsData->room->id));
                     room.setRoomName(req.name());
-                    co_await CoroMapper<models::Rooms>(tx).update(room);
+                    co_await switch_to_io_loop(CoroMapper<models::Rooms>(tx).update(room));
                     co_return std::nullopt;
                 } catch(const drogon::orm::DrogonDbException& e) {
                     const std::string w = e.base().what();
@@ -526,7 +521,7 @@ drogon::Task<chat::RenameRoomResponse> MessageHandlers::handleRenameRoom(const s
     }
 }
 
-drogon::Task<std::optional<chat::UserRights>> MessageHandlers::GetRoleType(uint32_t user_id, uint32_t room_id) const {
+drogon::Task<std::optional<chat::UserRights>> MessageHandlers::getUserRights(uint32_t user_id, uint32_t room_id) const {
     auto user = co_await switch_to_io_loop(CoroMapper<models::Users>(m_dbClient)
         .findBy(
             Criteria(models::Users::Cols::_user_id, CompareOperator::EQ, user_id) &&
@@ -539,6 +534,24 @@ drogon::Task<std::optional<chat::UserRights>> MessageHandlers::GetRoleType(uint3
     if (room.getOwnerId() && *room.getOwnerId() == user_id) {
         co_return chat::UserRights::OWNER;
     }
+    co_return co_await findStoredUserRole(user_id, room_id);
+}
+
+drogon::Task<std::optional<chat::UserRights>> MessageHandlers::getUserRights(uint32_t user_id, uint32_t room_id, const models::Rooms& room) const {
+    auto user = co_await switch_to_io_loop(CoroMapper<models::Users>(m_dbClient)
+        .findBy(
+            Criteria(models::Users::Cols::_user_id, CompareOperator::EQ, user_id) &&
+            Criteria(models::Users::Cols::_is_admin, CompareOperator::EQ, true)));
+    if (!user.empty()){
+        co_return chat::UserRights::ADMIN;
+    }
+    if (room.getOwnerId() && *room.getOwnerId() == user_id) {
+        co_return chat::UserRights::OWNER;
+    }
+    co_return co_await findStoredUserRole(user_id, room_id);
+}
+
+drogon::Task<std::optional<chat::UserRights>> MessageHandlers::findStoredUserRole(uint32_t user_id, uint32_t room_id) const {
     auto role = co_await switch_to_io_loop(CoroMapper<models::UserRoomRoles>(m_dbClient)
         .findBy(
             Criteria(models::UserRoomRoles::Cols::_user_id, CompareOperator::EQ, user_id) &&
