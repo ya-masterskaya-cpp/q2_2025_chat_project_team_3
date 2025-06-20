@@ -8,6 +8,9 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 option(BUILD_SERVER "Build the server application" ON)
 option(BUILD_CLIENT "Build the client application" ON)
 
+set(CPACK_PACKAGE_NAME "${PROJECT_NAME}")
+set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
+
 # Force-disable server on macOS
 if(APPLE)
     if(BUILD_SERVER)
@@ -26,9 +29,6 @@ endif()
 if(BUILD_CLIENT)
     add_subdirectory(client)
 endif()
-
-set(CPACK_PACKAGE_NAME "${PROJECT_NAME}")
-set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
 
 # Set the generator and filename based on the platform
 if(WIN32)

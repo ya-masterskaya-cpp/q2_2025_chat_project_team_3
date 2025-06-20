@@ -4,6 +4,7 @@
 #include <wx/popupwin.h>
 
 struct Message;
+class CachedColorText;
 
 class MessageWidget : public wxPanel {
 public:
@@ -25,7 +26,7 @@ public:
 
 private:
     wxString m_originalMessage;        // Stores the original, unwrapped message.
-    wxStaticText* m_messageStaticText; // Pointer to the actual text control.
+    CachedColorText* m_messageStaticText; // Pointer to the actual text control.
     int64_t m_timestamp_val;           // Stores the raw timestamp for sorting/querying
     wxStaticText* m_timeText;
     wxStaticText* m_userText;
