@@ -83,7 +83,7 @@ void AuthPanel::OnInputLogin(wxCommandEvent& event) {
 void AuthPanel::HandleRegisterContinue() {
     try {
         std::string salt = password::generate_salt();
-        std::string hash = password::hash_password(std::string(m_password.ToUTF8()), salt);
+        std::string hash = password::hash_password(m_password.utf8_string(), salt);
         mainWin->wsClient->completeRegister(hash, salt);
     } catch (const std::exception& ex) {
         mainWin->ShowPopup(ex.what(), wxICON_ERROR);
@@ -95,10 +95,10 @@ void AuthPanel::HandleAuthContinue(const std::string &salt) {
     try {
         if (salt.empty()) {
             std::string new_salt = password::generate_salt();
-            std::string hash = password::hash_password(std::string(m_password.ToUTF8()), new_salt);
-            mainWin->wsClient->completeAuth(hash, std::string(m_password.ToUTF8()), new_salt);
+            std::string hash = password::hash_password(m_password.utf8_string(), new_salt);
+            mainWin->wsClient->completeAuth(hash, m_password.utf8_string(), new_salt);
         } else {
-            std::string hash = password::hash_password(std::string(m_password.ToUTF8()), salt);
+            std::string hash = password::hash_password(m_password.utf8_string(), salt);
             mainWin->wsClient->completeAuth(hash, std::nullopt, std::nullopt);
         }
     } catch (const std::exception& ex) {

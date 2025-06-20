@@ -110,7 +110,7 @@ void ChatPanel::OnResizeTimerTick(wxTimerEvent& event) {
 
 void ChatPanel::OnSend(wxCommandEvent&) {
     if (!m_input_ctrl->IsEmpty()) {
-        m_parent->wsClient->sendMessage(std::string(m_input_ctrl->GetValue().ToUTF8()));
+        m_parent->wsClient->sendMessage(m_input_ctrl->GetValue().utf8_string());
         m_input_ctrl->Clear();
     }
 }

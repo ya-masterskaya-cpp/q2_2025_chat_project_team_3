@@ -27,7 +27,9 @@ void UserListPanel::SetUserList(std::vector<User> users) {
     m_userSizer->Clear(true); // Destroy existing widgets
 
     // Sort the incoming user list by the User::operator<
-    std::sort(users.begin(), users.end());
+    std::sort(users.begin(), users.end(), [] (const User& lhs, const User& rhs) {
+        return !(lhs < rhs);
+    });
 
     for (const auto& user : users) {
         auto* userWidget = new UserNameWidget(m_userContainer, user);
