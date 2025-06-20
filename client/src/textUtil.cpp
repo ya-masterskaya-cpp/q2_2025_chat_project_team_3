@@ -4,6 +4,7 @@
 #include <wx/dcbuffer.h>
 #include <wx/settings.h>
 #include <wx/font.h>
+#include <wx/utils.h>
 
 namespace TextUtil {
     wxString WrapText(wxWindow* targetWindow, const wxString& text, int wrapWidth, const wxFont& font) {
@@ -52,5 +53,18 @@ namespace TextUtil {
         }
 
         return wrappedText;
+    }
+
+    void LimitTextLength(wxTextCtrl* textEntry, size_t maxLength) {
+        wxString val = textEntry->GetValue();
+        if (val.length() > maxLength) {
+            size_t pos = static_cast<size_t>(textEntry->GetInsertionPoint());
+            wxString cated_str = val.Left(maxLength);
+            textEntry->CallAfter([=]() {
+                textEntry->SetValue(cated_str);
+                textEntry->SetInsertionPoint(std::min(pos, maxLength));
+                wxBell();
+            });
+        }
     }
 } // namespace TextUtil

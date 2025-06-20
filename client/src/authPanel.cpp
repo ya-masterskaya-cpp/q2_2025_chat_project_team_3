@@ -2,6 +2,7 @@
 #include <client/mainWidget.h>
 #include <client/wsClient.h>
 #include <client/passwordUtil.h>
+#include <client/textUtil.h>
 #include <common/utils/limits.h>
 #include <optional>
 
@@ -68,16 +69,7 @@ void AuthPanel::OnBack(wxCommandEvent&) {
 
 void AuthPanel::OnInputLogin(wxCommandEvent& event) {
     event.Skip();
-    wxString val = m_usernameInput->GetValue();
-    if (val.length() > limits::MAX_USERNAME_LENGTH) {
-        size_t pos = static_cast<size_t>(m_usernameInput->GetInsertionPoint());
-        wxString cated_str = val.Left(limits::MAX_USERNAME_LENGTH);
-        CallAfter([this, cated_str, pos]() {
-            m_usernameInput->SetValue(cated_str);
-            m_usernameInput->SetInsertionPoint((std::min)(pos, limits::MAX_USERNAME_LENGTH));
-            wxBell();
-        });
-    }
+    TextUtil::LimitTextLength(m_usernameInput, limits::MAX_USERNAME_LENGTH);
 }
 
 void AuthPanel::HandleRegisterContinue() {
