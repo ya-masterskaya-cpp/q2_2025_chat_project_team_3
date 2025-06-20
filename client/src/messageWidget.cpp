@@ -110,9 +110,9 @@ wxFont MessageWidget::GetMessageTextFont() const {
 }
 
 void MessageWidget::OnRightClick(wxMouseEvent& event) {
-    wxMenu menu;
-    menu.Append(ID_COPY, "Copy Message");
-    PopupMenu(&menu);
+    // wxMenu menu;
+    // menu.Append(ID_COPY, "Copy Message");
+    // PopupMenu(&menu);
     event.Skip();
 }
 
