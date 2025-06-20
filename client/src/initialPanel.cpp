@@ -67,8 +67,8 @@ void InitialPanel::OnDelete(wxCommandEvent& event) {
     
     // Check if an item is actually selected
     if(selection != wxNOT_FOUND) {
-        m_listBox->Delete(selection);
         wxGetApp().GetConfig().removeServer(std::string(m_listBox->GetStringSelection().utf8_str()));
+        m_listBox->Delete(selection);
         // After deleting, no item is selected, so update the button states
         UpdateButtonsState();
     }
