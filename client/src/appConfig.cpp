@@ -83,28 +83,30 @@ void AppConfig::InitPath() {
 
 void AppConfig::ReadConfig() {
     // 1. Use wxFile for direct, cross-platform file access.
-    wxFile configFile(m_configFilePath, wxFile::read);
-    wxString file_contents;
+    if(wxFileName::FileExists(m_configFilePath)) {
+        wxFile configFile(m_configFilePath, wxFile::read);
+        wxString file_contents;
 
-    if(!configFile.IsOpened()) {
-        LOG_INFO << "Configuration file not found. Creating a new one with default values.";
-    } else {
-        // 2. Read the entire file's content into a wxString.
-        //    We explicitly tell it to interpret the file's bytes as UTF-8.
-        if(!configFile.ReadAll(&file_contents, wxConvUTF8)) {
-            LOG_ERROR << "Failed to read content from config file: " << std::string(m_configFilePath.utf8_str());
+        if(!configFile.IsOpened()) {
+            LOG_INFO << "Configuration file not found. Creating a new one with default values.";
+        } else {
+            // 2. Read the entire file's content into a wxString.
+            //    We explicitly tell it to interpret the file's bytes as UTF-8.
+            if(!configFile.ReadAll(&file_contents, wxConvUTF8)) {
+                LOG_ERROR << "Failed to read content from config file: " << std::string(m_configFilePath.utf8_str());
+            }
         }
-    }
-    // configFile is automatically closed when it goes out of scope.
+        // configFile is automatically closed when it goes out of scope.
 
-    // 3. If we have content, parse it.
-    if(!file_contents.IsEmpty()) {
-        Json::Reader reader;
-        // Use the safe utf8_str() conversion to pass a UTF-8 std::string to the parser.
-        if(!reader.parse(std::string(file_contents.utf8_str()), m_root)) {
-            LOG_ERROR << "Error parsing config.json: " << reader.getFormattedErrorMessages()
-                      << ". Will reset to default.";
-            m_root = Json::Value(Json::objectValue);
+        // 3. If we have content, parse it.
+        if(!file_contents.IsEmpty()) {
+            Json::Reader reader;
+            // Use the safe utf8_str() conversion to pass a UTF-8 std::string to the parser.
+            if(!reader.parse(std::string(file_contents.utf8_str()), m_root)) {
+                LOG_ERROR << "Error parsing config.json: " << reader.getFormattedErrorMessages()
+                        << ". Will reset to default.";
+                m_root = Json::Value(Json::objectValue);
+            }
         }
     }
 
