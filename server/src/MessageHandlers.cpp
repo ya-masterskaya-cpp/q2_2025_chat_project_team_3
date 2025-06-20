@@ -362,6 +362,10 @@ drogon::Task<chat::CreateRoomResponse> MessageHandlers::handleCreateRoom(const s
         setStatus(resp, chat::STATUS_FAILURE, "Empty room name.");
         co_return resp;
     }
+    if (auto error = validateUtf8String(req.room_name(), limits::MAX_ROOMNAME_LENGTH, "room name")) {
+        setStatus(resp, chat::STATUS_FAILURE, *error);
+        co_return resp;
+    }
     uint32_t room_id;
     try {
         auto err = co_await WithTransaction(
