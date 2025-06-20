@@ -62,7 +62,7 @@ namespace TextUtil {
             wxString cated_str = val.Left(maxLength);
             textEntry->CallAfter([=]() {
                 textEntry->SetValue(cated_str);
-                textEntry->SetInsertionPoint(std::min(pos, maxLength));
+                textEntry->SetInsertionPoint((std::min)(pos, maxLength));
                 wxBell();
             });
         }
