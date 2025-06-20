@@ -27,8 +27,8 @@ UserNameWidget::UserNameWidget(wxWindow* parent, const User& user)
     sizer->Add(m_usernameText, 0, wxALIGN_CENTER_VERTICAL | wxALL, 5);
     SetSizer(sizer);
 
-    Bind(wxEVT_RIGHT_DOWN, &UserNameWidget::OnRightClick, this);
-    m_usernameText->Bind(wxEVT_RIGHT_DOWN, &UserNameWidget::OnRightClick, this);
+    // Bind(wxEVT_RIGHT_DOWN, &UserNameWidget::OnRightClick, this);
+    // m_usernameText->Bind(wxEVT_RIGHT_DOWN, &UserNameWidget::OnRightClick, this);
 }
 
 void UserNameWidget::OnRightClick(wxMouseEvent& event) {

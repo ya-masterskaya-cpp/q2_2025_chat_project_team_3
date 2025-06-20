@@ -59,10 +59,10 @@ MessageWidget::MessageWidget(wxWindow* parent,
 
     SetSizer(mainSizer); // Set the sizer for the panel
 
-    Bind(wxEVT_RIGHT_DOWN, &MessageWidget::OnRightClick, this);
-    m_userText->Bind(wxEVT_RIGHT_DOWN, &MessageWidget::OnRightClick, this);
-    m_timeText->Bind(wxEVT_RIGHT_DOWN, &MessageWidget::OnRightClick, this);
-    m_messageStaticText->Bind(wxEVT_RIGHT_DOWN, &MessageWidget::OnRightClick, this);
+    // Bind(wxEVT_RIGHT_DOWN, &MessageWidget::OnRightClick, this);
+    // m_userText->Bind(wxEVT_RIGHT_DOWN, &MessageWidget::OnRightClick, this);
+    // m_timeText->Bind(wxEVT_RIGHT_DOWN, &MessageWidget::OnRightClick, this);
+    // m_messageStaticText->Bind(wxEVT_RIGHT_DOWN, &MessageWidget::OnRightClick, this);
 
     Bind(wxEVT_ENTER_WINDOW, &MessageWidget::OnMouseEnter, this);
 
