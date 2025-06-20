@@ -109,3 +109,28 @@ void ChatRoomManager::sendToAll(const chat::Envelope& message) const {
         }
     }
 }
+
+void ChatRoomManager::onRoomDeleted(int32_t room_id) {
+    std::unique_lock lock(m_mutex);
+
+    if(auto it = m_room_to_conns.find(room_id); it != m_room_to_conns.end()) {
+        for (const auto& conn : it->second) {
+            conn->getContextRef<WsData>().room.reset();
+        }
+        m_room_to_conns.erase(it);
+    }
+
+    chat::Envelope room_deleted_msg;
+    room_deleted_msg.mutable_room_deleted()->set_room_id(room_id);
+    sendToAll_unsafe(room_deleted_msg);
+}
+
+void ChatRoomManager::sendToAll_unsafe(const chat::Envelope& message) const {
+    for (const auto& [user_id, conns] : m_user_id_to_conns) {
+        for (const auto& conn : conns) {
+            if (conn->getContextRef<WsData>().status == USER_STATUS::Authenticated) {
+                sendEnvelope(conn, message);
+            }
+        }
+    }
+}

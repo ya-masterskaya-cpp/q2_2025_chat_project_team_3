@@ -23,6 +23,7 @@ public:
     void ShowChatPanel();
     void SetRoomName(wxString name);
     int32_t GetRoomId();
+    void ResetState();
 
     UserListPanel* m_userListPanel = nullptr;
     MessageView* m_messageView = nullptr;

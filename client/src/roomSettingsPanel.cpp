@@ -46,20 +46,33 @@ RoomSettingsPanel::RoomSettingsPanel(wxWindow* parent, const wxString& roomName,
 }
 
 void RoomSettingsPanel::OnRename(wxCommandEvent& event) {
-    wxCommandEvent evt(wxEVT_ROOM_RENAME);
-    evt.SetEventObject(this);
-    evt.SetString(m_roomNameCtrl->GetValue());
-    evt.SetInt(m_roomId);
-    
-    GetParent()->GetEventHandler()->ProcessEvent(evt);
+    wxString newName = m_roomNameCtrl->GetValue();
+    if (newName.IsEmpty()) {
+        wxMessageBox("Room name cannot be empty.", "Error", wxOK | wxICON_ERROR, this);
+        return;
+    }
+    wxString confirmationMessage = wxString::Format("Are you sure you want to rename this room to \"%s\"?", newName);
+    int response = wxMessageBox(confirmationMessage, "Confirm Rename", wxYES_NO | wxICON_QUESTION, this);
+    if (response == wxYES) {
+        wxCommandEvent evt(wxEVT_ROOM_RENAME);
+        evt.SetEventObject(this);
+        evt.SetString(newName);
+        evt.SetInt(m_roomId);
+        
+        GetParent()->GetEventHandler()->ProcessEvent(evt);
+    }
 }
 
 void RoomSettingsPanel::OnDelete(wxCommandEvent& event) {
-    wxCommandEvent evt(wxEVT_ROOM_DELETE);
-    evt.SetEventObject(this);
-    evt.SetInt(m_roomId);
-    
-    GetParent()->GetEventHandler()->ProcessEvent(evt);
+    wxString confirmationMessage = "Are you sure you want to permanently delete this room? This action cannot be undone.";
+    int response = wxMessageBox(confirmationMessage, "Confirm Deletion", wxYES_NO | wxICON_WARNING, this);
+    if (response == wxYES) {
+        wxCommandEvent evt(wxEVT_ROOM_DELETE);
+        evt.SetEventObject(this);
+        evt.SetInt(m_roomId);
+        
+        GetParent()->GetEventHandler()->ProcessEvent(evt);
+    }
 }
 
 void RoomSettingsPanel::OnClose(wxCommandEvent& event) {

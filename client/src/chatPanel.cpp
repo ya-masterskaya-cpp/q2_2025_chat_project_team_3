@@ -201,6 +201,15 @@ int32_t ChatPanel::GetRoomId() {
     return m_roomHeaderPanel->GetRoomId();
 }
 
+void ChatPanel::ResetState() {
+    ShowChatPanel();
+    m_input_ctrl->Clear();
+    m_messageView->Clear();
+    m_userListPanel->Clear();
+    m_jumpToPresentButton->Hide();
+    Layout();
+}
+
 void ChatPanel::OnRoomRename(wxCommandEvent &event) {
     if (!m_parent || !m_parent->wsClient) return;
     wxString newName = event.GetString();
