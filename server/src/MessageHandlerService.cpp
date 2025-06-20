@@ -54,6 +54,10 @@ drogon::Task<chat::Envelope> MessageHandlerService::processMessage(const std::sh
             *respEnv.mutable_rename_room_response() = co_await m_handlers->MessageHandlers::handleRenameRoom(wsData, env.rename_room_request());
             break;
         }
+        case chat::Envelope::kDeleteRoomRequest: {
+            *respEnv.mutable_delete_room_response() = co_await m_handlers->MessageHandlers::handleDeleteRoom(wsData, env.delete_room_request());
+            break;
+        }
         default: {
             respEnv = makeGenericErrorEnvelope("Unknown or empty payload");
             break;

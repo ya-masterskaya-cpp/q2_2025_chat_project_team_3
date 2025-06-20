@@ -11,6 +11,7 @@ public:
     void SetUserList(std::vector<User> users);
     void AddUser(const User& user);
     void RemoveUser(int32_t userId);
+    void Clear();
 
 private:
 

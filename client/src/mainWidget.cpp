@@ -32,6 +32,9 @@ void MainWidget::ShowPopup(const wxString& msg, long icon) {
 
 void MainWidget::ShowInitial() {
     wsClient->stop();
+    if (chatPanel->IsShown()) {
+        chatPanel->ResetState();
+    }
     initialPanel->Show();
     serversPanel->Hide();
     authPanel->Hide();
@@ -41,6 +44,9 @@ void MainWidget::ShowInitial() {
 }
 
 void MainWidget::ShowServers() {
+    if (chatPanel->IsShown()) {
+        chatPanel->ResetState();
+    }
     initialPanel->Hide();
     serversPanel->Show();
     authPanel->Hide();
@@ -50,6 +56,9 @@ void MainWidget::ShowServers() {
 }
 
 void MainWidget::ShowAuth() {
+    if (chatPanel->IsShown()) {
+        chatPanel->ResetState();
+    }
     initialPanel->Hide();
     serversPanel->Hide();
     authPanel->Show();
@@ -59,6 +68,9 @@ void MainWidget::ShowAuth() {
 }
 
 void MainWidget::ShowRooms() {
+    if (chatPanel->IsShown()) {
+        chatPanel->ResetState();
+    }
     initialPanel->Hide();
     serversPanel->Hide();
     authPanel->Hide();

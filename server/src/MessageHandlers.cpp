@@ -521,6 +521,55 @@ drogon::Task<chat::RenameRoomResponse> MessageHandlers::handleRenameRoom(const s
     }
 }
 
+drogon::Task<chat::DeleteRoomResponse> MessageHandlers::handleDeleteRoom(const std::shared_ptr<WsData>& wsData, const chat::DeleteRoomRequest& req) {
+    chat::DeleteRoomResponse resp;
+    if(wsData->status != USER_STATUS::Authenticated) {
+        setStatus(resp, chat::STATUS_UNAUTHORIZED, "Not authenticated.");
+        co_return resp;
+    }
+    const auto room_id = req.room_id();
+    try {
+        auto rights = co_await getUserRights(wsData->user->id, room_id);
+
+        if (!rights.has_value() || rights.value() < chat::UserRights::OWNER) {
+            setStatus(resp, chat::STATUS_FAILURE, "Insufficient rights to delete this room.");
+            co_return resp;
+        }
+    } catch (const std::exception& e) {
+        LOG_ERROR << "Failed to get user rights for room deletion: " << e.what();
+        setStatus(resp, chat::STATUS_FAILURE, "Failed to verify permissions.");
+        co_return resp;
+    }
+
+    auto err = co_await WithTransaction(
+        [&](auto tx) -> drogon::Task<ScopedTransactionResult> {
+            try {
+                co_await switch_to_io_loop(CoroMapper<models::Messages>(tx)
+                    .deleteBy(Criteria(models::Messages::Cols::_room_id, CompareOperator::EQ, room_id)));
+                co_await switch_to_io_loop(CoroMapper<models::UserRoomRoles>(tx)
+                    .deleteBy(Criteria(models::UserRoomRoles::Cols::_room_id, CompareOperator::EQ, room_id)));
+                size_t deleted_count = co_await switch_to_io_loop(CoroMapper<models::Rooms>(tx)
+                    .deleteBy(Criteria(models::Rooms::Cols::_room_id, CompareOperator::EQ, room_id)));
+                if (deleted_count == 0) {
+                    co_return "Room could not be deleted as it was not found.";
+                }
+                co_return std::nullopt;
+            } catch(const DrogonDbException& e) {
+                const std::string w = e.base().what();
+                LOG_ERROR << "Room deletion transaction failed: " << w;
+                co_return "Database error during room deletion.";
+            }
+        });
+
+    if(err) {
+        setStatus(resp, chat::STATUS_FAILURE, *err);
+        co_return resp;
+    }
+    ChatRoomManager::instance().onRoomDeleted(room_id);
+    setStatus(resp, chat::STATUS_SUCCESS);
+    co_return resp;
+}
+
 drogon::Task<std::optional<chat::UserRights>> MessageHandlers::getUserRights(uint32_t user_id, uint32_t room_id) const {
     auto user = co_await switch_to_io_loop(CoroMapper<models::Users>(m_dbClient)
         .findBy(

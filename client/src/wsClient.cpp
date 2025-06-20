@@ -340,7 +340,7 @@ void WebSocketClient::handleMessage(const std::string& msg) {
         case chat::Envelope::kNewRoomName: {
             wxTheApp->CallAfter([this, response = env.new_room_name()] {
             if (ui->chatPanel->IsShown() && ui->chatPanel->GetRoomId() == response.room_id()) {
-                ui->chatPanel->SetRoomName(wxString(response.name()));
+                ui->chatPanel->SetRoomName(wxString::FromUTF8(response.name()));
             }
             ui->roomsPanel->RenameRoom(response.room_id(), response.name());
             });
@@ -356,7 +356,10 @@ void WebSocketClient::handleMessage(const std::string& msg) {
         }
         case chat::Envelope::kRoomDeleted: {
             wxTheApp->CallAfter([this, roomId = env.room_deleted().room_id()] {
-                ui->roomsPanel->RemoveRoom(roomId);
+                if (ui->chatPanel->IsShown() && ui->chatPanel->GetRoomId() == roomId) {
+                ui->ShowRooms();
+            }
+            ui->roomsPanel->RemoveRoom(roomId);
             });
             break;
         }

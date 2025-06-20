@@ -26,6 +26,7 @@ public:
     drogon::Task<chat::GetMessagesResponse> handleGetMessages(const std::shared_ptr<WsData>& wsData, const chat::GetMessagesRequest& req) const;
     drogon::Task<chat::LogoutResponse> handleLogoutUser(const std::shared_ptr<WsData>& wsData, IChatRoomService& room_service) const;
     drogon::Task<chat::RenameRoomResponse> handleRenameRoom(const std::shared_ptr<WsData>& wsData, const chat::RenameRoomRequest& req);
+    drogon::Task<chat::DeleteRoomResponse> handleDeleteRoom(const std::shared_ptr<WsData>& wsData, const chat::DeleteRoomRequest& req);
 private:
 
     std::optional<std::string> validateUtf8String(const std::string& textToValidate, size_t maxLength, const std::string& fieldName) const;
