@@ -1,6 +1,7 @@
 #include <client/roomsPanel.h>
 #include <client/mainWidget.h>
 #include <client/wsClient.h>
+#include <common/utils/limits.h>
 
 enum { ID_JOIN = wxID_HIGHEST+20, ID_CREATE, ID_LOGOUT };
 
@@ -65,10 +66,17 @@ void RoomsPanel::OnJoin(wxCommandEvent &)
 
 void RoomsPanel::OnCreate(wxCommandEvent&) {
     wxTextEntryDialog dlg(this, "Room name?", "Create Room");
+    dlg.SetMaxLength(limits::MAX_ROOMNAME_LENGTH);
     if(dlg.ShowModal() == wxID_OK) {
-        mainWin->wsClient->createRoom(dlg.GetValue().utf8_string());
+        wxString roomName = dlg.GetValue();
+        if (roomName.IsEmpty()) {
+            wxMessageBox("Room name cannot be empty!", "Error", wxOK | wxICON_ERROR);
+            return;
+        }
+        mainWin->wsClient->createRoom(roomName.utf8_string());
     }
 }
+
 void RoomsPanel::OnLogout(wxCommandEvent &) {
     mainWin->wsClient->logout();
 }
