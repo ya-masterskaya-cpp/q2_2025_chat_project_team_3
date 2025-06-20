@@ -12,9 +12,6 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-24.04, macos-13, windows-2025]
-    env:
-      _VCPKG_: ${{ github.workspace }}/vcpkg
-      VCPKG_DEFAULT_BINARY_CACHE: ${{ github.workspace }}/vcpkg/bincache
 
     # Grant permissions to write to the GitHub Packages container registry
     permissions:
@@ -26,72 +23,60 @@ jobs:
         with:
           submodules: true
 
-      - name: "Create directory '${{ env.VCPKG_DEFAULT_BINARY_CACHE }}'"
-        run: mkdir -p $VCPKG_DEFAULT_BINARY_CACHE
-        shell: bash
-
       - uses: lukka/get-cmake@latest
         with:
           cmakeVersion: 4.0.2
           ninjaVersion: 1.12.1
 
-      # Restore vcpkg binary cache
-      - name: Restore vcpkg cache
-        id: vcpkg-cache
-        uses: actions/cache/restore@v4
-        with:
-          path: ${{ env.VCPKG_DEFAULT_BINARY_CACHE }}
-          # The key we will SAVE to is new and unique for this run.
-          key: ${{ runner.os }}-vcpkg-${{ hashFiles('.git/modules/vcpkg/HEAD') }}-${{ github.run_id }}
-          # The keys we RESTORE from are the most recent successful run
-          restore-keys: |
-            ${{ runner.os }}-vcpkg-${{ hashFiles('.git/modules/vcpkg/HEAD') }}-
-            ${{ runner.os }}-vcpkg-${{ hashFiles('.git/modules/vcpkg/HEAD') }}
-            ${{ runner.os }}-vcpkg-
-
-      # On Windows runners, let's ensure to have the Developer Command Prompt environment setup correctly.
-      # As used here the Developer Command Prompt created is targeting x64 and using the default the Windows SDK.
+      # On Windows runners, ensure the Developer Command Prompt environment is set up.
       - uses: ilammy/msvc-dev-cmd@v1
 
-      - name: Get required deps on Ubntu
+      - name: Bootstrap vcpkg
+        shell: bash
+        run: ./vcpkg/bootstrap-vcpkg.sh -disableMetrics
+
+      - name: Install Mono (for Linux runner)
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y bison flex autoconf libltdl-dev python3-jinja2 libx11-dev libxft-dev libxext-dev libxi-dev libxtst-dev libxrandr-dev
+          sudo apt-get install -y mono-complete bison flex autoconf libltdl-dev python3-jinja2 libx11-dev libxft-dev libxext-dev libxi-dev libxtst-dev libxrandr-dev
 
+      - name: Configure NuGet credentials using vcpkg's nuget.exe
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GH_PACKAGES_TOKEN }} 
+        run: |
+          # Get the path to vcpkg's managed nuget.exe. tr -d '\r' is for Windows compatibility.
+          NUGET_EXE_PATH=$(./vcpkg/vcpkg fetch nuget | tail -n 1 | tr -d '\r')
+
+          # Determine the command prefix (mono for non-windows)
+          CMD_PREFIX=""
+          if [[ "${{ runner.os }}" != "Windows" ]]; then
+            CMD_PREFIX="mono"
+          fi
+
+          echo "Configuring NuGet source..."
+          # Add the source with credentials, as per the documentation
+          $CMD_PREFIX "$NUGET_EXE_PATH" sources add \
+            -Name "github" \
+            -Source "https://nuget.pkg.github.com/cuteBoiButt/index.json" \
+            -UserName "GITHUB_TOKEN" \
+            -Password "${{ secrets.GITHUB_TOKEN }}" \
+            -StorePasswordInClearText
+
+          echo "Setting API key..."
+          # Set the API key for the source to ensure push access
+          $CMD_PREFIX "$NUGET_EXE_PATH" setapikey "${{ secrets.GITHUB_TOKEN }}" \
+            -Source "https://nuget.pkg.github.com/cuteBoiButt/index.json"
+  
+      - name: Set vcpkg binary sources environment variable
+        shell: bash
+        run: |
+          echo "VCPKG_BINARY_SOURCES=clear;nuget,https://nuget.pkg.github.com/cuteBoiButt/index.json,read" >> $GITHUB_ENV
+          
       - name: Configure CMake
         run: |
           cmake --preset ninja-multi-vcpkg
-
-      - name: Check for vcpkg rebuild
-        id: check_vcpkg_rebuild
-        shell: bash
-        run: |
-          LOG_FILE="build/vcpkg-manifest-install.log"
-          echo "should_save=false" > $GITHUB_OUTPUT
-          
-          echo "Checking for log file at: $LOG_FILE"
-          # First, check if the log file actually exists
-          if [ -f "$LOG_FILE" ]; then
-            # If it exists, check for the key phrase that indicates a package was built
-            if grep -q "Starting submission of .*" "$LOG_FILE"; then
-              echo "SUCCESS: vcpkg rebuild detected. Marking cache for saving."
-              echo "should_save=true" > $GITHUB_OUTPUT
-            else
-              echo "INFO: vcpkg log found, but no rebuild was indicated."
-            fi
-          else
-            echo "INFO: vcpkg log file not found. Assuming no rebuild."
-          fi
-
-      - name: Save vcpkg cache
-        # The condition is simple: if a rebuild happened, we save.
-        if: always() && steps.check_vcpkg_rebuild.outputs.should_save == 'true'
-        uses: actions/cache/save@v4
-        with:
-          path: ${{ env.VCPKG_DEFAULT_BINARY_CACHE }}
-          # We save to the unique key for THIS run.
-          key: ${{ steps.vcpkg-cache.outputs.cache-primary-key }}
 
       - name: Build (Release configuration)
         run: |
@@ -149,24 +134,10 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           echo "Preparing Docker build contexts from CPack output..."
-          
-          # Use `find ... | head -n 1` to guarantee we only get one result.
           SERVER_TARBALL=$(find build -name '*-server.tar.gz' | head -n 1)
           AGGREGATOR_TARBALL=$(find build -name '*-aggregator.tar.gz' | head -n 1)
-
-          # Add checks to ensure the files were actually found before proceeding.
-          if [ -z "$SERVER_TARBALL" ]; then
-            echo "::error::Server tarball not found in build directory!"
-            exit 1
-          fi
-          if [ -z "$AGGREGATOR_TARBALL" ]; then
-            echo "::error::Aggregator tarball not found in build directory!"
-            exit 1
-          fi
-
-          echo "Found Server Tarball: $SERVER_TARBALL"
-          echo "Found Aggregator Tarball: $AGGREGATOR_TARBALL"
-          
+          if [ -z "$SERVER_TARBALL" ]; then echo "::error::Server tarball not found!"; exit 1; fi
+          if [ -z "$AGGREGATOR_TARBALL" ]; then echo "::error::Aggregator tarball not found!"; exit 1; fi
           mkdir -p docker_contexts/server docker_contexts/aggregator
           tar -xvf "$SERVER_TARBALL" -C docker_contexts/server
           tar -xvf "$AGGREGATOR_TARBALL" -C docker_contexts/aggregator
@@ -176,8 +147,6 @@ jobs:
         id: set_repo_lc
         shell: bash
         run: |
-          # 'tr' is a standard, reliable tool for translating characters.
-          # Here it converts all uppercase characters to lowercase.
           echo "repo_lc=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
 
       - name: Build and push Server Docker image
