@@ -15,8 +15,8 @@ struct Room : public wxClientData {
 class RoomsPanel : public wxPanel {
 public:
     RoomsPanel(MainWidget* parent);
-    void UpdateRoomList(const std::vector<Room>& rooms);
-    void AddRoom(const Room& room);
+    void UpdateRoomList(const std::vector<Room*>& rooms);
+    void AddRoom(Room* room);
     void RemoveRoom(uint32_t room_id);
 
     wxListBox* roomList;

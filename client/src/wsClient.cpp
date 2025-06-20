@@ -234,9 +234,9 @@ void WebSocketClient::handleMessage(const std::string& msg) {
         case chat::Envelope::kAuthResponse: {
             if(statusOk(env.auth_response().status())) {
                 showInfo("Login successful!");
-                std::vector<Room> rooms;
+                std::vector<Room*> rooms;
                 for (const auto& proto_room : env.auth_response().rooms()){
-                    rooms.emplace_back(Room{proto_room.room_id(), proto_room.room_name()});
+                    rooms.emplace_back(new Room{proto_room.room_id(), wxString::FromUTF8(proto_room.room_name())});
                 }
                 updateRoomsPanel(rooms);
                 showRooms();
@@ -290,7 +290,7 @@ void WebSocketClient::handleMessage(const std::string& msg) {
         }
         case chat::Envelope::kNewRoomCreated: {
             wxTheApp->CallAfter([this, response = env.new_room_created().room()] {
-                ui->roomsPanel->AddRoom(Room{response.room_id(), response.room_name()});
+                ui->roomsPanel->AddRoom(new Room{response.room_id(), wxString::FromUTF8(response.room_name())});
             });
             break;
         }
@@ -309,7 +309,7 @@ void WebSocketClient::showInfo(const wxString& msg) {
     wxTheApp->CallAfter([this, msg] { ui->ShowPopup(msg, wxICON_INFORMATION); });
 }
 
-void WebSocketClient::updateRoomsPanel(const std::vector<Room> &rooms)
+void WebSocketClient::updateRoomsPanel(const std::vector<Room*> &rooms)
 {
     wxTheApp->CallAfter([this, rooms] { ui->roomsPanel->UpdateRoomList(rooms); });
 }

@@ -39,7 +39,7 @@ private:
     // UI helpers
     void showError(const wxString& msg);
     void showInfo(const wxString& msg);
-    void updateRoomsPanel(const std::vector<Room>& rooms);
+    void updateRoomsPanel(const std::vector<Room*>& rooms);
     void showChat(std::vector<User> users);
     void showRooms();
     void showRoomMessage(const chat::MessageInfo& mi);
