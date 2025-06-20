@@ -61,21 +61,20 @@ AppConfig::~AppConfig() {
 }
 
 void AppConfig::InitPath() {
-    // 1. Get the full path to your app's config directory as a string.
+    // 1. Get the full path to app's config directory as a string.
     wxStandardPaths& paths = wxStandardPaths::Get();
     wxString configDir = paths.GetUserDataDir();
 
-    // 2. Use that string DIRECTLY to check if the directory exists.
+    // 2. Use that string to check if the directory exists.
     if (!wxDirExists(configDir)) {
         // 3. If it doesn't exist, create it.
         if (!wxMkdir(configDir, wxS_DIR_DEFAULT)) {
-            // Your own logging/error handling for a critical failure
             LOG_ERROR << "Could not create configuration directory: " << configDir.utf8_str();
             return;
         }
     }
 
-    // 4. NOW that the directory is guaranteed to exist, use wxFileName
+    // 4. Now that the directory is guaranteed to exist, use wxFileName
     // to correctly and safely build the final file path.
     wxFileName finalPath(configDir, "config.json");
 
