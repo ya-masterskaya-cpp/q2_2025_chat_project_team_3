@@ -9,6 +9,7 @@
 #include <client/serversPanel.h>
 
 MainWidget::MainWidget() : wxFrame(NULL, wxID_ANY, "Slightly Pretty Chat", wxDefaultPosition, wxSize(450, 600)) {
+    m_checker = new wxSingleInstanceChecker;
     wsClient = new WebSocketClient(this);
     initialPanel = new InitialPanel(this);
     serversPanel = new ServersPanel(this);
@@ -26,6 +27,10 @@ MainWidget::MainWidget() : wxFrame(NULL, wxID_ANY, "Slightly Pretty Chat", wxDef
 
     ShowInitial();
     Show();
+}
+
+MainWidget::~MainWidget() {
+    delete m_checker;
 }
 
 void MainWidget::ShowPopup(const wxString& msg, long icon) {
@@ -78,4 +83,8 @@ void MainWidget::ShowChat(std::vector<User> users) {
     chatPanel->m_userListPanel->SetUserList(std::move(users));
     chatPanel->m_messageView->Start();
     Layout();
+}
+
+bool MainWidget::IsAnotherInstanceRunning() const {
+    return m_checker && m_checker->IsAnotherRunning();
 }

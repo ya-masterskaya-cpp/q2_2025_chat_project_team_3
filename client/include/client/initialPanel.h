@@ -1,6 +1,7 @@
 #pragma once
 
 #include <wx/wx.h>
+#include <wx/filename.h>
 
 class MainWidget;
 
@@ -17,6 +18,11 @@ private:
 
     // --- Helper function to manage button states ---
     void UpdateButtonsState();
+
+    // --- Server List Read/Write ---
+    void GetServerList();
+    void ServerListFileUpdate();
+    wxFileName GetFilePath();
 
     MainWidget* m_parent = nullptr;
 
