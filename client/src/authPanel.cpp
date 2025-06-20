@@ -45,7 +45,7 @@ AuthPanel::AuthPanel(MainWidget* parent) : wxPanel(parent), mainWin(parent) {
 
 void AuthPanel::OnLogin(wxCommandEvent&) {
     m_password = m_passwordInput->GetValue();
-    mainWin->wsClient->requestInitialAuth(std::string(m_usernameInput->GetValue().ToUTF8()));
+    mainWin->wsClient->requestInitialAuth(m_usernameInput->GetValue().utf8_string());
 }
 
 void AuthPanel::OnRegister(wxCommandEvent&) {
