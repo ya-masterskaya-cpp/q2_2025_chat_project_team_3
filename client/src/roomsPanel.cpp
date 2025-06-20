@@ -33,13 +33,13 @@ void RoomsPanel::UpdateRoomList(const std::vector<Room>& rooms) {
     roomList->Clear();
     for (const Room& room : rooms){
         Room* roomData = new Room(room.room_id, room.room_name);
-        roomList->Append(room.room_name, roomData);
+        roomList->Append(wxString(room.room_name), roomData);
     }
 }
 
 void RoomsPanel::AddRoom(const Room &room) {
     Room* roomData = new Room(room.room_id, room.room_name);
-    roomList->Append(room.room_name, roomData);
+    roomList->Append(wxString(room.room_name), roomData);
 }
 
 void RoomsPanel::RemoveRoom(uint32_t room_id) {
@@ -66,7 +66,7 @@ void RoomsPanel::OnJoin(wxCommandEvent &)
 void RoomsPanel::OnCreate(wxCommandEvent&) {
     wxTextEntryDialog dlg(this, "Room name?", "Create Room");
     if(dlg.ShowModal() == wxID_OK) {
-        mainWin->wsClient->createRoom(std::string(dlg.GetValue().ToUTF8()));
+        mainWin->wsClient->createRoom(dlg.GetValue().utf8_string());
     }
 }
 void RoomsPanel::OnLogout(wxCommandEvent &) {

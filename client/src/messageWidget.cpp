@@ -132,4 +132,3 @@ void MessageWidget::OnMouseLeave(wxMouseEvent& event) {
     }
     event.Skip();
 }
-

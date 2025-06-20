@@ -12,6 +12,7 @@
 #include <server/utils/scoped_coro_transaction.h>
 #include <server/utils/switch_to_io_loop.h>
 #include <common/utils/utils.h>
+#include <common/utils/limits.h>
 
 #include <utf8.h>
 
@@ -25,6 +26,10 @@ drogon::Task<chat::InitialAuthResponse> MessageHandlers::handleAuthInitial(const
     chat::InitialAuthResponse resp;
     if(req.username().empty()) {
         setStatus(resp, chat::STATUS_FAILURE, "Empty username.");
+        co_return resp;
+    }
+    if (auto error = validateUtf8String(req.username(), limits::MAX_USERNAME_LENGTH, "username")) {
+        setStatus(resp, chat::STATUS_FAILURE, *error);
         co_return resp;
     }
     try {
@@ -50,6 +55,10 @@ drogon::Task<chat::InitialRegisterResponse> MessageHandlers::handleRegisterIniti
     chat::InitialRegisterResponse resp;
     if(req.username().empty()) {
         setStatus(resp, chat::STATUS_FAILURE, "Empty username or password.");
+        co_return resp;
+    }
+    if (auto error = validateUtf8String(req.username(), limits::MAX_USERNAME_LENGTH, "username")) {
+        setStatus(resp, chat::STATUS_FAILURE, *error);
         co_return resp;
     }
     try {
@@ -214,15 +223,8 @@ drogon::Task<chat::SendMessageResponse> MessageHandlers::handleSendMessage(const
         setStatus(resp, chat::STATUS_FAILURE, "Empty 'message' field.");
         co_return resp;
     }
-
-    try {
-        if (size_t dist = utf8::distance(req.message().begin(), req.message().end()); dist > 512) {
-            setStatus(resp, chat::STATUS_FAILURE, "Big message (>512ch).");
-            co_return resp;
-        }
-    }
-    catch (const std::exception& e) {
-        setStatus(resp, chat::STATUS_FAILURE, "Invalid UTF-8 message.");
+    if (auto error = validateUtf8String(req.message(), limits::MAX_MESSAGE_LENGTH, "message")) {
+        setStatus(resp, chat::STATUS_FAILURE, *error);
         co_return resp;
     }
 
@@ -486,4 +488,22 @@ drogon::Task<std::optional<chat::UserRights>> MessageHandlers::GetRoleType(uint3
         co_return rights;
     }
     co_return chat::UserRights::REGULAR;
+}
+
+std::optional<std::string> MessageHandlers::validateUtf8String(const std::string& textToValidate,
+    size_t maxLength,
+    const std::string& fieldName) const {
+    try {
+        size_t length = utf8::distance(textToValidate.begin(), textToValidate.end());
+        if (length > maxLength) {
+            return "Field '" + fieldName + "' is too long. Max length: " + std::to_string(maxLength) + " chars.";
+        }
+    }
+    catch (const utf8::invalid_utf8&) {
+        return "Field '" + fieldName + "' contains invalid UTF-8 characters.";
+    }
+    catch (const std::exception& e) {
+        return "An unexpected error occurred during " + fieldName + " validation: " + e.what();
+    }
+    return std::nullopt;
 }

@@ -59,6 +59,6 @@ void ServersPanel::UpdateButtonsState() {
 void ServersPanel::SetServers(const std::vector<std::string>& servers) {
     m_listBox->Clear();
     for(const auto& server : servers) {
-        m_listBox->Append(server);
+        m_listBox->Append(wxString(server));
     }
 }

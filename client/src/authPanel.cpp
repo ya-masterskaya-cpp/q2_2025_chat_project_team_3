@@ -2,6 +2,7 @@
 #include <client/mainWidget.h>
 #include <client/wsClient.h>
 #include <client/passwordUtil.h>
+#include <common/utils/limits.h>
 #include <optional>
 
 void AuthPanel::SetButtonsEnabled(bool enabled) {
@@ -37,13 +38,14 @@ AuthPanel::AuthPanel(MainWidget* parent) : wxPanel(parent), mainWin(parent) {
     m_loginButton   ->Bind(wxEVT_BUTTON, &AuthPanel::OnLogin,    this);
     m_registerButton->Bind(wxEVT_BUTTON, &AuthPanel::OnRegister, this);
     m_backButton    ->Bind(wxEVT_BUTTON, &AuthPanel::OnBack,     this);
+    m_usernameInput ->Bind(wxEVT_TEXT, &AuthPanel::OnInputLogin, this);
 
     //SetButtonsEnabled(false); // Disable by default until connection is ready
 }
 
 void AuthPanel::OnLogin(wxCommandEvent&) {
     m_password = m_passwordInput->GetValue();
-    mainWin->wsClient->requestInitialAuth(m_usernameInput->GetValue().ToStdString());
+    mainWin->wsClient->requestInitialAuth(m_usernameInput->GetValue().utf8_string());
 }
 
 void AuthPanel::OnRegister(wxCommandEvent&) {
@@ -57,17 +59,31 @@ void AuthPanel::OnRegister(wxCommandEvent&) {
         return;
     }
     m_password = password;
-    mainWin->wsClient->requestInitialRegister(std::string(m_usernameInput->GetValue().ToUTF8()));
+    mainWin->wsClient->requestInitialRegister(m_usernameInput->GetValue().utf8_string());
 }
 
 void AuthPanel::OnBack(wxCommandEvent&) {
     mainWin->ShowInitial();
 }
 
+void AuthPanel::OnInputLogin(wxCommandEvent& event) {
+    event.Skip();
+    wxString val = m_usernameInput->GetValue();
+    if (val.length() > limits::MAX_USERNAME_LENGTH) {
+        size_t pos = static_cast<size_t>(m_usernameInput->GetInsertionPoint());
+        wxString cated_str = val.Left(limits::MAX_USERNAME_LENGTH);
+        CallAfter([this, cated_str, pos]() {
+            m_usernameInput->SetValue(cated_str);
+            m_usernameInput->SetInsertionPoint((std::min)(pos, limits::MAX_USERNAME_LENGTH));
+            wxBell();
+        });
+    }
+}
+
 void AuthPanel::HandleRegisterContinue() {
     try {
         std::string salt = password::generate_salt();
-        std::string hash = password::hash_password(m_password.ToStdString(), salt);
+        std::string hash = password::hash_password(m_password.utf8_string(), salt);
         mainWin->wsClient->completeRegister(hash, salt);
     } catch (const std::exception& ex) {
         mainWin->ShowPopup(ex.what(), wxICON_ERROR);
@@ -79,10 +95,10 @@ void AuthPanel::HandleAuthContinue(const std::string &salt) {
     try {
         if (salt.empty()) {
             std::string new_salt = password::generate_salt();
-            std::string hash = password::hash_password(m_password.ToStdString(), new_salt);
-            mainWin->wsClient->completeAuth(hash, m_password.ToStdString(), new_salt);
+            std::string hash = password::hash_password(m_password.utf8_string(), new_salt);
+            mainWin->wsClient->completeAuth(hash, m_password.utf8_string(), new_salt);
         } else {
-            std::string hash = password::hash_password(m_password.ToStdString(), salt);
+            std::string hash = password::hash_password(m_password.utf8_string(), salt);
             mainWin->wsClient->completeAuth(hash, std::nullopt, std::nullopt);
         }
     } catch (const std::exception& ex) {

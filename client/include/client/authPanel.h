@@ -22,6 +22,8 @@ private:
     void OnLogin(wxCommandEvent&);
     void OnRegister(wxCommandEvent&);
     void OnBack(wxCommandEvent&);
+    void OnInputLogin(wxCommandEvent& event);
+
     MainWidget* mainWin;
     wxString m_password;
 };

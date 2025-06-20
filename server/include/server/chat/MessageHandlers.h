@@ -20,7 +20,9 @@ public:
     drogon::Task<chat::GetMessagesResponse> handleGetMessages(const std::shared_ptr<WsData>& wsData, const chat::GetMessagesRequest& req) const;
     drogon::Task<chat::LogoutResponse> handleLogoutUser(const std::shared_ptr<WsData>& wsData, IChatRoomService& room_service) const;
 private:
+
     drogon::Task<std::optional<chat::UserRights>> GetRoleType(uint32_t user_id, uint32_t room_id) const;
+    std::optional<std::string> validateUtf8String(const std::string& textToValidate, size_t maxLength, const std::string& fieldName) const;
 
     drogon::orm::DbClientPtr m_dbClient;
 };
