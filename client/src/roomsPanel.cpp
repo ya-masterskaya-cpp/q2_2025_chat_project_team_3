@@ -29,17 +29,15 @@ RoomsPanel::RoomsPanel(MainWidget* parent) : wxPanel(parent), mainWin(parent) {
     SetSizer(sizer);
 }
 
-void RoomsPanel::UpdateRoomList(const std::vector<Room>& rooms) {
+void RoomsPanel::UpdateRoomList(const std::vector<Room*>& rooms) {
     roomList->Clear();
-    for (const Room& room : rooms){
-        Room* roomData = new Room(room.room_id, wxString::FromUTF8(room.room_name));
-        roomList->Append(roomData->room_name, roomData);
+    for (auto* room : rooms){
+        roomList->Append(room->room_name, room);
     }
 }
 
-void RoomsPanel::AddRoom(const Room &room) {
-    Room* roomData = new Room(room.room_id, wxString::FromUTF8(room.room_name));
-    roomList->Append(roomData->room_name, roomData);
+void RoomsPanel::AddRoom(Room* room) {
+    roomList->Append(room->room_name, room);
 }
 
 void RoomsPanel::RemoveRoom(uint32_t room_id) {
