@@ -94,4 +94,3 @@ void UserListPanel::RemoveUser(int userId) { // Now accepts user ID
     m_userContainer->SetVirtualSize(m_userSizer->GetMinSize());
     m_userContainer->Thaw();
 }
-
