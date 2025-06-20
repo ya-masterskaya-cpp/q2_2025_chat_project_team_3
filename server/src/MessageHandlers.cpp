@@ -494,20 +494,25 @@ drogon::Task<std::optional<chat::UserRights>> MessageHandlers::GetRoleType(uint3
     co_return chat::UserRights::REGULAR;
 }
 
-std::optional<std::string> MessageHandlers::validateUtf8String(const std::string& textToValidate,
+std::optional<std::string> MessageHandlers::validateUtf8String(
+    const std::string_view& textToValidate,
     size_t maxLength,
-    const std::string& fieldName) const {
+    const std::string_view& fieldName) const {
+    
     try {
         size_t length = utf8::distance(textToValidate.begin(), textToValidate.end());
         if (length > maxLength) {
-            return "Field '" + fieldName + "' is too long. Max length: " + std::to_string(maxLength) + " chars.";
+            return std::string("Field '") + std::string(fieldName) +
+                   "' is too long. Max length: " + std::to_string(maxLength) + " chars.";
         }
     }
     catch (const utf8::invalid_utf8&) {
-        return "Field '" + fieldName + "' contains invalid UTF-8 characters.";
+        return std::string("Field '") + std::string(fieldName) + "' contains invalid UTF-8 characters.";
     }
     catch (const std::exception& e) {
-        return "An unexpected error occurred during " + fieldName + " validation: " + e.what();
+        return std::string("An unexpected error occurred during ") +
+               std::string(fieldName) + " validation: " + e.what();
     }
+
     return std::nullopt;
 }
