@@ -15,7 +15,7 @@ MessageView::MessageView(ChatPanel* parent)
       m_lastKnownWrapWidth(-1),
       m_lastKnownSnapState(true)
 {
-    SetBackgroundStyle(wxBG_STYLE_PAINT);
+    SetBackgroundStyle(wxBG_STYLE_ERASE);
     SetDoubleBuffered(true);
     Bind(wxEVT_SIZE, &MessageView::OnSize, this);
     Bind(wxEVT_MOUSEWHEEL, &MessageView::OnMouseWheel, this);
