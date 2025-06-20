@@ -1,6 +1,8 @@
 #include <client/initialPanel.h>
 #include <client/mainWidget.h>
 #include <client/wsClient.h>
+#include <client/app.h>
+#include <client/appConfig.h>
 
 InitialPanel::InitialPanel(MainWidget* parent)
  : wxPanel(parent), m_parent(parent) {
@@ -27,8 +29,10 @@ InitialPanel::InitialPanel(MainWidget* parent)
     SetSizer(mainSizer);
 
     // 5) Populate & hook up events
-    m_listBox->Append("ws://localhost:8848/ws");
-    //m_listBox->Append("ws://localhost:8849/ws");
+
+    for(const auto& server : wxGetApp().GetConfig().getServers()) {
+        m_listBox->Append(wxString::FromUTF8(server));
+    }
 
     m_connectButton->Bind(wxEVT_BUTTON, &InitialPanel::OnConnect, this);
     m_addButton    ->Bind(wxEVT_BUTTON, &InitialPanel::OnAdd,     this);
@@ -52,8 +56,7 @@ void InitialPanel::OnAdd(wxCommandEvent& event) {
     // Show the dialog and check if the user clicked OK
     if(dialog.ShowModal() == wxID_OK) {
         wxString newItem = dialog.GetValue();
-        // Don't add empty items
-        if(!newItem.IsEmpty()) {
+        if(wxGetApp().GetConfig().addServer(std::string(newItem.utf8_str()))) {
             m_listBox->Append(newItem);
         }
     }
@@ -65,7 +68,7 @@ void InitialPanel::OnDelete(wxCommandEvent& event) {
     // Check if an item is actually selected
     if(selection != wxNOT_FOUND) {
         m_listBox->Delete(selection);
-        
+        wxGetApp().GetConfig().removeServer(std::string(m_listBox->GetStringSelection().utf8_str()));
         // After deleting, no item is selected, so update the button states
         UpdateButtonsState();
     }
