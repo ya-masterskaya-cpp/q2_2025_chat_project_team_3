@@ -47,8 +47,17 @@ void AuthPanel::OnLogin(wxCommandEvent&) {
 }
 
 void AuthPanel::OnRegister(wxCommandEvent&) {
-    m_password = m_passwordInput->GetValue();
-    mainWin->wsClient->requestInitialRegister(m_usernameInput->GetValue().ToStdString());
+    wxString password = m_passwordInput->GetValue();
+    if (password.IsEmpty()) {
+        wxMessageBox("Password can't be empty",
+            "Registration error",
+            wxOK | wxICON_ERROR, this
+        );
+        m_passwordInput->SetFocus();
+        return;
+    }
+    m_password = password;
+    mainWin->wsClient->requestInitialRegister(std::string(m_usernameInput->GetValue().ToUTF8()));
 }
 
 void AuthPanel::OnBack(wxCommandEvent&) {
