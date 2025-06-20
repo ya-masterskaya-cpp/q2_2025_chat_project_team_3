@@ -6,9 +6,9 @@ class MainWidget;
 
 struct Room : public wxClientData {
     int32_t room_id;
-    std::string room_name;
+    wxString room_name;
 
-    Room(int32_t id, const std::string& name)
+    Room(int32_t id, const wxString& name)
     : room_id(id), room_name(name) {}
 };
 
