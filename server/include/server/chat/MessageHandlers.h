@@ -29,7 +29,7 @@ public:
     drogon::Task<chat::DeleteRoomResponse> handleDeleteRoom(const std::shared_ptr<WsData>& wsData, const chat::DeleteRoomRequest& req);
 private:
 
-    std::optional<std::string> validateUtf8String(const std::string& textToValidate, size_t maxLength, const std::string& fieldName) const;
+    std::optional<std::string> validateUtf8String(const std::string_view& textToValidate, size_t maxLength, const std::string_view& fieldName) const;
     drogon::Task<std::optional<chat::UserRights>> getUserRights(uint32_t user_id, uint32_t room_id) const;
     drogon::Task<std::optional<chat::UserRights>> getUserRights(uint32_t user_id, uint32_t room_id, const drogon_model::drogon_test::Rooms& room) const;
     drogon::Task<std::optional<chat::UserRights>> findStoredUserRole(uint32_t user_id, uint32_t room_id) const;
