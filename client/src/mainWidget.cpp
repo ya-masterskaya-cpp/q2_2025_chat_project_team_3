@@ -23,9 +23,6 @@ MainWidget::MainWidget() : wxFrame(NULL, wxID_ANY, "Slightly Pretty Chat", wxDef
     sizer->Add(roomsPanel, 1, wxEXPAND);
     sizer->Add(chatPanel, 1, wxEXPAND);
     SetSizer(sizer);
-
-    ShowInitial();
-    Show();
 }
 
 void MainWidget::ShowPopup(const wxString& msg, long icon) {
