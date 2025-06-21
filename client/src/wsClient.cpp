@@ -8,6 +8,7 @@
 #include <client/message.h>
 #include <client/messageView.h>
 #include <common/utils/utils.h>
+#include <common/version.h>
 #include <drogon/HttpRequest.h>
 #include <drogon/HttpAppFramework.h>
 #include <time.h>
@@ -154,7 +155,11 @@ void WebSocketClient::handleMessage(const std::string& msg) {
         case chat::Envelope::kServerHello: {
             //wxTheApp->CallAfter([this] { ui->authPanel->SetButtonsEnabled(true); });
             //showInfo("Connected!");
-            if(env.server_hello().type() == chat::ServerType::TYPE_AGGREGATOR) {
+
+            if(env.server_hello().protocol_version() != version::PROTOCOL_VERSION) {
+                showError("Version mismatch, update your client");
+                showInitial();
+            } else if(env.server_hello().type() == chat::ServerType::TYPE_AGGREGATOR) {
                 LOG_TRACE << "Aggregator, getting initial list of servers";
                 getServers();
                 showServers();
@@ -320,6 +325,10 @@ void WebSocketClient::showChat(std::vector<User> users) {
 
 void WebSocketClient::showRooms() {
     wxTheApp->CallAfter([this] { ui->ShowRooms(); });
+}
+
+void WebSocketClient::showInitial() {
+    wxTheApp->CallAfter([this] { ui->ShowInitial(); });
 }
 
 void WebSocketClient::showAuth() {
