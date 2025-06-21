@@ -63,7 +63,7 @@ if(APPLE)
     # Tell CMake to place these specific source files into the
     # "Contents/Resources/fonts" directory inside the .app bundle.
     set_source_files_properties(${FONT_FILES}
-        PROPERTIES MACOSX_PACKAGE_LOCATION "Resources/fonts"
+        PROPERTIES MACOSX_PACKAGE_LOCATION "Resources/Fonts"
     )
 
     # This creates the .app structure and automatically includes the
