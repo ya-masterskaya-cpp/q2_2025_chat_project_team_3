@@ -1,4 +1,5 @@
 #include <wx/wx.h>
+#include <wx/stdpaths.h>
 #include <drogon/HttpAppFramework.h>
 #include <client/mainWidget.h>
 #include <client/appConfig.h>
@@ -20,7 +21,8 @@ bool MyApp::OnInit() {
     
     // Start Drogon (networking) in a background thread
     drogon::app().setLogLevel(trantor::Logger::kTrace);
-
+    drogon::app().setDocumentRoot(std::string(wxStandardPaths::Get().GetUserDataDir().ToUTF8()));
+    drogon::app().setUploadPath("uploads");
     drogonThread = std::thread([] {
         drogon::app().run();
     });
