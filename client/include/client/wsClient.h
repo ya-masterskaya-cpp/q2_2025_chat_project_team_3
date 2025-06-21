@@ -48,6 +48,7 @@ private:
     void removeUser(User user);
     void showAuth();
     void showServers();
+    void showInitial();
     void SetServers(const std::vector<std::string> &servers);
     
     MainWidget* ui;

@@ -5,6 +5,7 @@
 #include <server/chat/WsData.h>
 #include <server/chat/ChatRoomManager.h>
 #include <common/utils/utils.h>
+#include <common/version.h>
 
 WsController::WsController() {
     LOG_INFO << "Constructing WsController service chain...";
@@ -30,6 +31,7 @@ void WsController::handleNewConnection(const drogon::HttpRequestPtr& req, const 
     conn->setContext(std::make_shared<WsData>());
     chat::Envelope helloEnv;
     helloEnv.mutable_server_hello()->set_type(chat::ServerType::TYPE_SERVER);
+    helloEnv.mutable_server_hello()->set_protocol_version(version::PROTOCOL_VERSION);
     sendEnvelope(conn, helloEnv);
 }
 
