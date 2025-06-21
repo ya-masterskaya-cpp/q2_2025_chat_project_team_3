@@ -29,6 +29,7 @@ private:
 
     wxString m_label;
     wxBitmap m_cache;
+    double m_cachedLineHeight;
 
     wxDECLARE_EVENT_TABLE();
 };

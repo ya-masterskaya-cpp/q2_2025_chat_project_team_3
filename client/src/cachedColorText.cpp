@@ -2,6 +2,7 @@
 #include <wx/graphics.h>
 #include <wx/dcclient.h>
 #include <wx/dcmemory.h>
+#include <wx/tokenzr.h>
 
 wxBEGIN_EVENT_TABLE(CachedColorText, wxControl)
     EVT_PAINT(CachedColorText::OnPaint)
@@ -14,6 +15,7 @@ CachedColorText::CachedColorText(wxWindow* parent, wxWindowID id, const wxString
     : wxControl(parent, id, pos, size, style | wxBORDER_NONE, wxDefaultValidator, name) {
     SetBackgroundStyle(wxBG_STYLE_PAINT);
     m_label = label;
+    m_cachedLineHeight = -1.0;
 }
 
 void CachedColorText::SetLabel(const wxString& label) {
@@ -32,6 +34,7 @@ wxString CachedColorText::GetLabel() const {
 bool CachedColorText::SetFont(const wxFont& font) {
     bool ret = wxControl::SetFont(font);
     if(ret) {
+        m_cachedLineHeight = -1.0;
         InvalidateBestSize();
         InvalidateCache();
     }
@@ -48,7 +51,70 @@ void CachedColorText::InvalidateCacheAndRefresh() {
 }
 
 wxSize CachedColorText::DoGetBestSize() const {
-    return GetTextExtent(m_label);
+    wxWindow* parent = GetParent();
+    if (!parent) {
+        return wxSize(20, 20);
+    }
+
+    const int availableWidth = parent->GetClientSize().GetWidth();
+
+    if (m_label.IsEmpty()) {
+        return wxSize(availableWidth, 0);
+    }
+
+#ifdef __WXMSW__
+    // --- Windows-Specific Path with Caching ---
+
+    // Check if the line height for the current font is already cached.
+    if (m_cachedLineHeight < 0) {
+        // CACHE MISS: We must perform the expensive one-time calculation.
+        // This will only happen once per font change.
+
+        wxBitmap temp_bmp(1, 1);
+        wxMemoryDC temp_memDC(temp_bmp);
+        wxGraphicsContext* gc = nullptr;
+        wxGraphicsRenderer* d2dRenderer = wxGraphicsRenderer::GetDirect2DRenderer();
+        if (d2dRenderer) {
+            gc = d2dRenderer->CreateContext(temp_memDC);
+        }
+        if (!gc) {
+            gc = wxGraphicsContext::Create(temp_memDC);
+        }
+
+        if (gc) {
+            gc->SetFont(GetFont(), GetForegroundColour());
+            wxDouble w;
+            // Use a non-const version of ourself to update the cache
+            auto* self = const_cast<CachedColorText*>(this);
+            gc->GetTextExtent("Tg", &w, &self->m_cachedLineHeight);
+            delete gc;
+        }
+        else {
+            // Fallback for catastrophic GC failure
+            wxClientDC dc(const_cast<CachedColorText*>(this));
+            dc.SetFont(GetFont());
+            return wxSize(availableWidth, dc.GetMultiLineTextExtent(m_label).GetHeight());
+        }
+    }
+
+    // CACHE HIT: The line height is known. The rest is super fast.
+    // Count the lines in the string (this is very cheap).
+    wxStringTokenizer tokenizer(m_label, "\n");
+    int numLines = tokenizer.CountTokens();
+    if (m_label.EndsWith("\n")) numLines++;
+    if (numLines == 0 && !m_label.IsEmpty()) numLines = 1;
+
+    const int totalHeight = ceil(numLines * m_cachedLineHeight);
+
+    return wxSize(availableWidth, totalHeight);
+
+#else
+    // --- Linux/macOS/Other Path (already fast) ---
+    wxClientDC dc(const_cast<CachedColorText*>(this));
+    dc.SetFont(GetFont());
+    const int requiredHeight = dc.GetMultiLineTextExtent(m_label).GetHeight();
+    return wxSize(availableWidth, requiredHeight);
+#endif
 }
 
 void CachedColorText::RenderToCache() {
