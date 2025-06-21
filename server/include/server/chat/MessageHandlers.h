@@ -22,7 +22,7 @@ public:
 private:
 
     drogon::Task<std::optional<chat::UserRights>> GetRoleType(uint32_t user_id, uint32_t room_id) const;
-    std::optional<std::string> validateUtf8String(const std::string& textToValidate, size_t maxLength, const std::string& fieldName) const;
+    std::optional<std::string> validateUtf8String(const std::string_view& textToValidate, size_t maxLength, const std::string_view& fieldName) const;
 
     drogon::orm::DbClientPtr m_dbClient;
 };
