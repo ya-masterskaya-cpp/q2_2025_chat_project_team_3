@@ -56,8 +56,25 @@ void InitialPanel::OnAdd(wxCommandEvent& event) {
     // Show the dialog and check if the user clicked OK
     if(dialog.ShowModal() == wxID_OK) {
         wxString newItem = dialog.GetValue();
-        if(wxGetApp().GetConfig().addServer(std::string(newItem.utf8_str()))) {
+        if (newItem.IsEmpty()) {
+            wxMessageBox(
+                "Cannot add an empty hostname/URI.",
+                "Input Error",
+                wxOK | wxICON_ERROR,
+                this
+            );
+            return;
+        }
+
+        if (wxGetApp().GetConfig().addServer(std::string(newItem.utf8_str()))) {
             m_listBox->Append(newItem);
+        } else {
+            wxMessageBox(
+                "This hostname/URI already exists.",
+                "Warning",
+                wxOK | wxICON_WARNING,
+                this
+            );
         }
     }
 }
