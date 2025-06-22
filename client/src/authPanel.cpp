@@ -45,11 +45,35 @@ AuthPanel::AuthPanel(MainWidget* parent) : wxPanel(parent), mainWin(parent) {
 }
 
 void AuthPanel::OnLogin(wxCommandEvent&) {
+    auto username = TextUtil::SanitizeInput(m_usernameInput->GetValue());
+    if(!username.length()) {
+        wxMessageBox("Username must consist of at least 1 non special character",
+            "Login error",
+            wxOK | wxICON_ERROR, this
+        );
+        m_usernameInput->SetFocus();
+        return;
+    }
+
+    m_usernameInput->SetValue(username);
+
     m_password = m_passwordInput->GetValue();
-    mainWin->wsClient->requestInitialAuth(m_usernameInput->GetValue().utf8_string());
+    mainWin->wsClient->requestInitialAuth(username.utf8_string());
 }
 
 void AuthPanel::OnRegister(wxCommandEvent&) {
+    auto username = TextUtil::SanitizeInput(m_usernameInput->GetValue());
+    if(!username.length()) {
+        wxMessageBox("Username must consist of at least 1 non special character",
+            "Registration error",
+            wxOK | wxICON_ERROR, this
+        );
+        m_usernameInput->SetFocus();
+        return;
+    }
+
+    m_usernameInput->SetValue(username);
+
     wxString password = m_passwordInput->GetValue();
     if (password.IsEmpty()) {
         wxMessageBox("Password can't be empty",
