@@ -767,8 +767,7 @@ namespace Unicode {
      * Latin, Hiragana, Katakana, and CJK ideographs. It is a locale-independent
      * replacement for the flawed, locale-dependent wxIsalpha().
      * NOTE: This covers many common scripts but is not an exhaustive list of all
-     * alphabetic characters in Unicode. For a complete implementation, a full
-     * Unicode character database would be required.
+     * alphabetic characters in Unicode.
      *
      * @param codePoint The full Unicode code point to check.
      * @return true if the character is considered a letter, false otherwise.
@@ -999,8 +998,7 @@ namespace TextUtil {
      * 2. On Windows (where wxString is UTF-16), it validates the string to ensure that
      *    every high surrogate is immediately followed by a low surrogate. If an invalid
      *    or "lone" surrogate is found, the function fails.
-     * 3. It checks that the resulting string contains at least one character from the
-     *    Basic Multilingual Plane (BMP), i.e., a code point U+0000 to U+FFFF.
+     * 3. It checks that the resulting string contains at least one "letter"(i.e. non special) character.
      *
      * @param input The wxString to be sanitized.
      * @return The sanitized string if all checks pass. Returns an empty wxString if
