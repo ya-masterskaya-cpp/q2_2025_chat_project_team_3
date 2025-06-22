@@ -199,7 +199,7 @@ namespace TextUtil {
                 // Restore the cursor's position, ensuring it's not placed beyond the end
                 // of the new, shorter string. The physical length of the truncated string
                 // is the new boundary.
-                textEntry->SetInsertionPoint(std::min(original_pos, (long)truncated_str.length()));
+                textEntry->SetInsertionPoint((std::min)(original_pos, (long)truncated_str.length()));
                 
                 // Provide audible feedback that the input was automatically shortened.
                 wxBell();
