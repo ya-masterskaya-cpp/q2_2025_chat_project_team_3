@@ -44,6 +44,7 @@ ChatPanel::ChatPanel(MainWidget* parent)
                                            wxDefaultPosition, wxDefaultSize,
                                            wxTE_PROCESS_ENTER | wxTE_MULTILINE);
     m_input_ctrl->Bind(wxEVT_TEXT, &ChatPanel::OnInputText, this);
+    m_input_ctrl->Bind(wxEVT_KEY_DOWN, &ChatPanel::OnInputKeyDown, this);
     inputSizer->Add(m_input_ctrl, 1, wxEXPAND | wxRIGHT, FromDIP(5));
 
     wxButton* sendButton = new wxButton(this, ID_SEND, "Send");
@@ -141,4 +142,26 @@ void ChatPanel::OnSnapStateChanged(wxCommandEvent& event) {
 void ChatPanel::OnInputText(wxCommandEvent& event) {
     event.Skip();
     TextUtil::LimitTextLength(m_input_ctrl, limits::MAX_MESSAGE_LENGTH);
+}
+
+void ChatPanel::OnInputKeyDown(wxKeyEvent& event) {
+    int keyCode = event.GetKeyCode();
+
+    // Check if the pressed key was Enter (on the main keyboard or the numpad).
+    if (keyCode == WXK_RETURN || keyCode == WXK_NUMPAD_ENTER) {
+        // Check if NO modifiers (Shift, Ctrl, Alt) are being held down.
+        if (!event.ShiftDown() && !event.ControlDown() && !event.AltDown()) {
+            // --- Case 1: Plain Enter was pressed ---
+            wxCommandEvent sendEvent(wxEVT_BUTTON, ID_SEND);
+            OnSend(sendEvent);
+        } else {
+            // --- Case 2: Enter was pressed with a modifier (e.g., Shift+Enter) ---
+            // Allow the event to be processed by the default handler.
+            event.Skip();
+        }
+    } else {
+        // --- Case 3: Any other key was pressed ---
+        // Let the default handler process the event as usual (e.g., typing a character).
+        event.Skip();
+    }
 }
