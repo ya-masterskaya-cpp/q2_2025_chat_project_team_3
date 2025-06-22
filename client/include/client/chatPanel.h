@@ -38,6 +38,7 @@ private:
     void OnChatPanelSize(wxSizeEvent& event);
     void OnResizeTimerTick(wxTimerEvent& event);
     void OnInputText(wxCommandEvent& event);
-
+    void OnInputKeyDown(wxKeyEvent& event);
+    
     wxDECLARE_EVENT_TABLE();
 };
