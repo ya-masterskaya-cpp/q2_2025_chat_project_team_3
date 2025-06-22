@@ -100,13 +100,35 @@ void WebSocketClient::joinRoom(int32_t room_id) {
 void WebSocketClient::leaveRoom() {
     chat::Envelope env;
     env.mutable_leave_room_request();
-    sendEnvelope(env);
+    auto callback = [this](const chat::Envelope& responseEnv) {
+        using SC = chat::StatusCode;
+        auto statusOk = [](const chat::Status& s) {
+            return s.code() == SC::STATUS_SUCCESS;
+        };
+        if(statusOk(responseEnv.leave_room_response().status())) {
+            showRooms();
+        } else {
+            showError("Failed to leave room.");
+        }
+    };
+
+    sendRequest(env, callback);
 }
 
 void WebSocketClient::sendMessage(const std::string& message) {
     chat::Envelope env;
     env.mutable_send_message_request()->set_message(message);
-    sendEnvelope(env);
+    auto callback = [this](const chat::Envelope& responseEnv) {
+        using SC = chat::StatusCode;
+        auto statusOk = [](const chat::Status& s) {
+            return s.code() == SC::STATUS_SUCCESS;
+        };
+        if(!statusOk(responseEnv.send_message_response().status())) {
+            showError("Failed to send message!");
+        }
+    };
+
+    sendRequest(env, callback);
 }
 
 void WebSocketClient::sendEnvelope(const chat::Envelope& env) {
@@ -122,24 +144,83 @@ void WebSocketClient::sendEnvelope(const chat::Envelope& env) {
     }
 }
 
+void WebSocketClient::sendRequest(chat::Envelope& env, std::function<void(const chat::Envelope&)> callback) {
+    if(!conn || !conn->connected()) {
+        showError("Not connected to server!");
+        return;
+    }
+    uint64_t reqId = m_nextRequestId++;
+    env.set_request_id(reqId);
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        m_pendingRequests[reqId] = std::move(callback);
+    }
+    sendEnvelope(env);
+}
+
 void WebSocketClient::getMessages(int32_t limit, int64_t offset_ts) {
     chat::Envelope env;
     auto* request = env.mutable_get_messages_request();
     request->set_limit(limit);
     request->set_offset_ts(offset_ts);
-    sendEnvelope(env);
+
+    auto callback = [this](const chat::Envelope& responseEnv) {
+        using SC = chat::StatusCode;
+        auto statusOk = [](const chat::Status& s) {
+            return s.code() == SC::STATUS_SUCCESS;
+        };
+        if (!statusOk(responseEnv.get_messages_response().status())) {
+            showError("Failed to get messages!");
+            return;
+        }
+        
+        std::vector<Message> messages;
+        for(const auto& proto_message : responseEnv.get_messages_response().message()) {
+            messages.emplace_back(Message{wxString::FromUTF8(proto_message.from().user_name()),
+                                        wxString::FromUTF8(proto_message.message()),
+                                        proto_message.timestamp()});
+        }
+        showMessageHistory(messages);
+    };
+
+    sendRequest(env, callback);
 }
 
 void WebSocketClient::logout() {
     chat::Envelope env;
     env.mutable_logout_request();
-    sendEnvelope(env);
+
+    auto callback = [this](const chat::Envelope& responseEnv) {
+        using SC = chat::StatusCode;
+        auto statusOk = [](const chat::Status& s) {
+            return s.code() == SC::STATUS_SUCCESS;
+        };
+        if (statusOk(responseEnv.logout_response().status())) {
+            wxTheApp->CallAfter([this] { ui->ShowAuth(); });
+        } else {
+            showError("Failed to logout");
+        }
+    };
+    sendRequest(env, callback);
 }
 
 void WebSocketClient::getServers() {
     chat::Envelope env;
     env.mutable_get_servers_request();
-    sendEnvelope(env);
+    auto callback = [this](const chat::Envelope& responseEnv) {
+        using SC = chat::StatusCode;
+        auto statusOk = [](const chat::Status& s) {
+            return s.code() == SC::STATUS_SUCCESS;
+        };
+        std::vector<std::string> servers;
+        LOG_TRACE << "got servers resp";
+        for(const auto& server : responseEnv.get_servers_response().servers()) {
+            LOG_TRACE << server.host();
+            servers.emplace_back(server.host());
+        }
+        SetServers(servers);
+    };
+    sendRequest(env, callback);
 }
 
 void WebSocketClient::handleMessage(const std::string& msg) {
@@ -148,6 +229,27 @@ void WebSocketClient::handleMessage(const std::string& msg) {
         showError("Invalid protobuf message received!");
         return;
     }
+    if (env.has_request_id()) {
+        std::function<void(const chat::Envelope&)> callback;
+        uint64_t reqId = env.request_id();
+        {
+            std::lock_guard<std::mutex> lock(m_mutex);
+            auto it = m_pendingRequests.find(reqId);
+            if (it != m_pendingRequests.end()) {
+                callback = std::move(it->second);
+                m_pendingRequests.erase(it);
+            }
+        }
+
+        if (callback) {
+            callback(env);
+        } else {
+            LOG_WARN << "Received response for unknown or timed-out request ID: " << reqId;
+        }
+        return;
+    }
+
+    // --- Если request_id отсутствует, это серверное уведомление ---
     using SC = chat::StatusCode;
     auto statusOk = [](const chat::Status& s) { return s.code() == SC::STATUS_SUCCESS; };
 
@@ -172,18 +274,6 @@ void WebSocketClient::handleMessage(const std::string& msg) {
             showRoomMessage(env.room_message().message());
             break;
         }
-        case chat::Envelope::kJoinRoomResponse: {
-            if(statusOk(env.join_room_response().status())) {
-                std::vector<User> users;
-                for(const auto& user : env.join_room_response().users()) {
-                    users.emplace_back(user.user_id(), wxString::FromUTF8(user.user_name()), user.user_room_rights());
-                }
-                showChat(std::move(users));
-            } else {
-                showError("Failed to join room.");
-            }
-            break;
-        }
         case chat::Envelope::kUserJoined: {
             addUser({env.user_joined().user().user_id(), wxString::FromUTF8(env.user_joined().user().user_name()), env.user_joined().user().user_room_rights()});
             break;
@@ -192,105 +282,9 @@ void WebSocketClient::handleMessage(const std::string& msg) {
             removeUser({env.user_left().user().user_id(), wxString::FromUTF8(env.user_left().user().user_name()), env.user_left().user().user_room_rights()});
             break;
         }
-        case chat::Envelope::kLeaveRoomResponse: {
-            if(statusOk(env.leave_room_response().status())) {
-                showRooms();
-            } else {
-                showError("Failed to leave room.");
-            }
-            break;
-        }
-        case chat::Envelope::kCreateRoomResponse: {
-            if(!statusOk(env.create_room_response().status())) {
-                showError("Failed to create room");
-            }
-            break;
-        }
-        case chat::Envelope::kInitialRegisterResponse: {
-            if (statusOk(env.initial_register_response().status())){
-                wxTheApp->CallAfter([this] {
-                    ui->authPanel->HandleRegisterContinue();
-                });
-            } else {
-                showError("Failed to register user");
-            }
-            break;
-        }
-        case chat::Envelope::kInitialAuthResponse: {
-            if (statusOk(env.initial_auth_response().status())){
-                wxTheApp->CallAfter([this, response = env.initial_auth_response()] {
-                    std::string salt = "";
-                    if (response.has_salt()) salt = response.salt();
-                    ui->authPanel->HandleAuthContinue(salt);
-                });
-            } else {
-                showError("Failed to login");
-            }
-            break;
-        }
-        case chat::Envelope::kLogoutResponse: {
-            if(statusOk(env.logout_response().status())) {
-                wxTheApp->CallAfter([this] { ui->ShowAuth(); });
-            } else {
-                showError("Failed to logout");
-            }
-            break;
-        }
-        case chat::Envelope::kAuthResponse: {
-            if(statusOk(env.auth_response().status())) {
-                showInfo("Login successful!");
-                std::vector<Room*> rooms;
-                for (const auto& proto_room : env.auth_response().rooms()){
-                    rooms.emplace_back(new Room{proto_room.room_id(), wxString::FromUTF8(proto_room.room_name())});
-                }
-                updateRoomsPanel(rooms);
-                showRooms();
-            } else {
-                showError("Login failed! " + wxString(env.auth_response().status().message()));
-            }
-            break;
-        }
-        case chat::Envelope::kRegisterResponse: {
-            if(statusOk(env.register_response().status())) {
-                showInfo("Registration successful!");
-            } else {
-                showError("Registration failed! " + wxString(env.register_response().status().message()));
-            }
-            break;
-        }
-        case chat::Envelope::kSendMessageResponse: {
-            if(!statusOk(env.send_message_response().status())) {
-                showError("Failed to send message!");
-            }
-            break;
-        }
-        case chat::Envelope::kGetServersResponse: {
-            std::vector<std::string> servers;
-
-            LOG_TRACE << "got servers resp";
-            for(const auto& server : env.get_servers_response().servers()) {
-                LOG_TRACE << server.host();
-                servers.emplace_back(server.host());
-            }
-            SetServers(servers);
-            break;
-        }
         case chat::Envelope::kGenericError: {
             showError(wxString::Format("Server error: %s",
                 wxString(env.generic_error().status().message().c_str(), wxConvUTF8)));
-            break;
-        }
-        case chat::Envelope::kGetMessagesResponse: {
-            if(!statusOk(env.get_messages_response().status())) {
-                showError("Failed to get messages!");
-            }
-            std::vector<Message> messages;
-            for(const auto& proto_message : env.get_messages_response().message()) {
-                messages.emplace_back(Message{wxString::FromUTF8(proto_message.from().user_name())
-                    , wxString::FromUTF8(proto_message.message())
-                    , proto_message.timestamp()});
-            }
-            showMessageHistory(messages);
             break;
         }
         case chat::Envelope::kNewRoomCreated: {

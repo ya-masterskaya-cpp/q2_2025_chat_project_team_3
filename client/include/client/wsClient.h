@@ -5,6 +5,9 @@
 #include <wx/longlong.h>
 #include <drogon/WebSocketClient.h>
 #include <optional>
+#include <functional>
+#include <map>
+#include <mutex>
 
 class MainWidget;
 struct Room;
@@ -34,6 +37,7 @@ public:
 
 private:
     void sendEnvelope(const chat::Envelope& env);
+    void sendRequest(chat::Envelope& env, std::function<void(const chat::Envelope&)> callback);
     void handleMessage(const std::string& msg);
 
     // UI helpers
@@ -54,4 +58,7 @@ private:
     MainWidget* ui;
     std::shared_ptr<drogon::WebSocketConnection> conn;
     drogon::WebSocketClientPtr client;
+    uint64_t m_nextRequestId{1};
+    std::map<uint64_t, std::function<void(const chat::Envelope&)>> m_pendingRequests;
+    std::mutex m_mutex;
 };
