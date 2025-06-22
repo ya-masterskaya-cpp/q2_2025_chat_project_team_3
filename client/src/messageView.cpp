@@ -61,7 +61,7 @@ void MessageView::OnMouseWheel(wxMouseEvent& event) {
     // Calculate lines to scroll
     int lines = (rotation * linesPerWheel) / delta;
     if(lines == 0) {
-        lines = (rotation > 0) ? -1 : 1;
+        lines = (rotation > 0) ? 1 : -1;
     }
 
     if(ScrollRows(lines)) {
