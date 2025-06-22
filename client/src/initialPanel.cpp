@@ -69,6 +69,11 @@ void InitialPanel::OnDelete(wxCommandEvent& event) {
     if(selection != wxNOT_FOUND) {
         wxGetApp().GetConfig().removeServer(std::string(m_listBox->GetStringSelection().utf8_str()));
         m_listBox->Delete(selection);
+
+        // Explicitly clear the selection to force the control to reset its internal state.
+        // This ensures the next click will be registered as a new selection event.
+        m_listBox->SetSelection(wxNOT_FOUND);
+
         // After deleting, no item is selected, so update the button states
         UpdateButtonsState();
     }
@@ -80,10 +85,13 @@ void InitialPanel::OnListSelect(wxCommandEvent& event) {
 }
 
 void InitialPanel::UpdateButtonsState() {
-    // Check if any item is selected in the list box
-    bool isItemSelected = (m_listBox->GetSelection() != wxNOT_FOUND);
+    //defer to avoid weird race conditions
+    CallAfter([this]{
+        // Check if any item is selected in the list box
+        bool isItemSelected = (m_listBox->GetSelection() != wxNOT_FOUND);
 
-    // Enable or disable buttons based on the selection
-    m_connectButton->Enable(isItemSelected);
-    m_deleteButton->Enable(isItemSelected);
+        // Enable or disable buttons based on the selection
+        m_connectButton->Enable(isItemSelected);
+        m_deleteButton->Enable(isItemSelected);
+    });
 }
