@@ -1,4 +1,5 @@
 #include <wx/graphics.h>
+#include <wx/clipbrd.h>
 #include <client/messageWidget.h>
 #include <client/textUtil.h>
 #include <client/message.h>
@@ -60,10 +61,10 @@ MessageWidget::MessageWidget(wxWindow* parent,
 
     SetSizer(mainSizer); // Set the sizer for the panel
 
-    // Bind(wxEVT_RIGHT_DOWN, &MessageWidget::OnRightClick, this);
-    // m_userText->Bind(wxEVT_RIGHT_DOWN, &MessageWidget::OnRightClick, this);
-    // m_timeText->Bind(wxEVT_RIGHT_DOWN, &MessageWidget::OnRightClick, this);
-    // m_messageStaticText->Bind(wxEVT_RIGHT_DOWN, &MessageWidget::OnRightClick, this);
+    Bind(wxEVT_RIGHT_DOWN, &MessageWidget::OnRightClick, this);
+    m_userText->Bind(wxEVT_RIGHT_DOWN, &MessageWidget::OnRightClick, this);
+    m_timeText->Bind(wxEVT_RIGHT_DOWN, &MessageWidget::OnRightClick, this);
+    m_messageStaticText->Bind(wxEVT_RIGHT_DOWN, &MessageWidget::OnRightClick, this);
 
     Bind(wxEVT_ENTER_WINDOW, &MessageWidget::OnMouseEnter, this);
 
@@ -110,6 +111,17 @@ wxFont MessageWidget::GetMessageTextFont() const {
 void MessageWidget::OnRightClick(wxMouseEvent& event) {
     wxMenu menu;
     menu.Append(ID_COPY, "Copy Message");
+
+    menu.Bind(wxEVT_MENU, [this](wxCommandEvent&) {
+        wxTheApp->CallAfter([msg = m_originalMessage]() {
+            wxClipboardLocker locker;
+            if (!locker) {
+                return;
+            }
+            wxTheClipboard->SetData(new wxTextDataObject(msg));
+        });
+    }, ID_COPY);
+
     PopupMenu(&menu);
     event.Skip();
 }
