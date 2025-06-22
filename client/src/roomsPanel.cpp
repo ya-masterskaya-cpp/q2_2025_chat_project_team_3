@@ -2,6 +2,7 @@
 #include <client/mainWidget.h>
 #include <client/wsClient.h>
 #include <common/utils/limits.h>
+#include <client/textUtil.h>
 
 enum { ID_JOIN = wxID_HIGHEST+20, ID_CREATE, ID_LOGOUT };
 
@@ -71,6 +72,17 @@ void RoomsPanel::OnCreate(wxCommandEvent&) {
             wxMessageBox("Room name cannot be empty!", "Error", wxOK | wxICON_ERROR);
             return;
         }
+
+        roomName = TextUtil::SanitizeInput(roomName);
+
+        if (roomName.IsEmpty()) {
+            wxMessageBox("Room name must consist of at least 1 non special character",
+                "Room creation error",
+                wxOK | wxICON_ERROR, this
+            );
+            return;
+        }
+
         mainWin->wsClient->createRoom(roomName.utf8_string());
     }
 }
