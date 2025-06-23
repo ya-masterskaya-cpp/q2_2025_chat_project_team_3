@@ -38,6 +38,7 @@ message MessageInfo {
     UserInfo from = 1;
     string message = 2;
     int64 timestamp = 3;
+    int64 message_id = 4;
 }
 
 message RoomInfo {
@@ -192,6 +193,30 @@ message RoomDeleted {
     int32 room_id = 1;
 }
 
+message AssignModeratorRequest {
+    int32 room_id = 1;
+    int32 user_id = 2;
+}
+message AssignModeratorResponse {
+    Status status = 1;
+}
+
+message UserRoleChanged {
+    int32 user_id = 1;
+    UserRights new_rights = 2;
+}
+
+message DeleteMessageRequest {
+    int64 message_id = 1;
+}
+message DeleteMessageResponse {
+    Status status = 1;
+}
+
+message MessageDeleted {
+    int64 message_id = 1;
+}
+
 message Envelope {
     oneof payload {
         ServerHello server_hello = 1;
@@ -232,5 +257,11 @@ message Envelope {
         DeleteRoomRequest delete_room_request = 36;
         DeleteRoomResponse delete_room_response = 37;
         RoomDeleted room_deleted = 38;
+        AssignModeratorRequest assign_moderator_request = 39;
+        AssignModeratorResponse assign_moderator_response = 40;
+        UserRoleChanged user_role_changed = 41;
+        DeleteMessageRequest delete_message_request = 42;
+        DeleteMessageResponse delete_message_response = 43;
+        MessageDeleted message_deleted = 44;
     }
 }

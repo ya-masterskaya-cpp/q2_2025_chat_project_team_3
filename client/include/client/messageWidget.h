@@ -20,6 +20,7 @@ public:
     wxFont GetMessageTextFont() const;
 
     int64_t GetTimestampValue() const { return m_timestamp_val; }
+    int64_t GetMessageIdValue() const { return m_messageId; }
     bool m_hasBeenPositionedCorrectly = false;
 
     void Update(wxWindow* parent, const Message& msg, int lastKnownWrapWidth);
@@ -28,6 +29,7 @@ private:
     wxString m_originalMessage;        // Stores the original, unwrapped message.
     CachedColorText* m_messageStaticText; // Pointer to the actual text control.
     int64_t m_timestamp_val;           // Stores the raw timestamp for sorting/querying
+    int64_t m_messageId;
     wxStaticText* m_timeText;
     wxStaticText* m_userText;
 

@@ -6,4 +6,5 @@ struct Message {
     wxString user;
     wxString msg;
     int64_t timestamp;
+    int64_t messageId;
 };

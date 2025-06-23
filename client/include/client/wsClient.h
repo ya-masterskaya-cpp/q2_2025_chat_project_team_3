@@ -31,7 +31,9 @@ public:
     void getServers();
     void renameRoom(int32_t roomId, const std::string& newName);
     void deleteRoom(int32_t roomId);
-    
+    void assignModerator(int32_t roomId, int32_t userId);
+    void deleteMessage(int64_t messageId);
+
     static std::string formatMessageTimestamp(uint64_t timestamp);
 
 private:

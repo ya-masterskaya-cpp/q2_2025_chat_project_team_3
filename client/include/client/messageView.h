@@ -68,7 +68,7 @@ public:
     void ReWrapAllMessages(int wrapWidth);
     void Clear();
     void JumpToPresent();
-
+    void RemoveMessage(int64_t messageId);
 
 
 protected:

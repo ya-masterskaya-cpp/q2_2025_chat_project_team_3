@@ -254,3 +254,14 @@ void MessageView::UpdateSnapState(bool isSnapped) {
 void MessageView::JumpToPresent() {
     Start();
 }
+
+void MessageView::RemoveMessage(int64_t messageId) {
+    auto it = std::find_if(m_messageWidgets.begin(), m_messageWidgets.end(), [messageId](const MessageWidget* message) {
+    return (message->GetMessageIdValue() == messageId);
+    });
+
+    if (it != m_messageWidgets.end()) {
+        m_messageWidgets.erase(it);
+    }
+
+}

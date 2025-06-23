@@ -125,7 +125,22 @@ void ChatRoomManager::onRoomDeleted(int32_t room_id) {
     sendToAll_unsafe(room_deleted_msg);
 }
 
-void ChatRoomManager::sendToAll_unsafe(const chat::Envelope& message) const {
+void ChatRoomManager::updateUserRoleInRoom(int32_t room_id, int32_t user_id, chat::UserRights new_rights) {
+    std::unique_lock lock(m_mutex);
+    if (auto room_it = m_room_to_conns.find(room_id); room_it != m_room_to_conns.end()) {
+        for (const auto& conn : room_it->second) {
+            auto& ws_data = conn->getContextRef<WsData>();
+            if (ws_data.user && ws_data.user->id == user_id) {
+                if (ws_data.room) {
+                    ws_data.room->rights = new_rights;
+                }
+            }
+        }
+    }
+}
+
+void ChatRoomManager::sendToAll_unsafe(const chat::Envelope &message) const
+{
     for (const auto& [user_id, conns] : m_user_id_to_conns) {
         for (const auto& conn : conns) {
             if (conn->getContextRef<WsData>().status == USER_STATUS::Authenticated) {

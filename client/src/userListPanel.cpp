@@ -102,3 +102,17 @@ void UserListPanel::Clear() {
     m_userContainer->SetVirtualSize(m_userSizer->GetMinSize());
     m_userContainer->Thaw();
 }
+
+void UserListPanel::UpdateUserRole(int32_t userId, chat::UserRights newRights) {
+    m_userContainer->Freeze();
+    for (auto* item : m_userSizer->GetChildren()) {
+        if (item->IsWindow()) {
+            auto* widget = static_cast<UserNameWidget*>(item->GetWindow());
+            if (widget && widget->GetUser().id == userId) {
+                widget->UpdateRole(newRights);
+                break;
+            }
+        }
+    }
+    m_userContainer->Thaw();
+}

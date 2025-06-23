@@ -265,6 +265,7 @@ drogon::Task<chat::SendMessageResponse> MessageHandlers::handleSendMessage(const
 
     message_info->set_message(req.message());
     message_info->set_timestamp(inserted_message.getValueOfCreatedAt());
+    message_info->set_message_id(inserted_message.getValueOfMessageId());
 
     user_info->set_user_id(wsData->user->id);
     user_info->set_user_name(wsData->user->name);
@@ -482,7 +483,7 @@ drogon::Task<chat::RenameRoomResponse> MessageHandlers::handleRenameRoom(const s
         co_return resp;
     }
     try {
-        if ((co_await getUserRights(wsData->user->id, wsData->room->id)).value() < chat::UserRights::OWNER) {
+        if (wsData->room->rights < chat::UserRights::OWNER) {
             setStatus(resp, chat::STATUS_FAILURE, "Insufficient rights to rename room.");
             co_return resp;
         }
@@ -529,9 +530,7 @@ drogon::Task<chat::DeleteRoomResponse> MessageHandlers::handleDeleteRoom(const s
     }
     const auto room_id = req.room_id();
     try {
-        auto rights = co_await getUserRights(wsData->user->id, room_id);
-
-        if (!rights.has_value() || rights.value() < chat::UserRights::OWNER) {
+        if (wsData->room->rights < chat::UserRights::OWNER) {
             setStatus(resp, chat::STATUS_FAILURE, "Insufficient rights to delete this room.");
             co_return resp;
         }
@@ -566,6 +565,110 @@ drogon::Task<chat::DeleteRoomResponse> MessageHandlers::handleDeleteRoom(const s
         co_return resp;
     }
     ChatRoomManager::instance().onRoomDeleted(room_id);
+    setStatus(resp, chat::STATUS_SUCCESS);
+    co_return resp;
+}
+
+drogon::Task<chat::AssignModeratorResponse> MessageHandlers::handleAssignModerator(const std::shared_ptr<WsData>& wsData, const chat::AssignModeratorRequest& req) {
+    chat::AssignModeratorResponse resp;
+    if (wsData->status != USER_STATUS::Authenticated) {
+        setStatus(resp, chat::STATUS_UNAUTHORIZED, "Not authenticated.");
+        co_return resp;
+    }
+    if (!wsData->room || wsData->room->id != req.room_id()) {
+        setStatus(resp, chat::STATUS_FAILURE, "You are not in this room or request is for a different room.");
+        co_return resp;
+    }
+    if (wsData->room->rights < chat::UserRights::OWNER) {
+        setStatus(resp, chat::STATUS_FAILURE, "Insufficient rights to assign moderators.");
+        co_return resp;
+    }
+    if (wsData->user->id == req.user_id()) {
+        setStatus(resp, chat::STATUS_FAILURE, "You cannot change your own role.");
+        co_return resp;
+    }
+    auto err = co_await WithTransaction(
+        [&](auto tx) -> drogon::Task<ScopedTransactionResult> {
+        try {
+            auto roleToUpdate = co_await switch_to_io_loop(CoroMapper<models::UserRoomRoles>(tx).findOne(
+                Criteria(models::UserRoomRoles::Cols::_user_id, CompareOperator::EQ, req.user_id()) &&
+                Criteria(models::UserRoomRoles::Cols::_room_id, CompareOperator::EQ, req.room_id())
+            ));
+
+            roleToUpdate.setRoleType(chat::UserRights_Name(chat::UserRights::MODERATOR));
+            co_await switch_to_io_loop(CoroMapper<models::UserRoomRoles>(tx).update(roleToUpdate));
+        } catch (const drogon::orm::UnexpectedRows& e) {
+            // TODO
+            // TODO
+            // TODO
+        } catch (const DrogonDbException& e) {
+            LOG_ERROR << "Database error while assigning moderator: " << e.base().what();
+            co_return "Database error while assigning moderator.";
+        }
+        co_return std::nullopt;
+    });
+
+    if (err) {
+        setStatus(resp, chat::STATUS_FAILURE, *err);
+        co_return resp;
+    }
+
+    chat::Envelope roleChangedEnv;
+    auto* roleChangedMsg = roleChangedEnv.mutable_user_role_changed();
+    roleChangedMsg->set_user_id(req.user_id());
+    roleChangedMsg->set_new_rights(chat::UserRights::MODERATOR);
+    ChatRoomManager::instance().sendToRoom(req.room_id(), roleChangedEnv);
+
+    ChatRoomManager::instance().updateUserRoleInRoom(req.room_id(), req.user_id(), chat::UserRights::MODERATOR);
+
+    setStatus(resp, chat::STATUS_SUCCESS);
+    co_return resp;
+}
+
+drogon::Task<chat::DeleteMessageResponse> MessageHandlers::handleDeleteMessage(const std::shared_ptr<WsData>& wsData, const chat::DeleteMessageRequest& req) {
+    chat::DeleteMessageResponse resp;
+    if (wsData->status != USER_STATUS::Authenticated) {
+        setStatus(resp, chat::STATUS_UNAUTHORIZED, "Not authenticated.");
+        co_return resp;
+    }
+    if (!wsData->room) {
+        setStatus(resp, chat::STATUS_FAILURE, "You are not in a room.");
+        co_return resp;
+    }
+    auto err = co_await WithTransaction(
+        [&](auto tx) -> drogon::Task<ScopedTransactionResult> {
+        try {
+            auto message = co_await switch_to_io_loop(CoroMapper<models::Messages>(tx).findOne(
+                Criteria(models::Messages::Cols::_message_id, CompareOperator::EQ, req.message_id())
+            ));
+            if (wsData->room->id != *message.getRoomId()) {
+                co_return "Message does not belong to the current room.";
+            }
+            bool hasModeratorRights = (wsData->room->rights >= chat::UserRights::MODERATOR);
+            bool isAuthor = (*message.getUserId() == wsData->user->id);
+            if (!hasModeratorRights && !isAuthor) {
+                co_return "You do not have permission to delete this message.";
+            }
+            co_await switch_to_io_loop(CoroMapper<models::Messages>(tx).deleteBy(
+                Criteria(models::Messages::Cols::_message_id, CompareOperator::EQ, req.message_id())
+            ));
+            chat::Envelope deletedEnv;
+            deletedEnv.mutable_message_deleted()->set_message_id(req.message_id());
+            ChatRoomManager::instance().sendToRoom(*message.getRoomId(), deletedEnv);
+            co_return std::nullopt;
+        } catch (const drogon::orm::UnexpectedRows& e) {
+            co_return "Message not found.";
+        } catch (const DrogonDbException& e) {
+            LOG_ERROR << "Database error while deleting message: " << e.base().what();
+            co_return "Database error while deleting message.";
+        }
+    });
+
+    if (err) {
+        setStatus(resp, chat::STATUS_FAILURE, *err);
+        co_return resp;
+    }
+    
     setStatus(resp, chat::STATUS_SUCCESS);
     co_return resp;
 }

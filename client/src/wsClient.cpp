@@ -157,6 +157,19 @@ void WebSocketClient::deleteRoom(int32_t roomId) {
     sendEnvelope(env);
 }
 
+void WebSocketClient::assignModerator(int32_t roomId, int32_t userId) {
+    chat::Envelope env;
+    auto* req = env.mutable_assign_moderator_request();
+    req->set_room_id(roomId);
+    req->set_user_id(userId);
+    sendEnvelope(env);
+}
+
+void WebSocketClient::deleteMessage(int64_t messageId) {
+    chat::Envelope env;
+    env.mutable_delete_message_request()->set_message_id(messageId);
+    sendEnvelope(env);
+}
 
 void WebSocketClient::handleMessage(const std::string& msg) {
     chat::Envelope env;
@@ -304,7 +317,8 @@ void WebSocketClient::handleMessage(const std::string& msg) {
             for(const auto& proto_message : env.get_messages_response().message()) {
                 messages.emplace_back(Message{wxString::FromUTF8(proto_message.from().user_name())
                     , wxString::FromUTF8(proto_message.message())
-                    , proto_message.timestamp()});
+                    , proto_message.timestamp()
+                    , proto_message.message_id()});
             }
             showMessageHistory(messages);
             break;
@@ -344,6 +358,22 @@ void WebSocketClient::handleMessage(const std::string& msg) {
                 ui->ShowRooms();
             }
             ui->roomsPanel->RemoveRoom(roomId);
+            });
+            break;
+        }
+        case chat::Envelope::kUserRoleChanged: {
+            wxTheApp->CallAfter([this, payload = env.user_role_changed()] {
+                if (ui->chatPanel->IsShown()) {
+                    ui->chatPanel->m_userListPanel->UpdateUserRole(payload.user_id(), static_cast<chat::UserRights>(payload.new_rights()));
+                }
+            });
+            break;
+        }
+        case chat::Envelope::kMessageDeleted: {
+            wxTheApp->CallAfter([this, payload = env.message_deleted()] {
+                if (ui->chatPanel->IsShown()) {
+                    ui->chatPanel->m_messageView->RemoveMessage(payload.message_id());
+                }
             });
             break;
         }
@@ -399,7 +429,8 @@ void WebSocketClient::showRoomMessage(const chat::MessageInfo& mi) {
     std::vector<Message> messages;
     messages.emplace_back(Message{wxString::FromUTF8(mi.from().user_name())
         , wxString::FromUTF8(mi.message())
-        , mi.timestamp()});
+        , mi.timestamp()
+        , mi.message_id()});
 
     wxTheApp->CallAfter([this, messages] {
         LOG_DEBUG << "Stared singular add";

@@ -12,6 +12,7 @@ public:
     void AddUser(const User& user);
     void RemoveUser(int32_t userId);
     void Clear();
+    void UpdateUserRole(int32_t userId, chat::UserRights newRights);
 
 private:
 

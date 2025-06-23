@@ -19,6 +19,7 @@ enum { ID_SEND = wxID_HIGHEST+30,
 };
 
 wxDEFINE_EVENT(wxEVT_SNAP_STATE_CHANGED, wxCommandEvent);
+wxDEFINE_EVENT(wxEVT_DELETE_MESSAGE_REQUEST, wxCommandEvent);
 
 wxBEGIN_EVENT_TABLE(ChatPanel, wxPanel)
     EVT_BUTTON(ID_SEND, ChatPanel::OnSend)
@@ -27,6 +28,7 @@ wxBEGIN_EVENT_TABLE(ChatPanel, wxPanel)
     //EVT_TIMER(ID_RESIZE_TIMER, ChatPanel::OnResizeTimerTick)
     //EVT_SIZE(ChatPanel::OnChatPanelSize)
     //EVT_LEFT_DOWN(ChatPanel::OnRoomHeaderClicked)
+    EVT_COMMAND(wxID_ANY, wxEVT_DELETE_MESSAGE_REQUEST, ChatPanel::OnDeleteMessageRequest)
 wxEND_EVENT_TABLE()
 
 ChatPanel::ChatPanel(MainWidget* parent)
@@ -210,7 +212,8 @@ void ChatPanel::ResetState() {
     Layout();
 }
 
-void ChatPanel::OnRoomRename(wxCommandEvent &event) {
+void ChatPanel::OnRoomRename(wxCommandEvent &event)
+{
     if (!m_parent || !m_parent->wsClient) return;
     wxString newName = event.GetString();
     int32_t roomId = event.GetInt();
@@ -246,5 +249,12 @@ void ChatPanel::OnInputKeyDown(wxKeyEvent& event) {
         // --- Case 3: Any other key was pressed ---
         // Let the default handler process the event as usual (e.g., typing a character).
         event.Skip();
+    }
+}
+
+void ChatPanel::OnDeleteMessageRequest(wxCommandEvent& event) {
+    int64_t messageId = static_cast<int64_t>(event.GetExtraLong());
+    if (m_parent && m_parent->wsClient) {
+        m_parent->wsClient->deleteMessage(messageId);
     }
 }

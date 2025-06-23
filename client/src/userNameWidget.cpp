@@ -31,6 +31,27 @@ UserNameWidget::UserNameWidget(wxWindow* parent, const User& user)
     // m_usernameText->Bind(wxEVT_RIGHT_DOWN, &UserNameWidget::OnRightClick, this);
 }
 
+void UserNameWidget::UpdateRole(chat::UserRights newRole) {
+    wxColour textColor;
+    switch (newRole) {
+        case chat::UserRights::OWNER:
+            textColor = *wxRED;
+            break;
+        case chat::UserRights::ADMIN:
+            textColor = *wxGREEN;
+            break;
+        case chat::UserRights::MODERATOR:
+            textColor = *wxBLUE;
+            break;
+        case chat::UserRights::REGULAR:
+        default:
+            textColor = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT);
+            break;
+    }
+    m_usernameText->SetForegroundColour(textColor);
+    Refresh();
+}
+
 void UserNameWidget::OnRightClick(wxMouseEvent& event) {
     UserNameWidget* clickedWidget = static_cast<UserNameWidget*>(event.GetEventObject());
     if (!clickedWidget) {

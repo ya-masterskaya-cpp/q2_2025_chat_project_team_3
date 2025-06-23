@@ -4,6 +4,7 @@
 #include <client/user.h>
 
 wxDECLARE_EVENT(wxEVT_SNAP_STATE_CHANGED, wxCommandEvent);
+wxDECLARE_EVENT(wxEVT_DELETE_MESSAGE_REQUEST, wxCommandEvent);
 
 class MainWidget;
 class UserListPanel;
@@ -55,6 +56,7 @@ private:
     void OnRoomRename(wxCommandEvent& event);
     void OnRoomDelete(wxCommandEvent& event);
     void OnRoomClose(wxCommandEvent& event);
+    void OnDeleteMessageRequest(wxCommandEvent& event);
 
     wxDECLARE_EVENT_TABLE();
 };

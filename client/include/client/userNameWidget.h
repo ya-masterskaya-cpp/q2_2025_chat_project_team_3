@@ -10,6 +10,7 @@ public:
     const User& GetUser() const {
         return m_user;
     }
+    void UpdateRole(chat::UserRights newRole);
 
 private:
     void OnRightClick(wxMouseEvent& event);

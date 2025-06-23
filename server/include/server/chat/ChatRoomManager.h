@@ -13,6 +13,7 @@ public:
     std::vector<chat::UserInfo> getUsersInRoom(int32_t room_id) const;
     void sendToAll(const chat::Envelope& message) const;
     void onRoomDeleted(int32_t room_id);
+    void updateUserRoleInRoom(int32_t room_id, int32_t user_id, chat::UserRights new_rights);
     
 private:
     ChatRoomManager() = default;
