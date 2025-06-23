@@ -126,13 +126,13 @@ void MessageView::UpdateWidgetPositions() {
     wxCoord scrollY = GetVisibleRowsBegin();
     wxCoord clientHeight = GetClientSize().y;
     wxCoord containerWidth = GetClientSize().x;
-    const wxCoord padding = 100; 
+    const wxCoord padding = 0; 
     wxCoord currentY = 0;
     for (auto* widget : m_messageWidgets) {
         wxCoord h = widget->GetBestSize().y;
         if ((currentY + h) > (scrollY - padding) && (currentY < scrollY + clientHeight + padding)) {
             wxCoord physicalY = currentY - scrollY;
-            widget->SetSize(0, physicalY, containerWidth, -1);
+            widget->SetSize(0, physicalY, containerWidth, h);
             widget->Show();
         } else {
             widget->Hide();
@@ -147,8 +147,10 @@ void MessageView::ReWrapAllMessages(int wrapWidth) {
     if (wrapWidth <= 0 || m_lastKnownWrapWidth == wrapWidth) return;
     m_lastKnownWrapWidth = wrapWidth;
     wxCoord oldScrollY = GetVisibleRowsBegin();
-    for (auto* widget : m_messageWidgets) {
-        widget->SetWrappedMessage(m_lastKnownWrapWidth);
+    for(auto* widget : m_messageWidgets) {
+        if(widget->IsShown()) {
+            widget->SetWrappedMessage(m_lastKnownWrapWidth);
+        }
     }
     SetUnitCount(CalculateTotalHeight());
     ScrollToRow(oldScrollY);

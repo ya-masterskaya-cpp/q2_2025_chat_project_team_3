@@ -27,7 +27,7 @@ MessageWidget::MessageWidget(wxWindow* parent,
     wxFont userFont = m_userText->GetFont();
     userFont.SetWeight(wxFONTWEIGHT_BOLD);
     m_userText->SetFont(userFont);
-    //m_userText->Wrap(-1);
+    m_userText->Wrap(-1);
     m_userText->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
     headerSizer->Add(m_userText, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(5));
 
@@ -41,13 +41,13 @@ MessageWidget::MessageWidget(wxWindow* parent,
     wxFont timeFont = m_timeText->GetFont();
     timeFont.SetPointSize(timeFont.GetPointSize() - 1); // Make it slightly smaller
     m_timeText->SetFont(timeFont);
-    //m_timeText->Wrap(-1);
+    m_timeText->Wrap(-1);
     headerSizer->Add(m_timeText, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(5));
 
     mainSizer->Add(headerSizer, 0, wxEXPAND | wxBOTTOM, FromDIP(2));
 
     // Wrap the original message using our utility function
-    wxString wrapped = TextUtil::WrapText(this, m_originalMessage, lastKnownWrapWidth - FromDIP(10), this->GetFont());
+    wxString wrapped = TextUtil::WrapText(this, m_originalMessage, lastKnownWrapWidth - FromDIP(9), this->GetFont());
 
     m_messageStaticText = new CachedColorText(this, wxID_ANY, wrapped,
                                           wxDefaultPosition, wxDefaultSize,
@@ -77,7 +77,7 @@ MessageWidget::MessageWidget(wxWindow* parent,
 void MessageWidget::Update(wxWindow* parent, const Message& msg, int lastKnownWrapWidth) {
     m_originalMessage = msg.msg;
     m_timestamp_val = msg.timestamp;
-    m_messageStaticText->SetLabelText(TextUtil::WrapText(this, m_originalMessage, lastKnownWrapWidth - FromDIP(10), this->GetFont()));
+    m_messageStaticText->SetLabelText(TextUtil::WrapText(this, m_originalMessage, lastKnownWrapWidth - FromDIP(9), this->GetFont()));
     m_userText->SetLabelText(msg.user);
     m_timeText->SetLabelText(wxString::FromUTF8(WebSocketClient::formatMessageTimestamp(msg.timestamp)));
     InvalidateBestSize();
@@ -91,7 +91,7 @@ void MessageWidget::SetWrappedMessage(int wrapWidth) {
     if (!m_messageStaticText) return;
 
     // Wrap the original message using our utility function
-    wxString wrapped = TextUtil::WrapText(this, m_originalMessage, wrapWidth - FromDIP(10), this->GetFont());
+    wxString wrapped = TextUtil::WrapText(this, m_originalMessage, wrapWidth - FromDIP(9), this->GetFont());
 
     // Only update the label and re-layout if the wrapped text has actually changed
     // This prevents unnecessary redraws and layout passes.
