@@ -17,6 +17,8 @@ private:
 
     // --- Helper function to manage button states ---
     void UpdateButtonsState();
+    
+    std::optional<std::string> ValidateUrl(std::string_view url);
 
     MainWidget* m_parent = nullptr;
 

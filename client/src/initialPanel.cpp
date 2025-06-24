@@ -3,6 +3,7 @@
 #include <client/wsClient.h>
 #include <client/app.h>
 #include <client/appConfig.h>
+#include <drogon/drogon.h>
 
 InitialPanel::InitialPanel(MainWidget* parent)
  : wxPanel(parent), m_parent(parent) {
@@ -56,10 +57,11 @@ void InitialPanel::OnAdd(wxCommandEvent& event) {
     // Show the dialog and check if the user clicked OK
     if(dialog.ShowModal() == wxID_OK) {
         wxString newItem = dialog.GetValue();
-        if (newItem.IsEmpty()) {
+        std::string serverAddress = std::string(newItem.utf8_str());
+        if (auto error = ValidateUrl(serverAddress)) {
             wxMessageBox(
-                "Cannot add an empty hostname/URI.",
-                "Input Error",
+                wxString(*error),
+                "Invalid URL format",
                 wxOK | wxICON_ERROR,
                 this
             );
@@ -111,4 +113,77 @@ void InitialPanel::UpdateButtonsState() {
         m_connectButton->Enable(isItemSelected);
         m_deleteButton->Enable(isItemSelected);
     });
+}
+
+std::optional<std::string> InitialPanel::ValidateUrl(std::string_view url) {
+    auto trim = [](std::string_view s) -> std::string_view {
+        while (!s.empty() && std::isspace(s.front())) s.remove_prefix(1);
+        while (!s.empty() && std::isspace(s.back())) s.remove_suffix(1);
+        return s;
+    };
+    url = trim(url);
+
+    if (url.empty()) {
+        return "URL cannot be empty";
+    }
+
+    // 1. Validate the scheme (must be ws:// or wss://)
+    constexpr std::string_view ws_scheme = "ws://";
+    constexpr std::string_view wss_scheme = "wss://";
+
+    if (url.starts_with(ws_scheme)) {
+        url.remove_prefix(ws_scheme.size());
+    } else if (url.starts_with(wss_scheme)) {
+        url.remove_prefix(wss_scheme.size());
+    } else {
+        return "URL must start with 'ws://' or 'wss://'";
+    }
+
+    // 2. Separate host:port from the path. The path is optional.
+    std::string_view host_port;
+    auto path_pos = url.find('/');
+    if (path_pos != std::string_view::npos) {
+        host_port = url.substr(0, path_pos);
+    } else {
+        host_port = url;
+    }
+
+    // 3. Validate the host and port part
+    if (host_port.empty()) {
+        return "Host and port are missing";
+    }
+
+    auto colon_pos = host_port.rfind(':');
+    if (colon_pos == std::string_view::npos) {
+        return "You must specify a port (e.g., ws://example.com:8840)";
+    }
+
+    std::string host(host_port.substr(0, colon_pos));
+    std::string port_str(host_port.substr(colon_pos + 1));
+
+    if (host.empty()) {
+        return "Host name cannot be empty";
+    }
+
+    int port = 0;
+    try {
+        port = std::stoi(port_str);
+    } catch (...) {
+        return "Port must be a number";
+    }
+
+    if (port <= 0 || port > 65535) {
+        return "Port must be in the range 1–65535";
+    }
+
+    // 4. Validate the host using trantor's name resolution
+    try {
+        trantor::InetAddress addr(host, port, false);
+    } catch (const std::exception& e) {
+        return std::string("Invalid host: ") + e.what();
+    }
+
+    // 5. Path validation is no longer needed as its absence is a valid case.
+
+    return std::nullopt; // All checks passed, no error
 }
