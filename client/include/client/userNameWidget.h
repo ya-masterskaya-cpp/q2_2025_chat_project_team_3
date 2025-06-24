@@ -3,6 +3,8 @@
 #include <wx/wx.h>
 #include <client/user.h>
 
+class CachedColorText;
+
 class UserNameWidget : public wxPanel {
 public:
     UserNameWidget(wxWindow* parent, const User& user);
@@ -14,6 +16,6 @@ public:
 private:
     void OnRightClick(wxMouseEvent& event);
 
-    wxStaticText* m_usernameText;
+    CachedColorText* m_usernameText;
     User m_user;
 };

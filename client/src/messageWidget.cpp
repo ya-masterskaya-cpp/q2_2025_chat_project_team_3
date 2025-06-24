@@ -23,11 +23,11 @@ MessageWidget::MessageWidget(wxWindow* parent,
     auto* headerSizer = new wxBoxSizer(wxHORIZONTAL);
 
     // Username (bold)
-    m_userText = new wxStaticText(this, wxID_ANY, msg.user);
+    m_userText = new CachedColorText(this, wxID_ANY, msg.user, wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT, wxStaticTextNameStr, false);
     wxFont userFont = m_userText->GetFont();
     userFont.SetWeight(wxFONTWEIGHT_BOLD);
     m_userText->SetFont(userFont);
-    m_userText->Wrap(-1);
+    //m_userText->Wrap(-1);
     m_userText->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
     headerSizer->Add(m_userText, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(5));
 
@@ -51,7 +51,7 @@ MessageWidget::MessageWidget(wxWindow* parent,
 
     m_messageStaticText = new CachedColorText(this, wxID_ANY, wrapped,
                                           wxDefaultPosition, wxDefaultSize,
-                                          wxALIGN_LEFT); // Ensure left alignment
+                                          wxALIGN_LEFT, wxStaticTextNameStr, true); // Ensure left alignment
     //m_messageStaticText->Wrap(-1);
     //m_messageStaticText->SetBackgroundColour(*wxYELLOW); // For debugging the text control width
 
@@ -129,6 +129,7 @@ void MessageWidget::OnRightClick(wxMouseEvent& event) {
 void MessageWidget::OnMouseEnter(wxMouseEvent& event) {
     SetBackgroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_BTNFACE));
     m_messageStaticText->InvalidateCache();
+    m_userText->InvalidateCache();
     Refresh();
     event.Skip();
 }
@@ -140,6 +141,7 @@ void MessageWidget::OnMouseLeave(wxMouseEvent& event) {
     if (!GetClientRect().Contains(clientPos)) {
         SetBackgroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW));
         m_messageStaticText->InvalidateCache();
+        m_userText->InvalidateCache();
         Refresh();
     }
     event.Skip();
