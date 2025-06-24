@@ -218,7 +218,12 @@ wxDouble CachedColorText::GetLineHeight() const {
     // CACHE MISS: We must perform the one-time calculation.
     // Use a temporary wxDC to get the true font metrics, as this is the most
     // reliable way to determine line height for all scripts (Latin, CJK, etc.).
-    wxClientDC dc(const_cast<CachedColorText*>(this));
+    wxMemoryDC dc;
+    // A wxMemoryDC on some platforms requires a bitmap to be selected to have
+    // valid characteristics. A 1x1 bitmap is sufficient.
+    wxBitmap tempBitmap(1, 1);
+    dc.SelectObject(tempBitmap);
+
     dc.SetFont(GetFont());
 
     wxFontMetrics metrics = dc.GetFontMetrics();
