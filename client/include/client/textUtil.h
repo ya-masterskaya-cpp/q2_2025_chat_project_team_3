@@ -34,7 +34,7 @@ namespace TextUtil {
     /**
      * @brief Validates a URI, ensuring it has a 'ws' or 'wss' scheme.
      *
-     * This function uses wxURI to check for syntactical validity and then
+     * This function uses ada-url to check for syntactical validity and then
      * specifically checks if the scheme is 'ws' or 'wss'.
      *
      * @param url The URI to validate, as a wxString.
