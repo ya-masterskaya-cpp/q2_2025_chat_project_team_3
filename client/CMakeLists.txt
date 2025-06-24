@@ -5,6 +5,7 @@ find_package(wxWidgets CONFIG REQUIRED)
 
 add_executable(client_app
     src/main.cpp
+    src/graphicsContextManager.cpp
     src/cachedColorText.cpp
     src/appConfig.cpp
     src/authPanel.cpp
