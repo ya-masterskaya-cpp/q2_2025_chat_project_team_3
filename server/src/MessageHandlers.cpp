@@ -22,8 +22,11 @@ namespace models = drogon_model::drogon_test;
 MessageHandlers::MessageHandlers(drogon::orm::DbClientPtr dbClient)
     : m_dbClient{std::move(dbClient)} {}
 
-drogon::Task<chat::InitialAuthResponse> MessageHandlers::handleAuthInitial(const std::shared_ptr<WsData>& wsData, const chat::InitialAuthRequest& req) const {
+drogon::Task<chat::InitialAuthResponse> MessageHandlers::handleAuthInitial(const WsDataPtr& wsDataGuarded, const chat::InitialAuthRequest& req) const {
     chat::InitialAuthResponse resp;
+
+    auto wsData = co_await wsDataGuarded->lock_unique();
+
     if(req.username().empty()) {
         setStatus(resp, chat::STATUS_FAILURE, "Empty username.");
         co_return resp;
@@ -51,8 +54,11 @@ drogon::Task<chat::InitialAuthResponse> MessageHandlers::handleAuthInitial(const
     }
 }
 
-drogon::Task<chat::InitialRegisterResponse> MessageHandlers::handleRegisterInitial(const std::shared_ptr<WsData>& wsData, const chat::InitialRegisterRequest& req) const {
+drogon::Task<chat::InitialRegisterResponse> MessageHandlers::handleRegisterInitial(const WsDataPtr& wsDataGuarded, const chat::InitialRegisterRequest& req) const {
     chat::InitialRegisterResponse resp;
+
+    auto wsData = co_await wsDataGuarded->lock_unique();
+
     if(req.username().empty()) {
         setStatus(resp, chat::STATUS_FAILURE, "Empty username or password.");
         co_return resp;
@@ -78,8 +84,10 @@ drogon::Task<chat::InitialRegisterResponse> MessageHandlers::handleRegisterIniti
     }
 }
 
-drogon::Task<chat::AuthResponse> MessageHandlers::handleAuth(const std::shared_ptr<WsData>& wsData, const chat::AuthRequest& req, IChatRoomService& room_service) const {
+drogon::Task<chat::AuthResponse> MessageHandlers::handleAuth(const WsDataPtr& wsDataGuarded, const chat::AuthRequest& req, IChatRoomService& room_service) const {
     chat::AuthResponse resp;
+
+    auto wsData = co_await wsDataGuarded->lock_unique();
 
     if (wsData->status != USER_STATUS::Authenticating) {
         setStatus(resp, chat::STATUS_FAILURE, "Not in authentication phase.");
@@ -153,7 +161,7 @@ drogon::Task<chat::AuthResponse> MessageHandlers::handleAuth(const std::shared_p
 
         wsData->user->id = *user.getUserId();
         wsData->status = USER_STATUS::Authenticated;
-        room_service.login();
+        co_await room_service.login(*wsData);
         setStatus(resp, chat::STATUS_SUCCESS);
         co_return resp;
     } catch (const std::exception& e) {
@@ -162,8 +170,11 @@ drogon::Task<chat::AuthResponse> MessageHandlers::handleAuth(const std::shared_p
     }
 }
 
-drogon::Task<chat::RegisterResponse> MessageHandlers::handleRegister(const std::shared_ptr<WsData>& wsData, const chat::RegisterRequest& req) const {
+drogon::Task<chat::RegisterResponse> MessageHandlers::handleRegister(const WsDataPtr& wsDataGuarded, const chat::RegisterRequest& req) const {
     chat::RegisterResponse resp;
+
+    auto wsData = co_await wsDataGuarded->lock_unique();
+
     if (wsData->status != USER_STATUS::Registering) {
         setStatus(resp, chat::STATUS_FAILURE, "Non-correct registering");
         co_return resp;
@@ -209,8 +220,11 @@ drogon::Task<chat::RegisterResponse> MessageHandlers::handleRegister(const std::
     }
 }
 
-drogon::Task<chat::SendMessageResponse> MessageHandlers::handleSendMessage(const std::shared_ptr<WsData>& wsData, const chat::SendMessageRequest& req) const {
+drogon::Task<chat::SendMessageResponse> MessageHandlers::handleSendMessage(const WsDataPtr& wsDataGuarded, const chat::SendMessageRequest& req) const {
     chat::SendMessageResponse resp;
+
+    auto wsData = co_await wsDataGuarded->lock_shared();
+
     if(wsData->status != USER_STATUS::Authenticated) {
         setStatus(resp, chat::STATUS_UNAUTHORIZED, "User not authenticated.");
         co_return resp;
@@ -269,14 +283,17 @@ drogon::Task<chat::SendMessageResponse> MessageHandlers::handleSendMessage(const
     user_info->set_user_id(wsData->user->id);
     user_info->set_user_name(wsData->user->name);
 
-    ChatRoomManager::instance().sendToRoom(wsData->room->id, msgEnv);
+    co_await ChatRoomManager::instance().sendToRoom(wsData->room->id, msgEnv);
 
     setStatus(resp, chat::STATUS_SUCCESS);
     co_return resp;
 }
 
-drogon::Task<chat::JoinRoomResponse> MessageHandlers::handleJoinRoom(const std::shared_ptr<WsData>& wsData, const chat::JoinRoomRequest& req, IChatRoomService& room_service) const {
+drogon::Task<chat::JoinRoomResponse> MessageHandlers::handleJoinRoom(const WsDataPtr& wsDataGuarded, const chat::JoinRoomRequest& req, IChatRoomService& room_service) const {
     chat::JoinRoomResponse resp;
+
+    auto wsData = co_await wsDataGuarded->lock_unique();
+
     if(wsData->status != USER_STATUS::Authenticated) {
         setStatus(resp, chat::STATUS_UNAUTHORIZED, "User not authenticated.");
         co_return resp;
@@ -315,8 +332,8 @@ drogon::Task<chat::JoinRoomResponse> MessageHandlers::handleJoinRoom(const std::
         }
         wsData->room = CurrentRoom{req.room_id(), role.value_or(chat::UserRights::REGULAR)};
         
-        room_service.joinRoom();
-        auto users = ChatRoomManager::instance().getUsersInRoom(req.room_id());
+        co_await room_service.joinRoom(*wsData);
+        auto users = co_await ChatRoomManager::instance().getUsersInRoomAsync(req.room_id(), *wsData);
         *resp.mutable_users() = {std::make_move_iterator(users.begin()), 
                                   std::make_move_iterator(users.end())};
 
@@ -324,7 +341,7 @@ drogon::Task<chat::JoinRoomResponse> MessageHandlers::handleJoinRoom(const std::
         user_joined_msg.mutable_user_joined()->mutable_user()->set_user_id(wsData->user->id);
         user_joined_msg.mutable_user_joined()->mutable_user()->set_user_name(wsData->user->name);
         user_joined_msg.mutable_user_joined()->mutable_user()->set_user_room_rights(wsData->room->rights);
-        ChatRoomManager::instance().sendToRoom(wsData->room->id, user_joined_msg);
+        co_await ChatRoomManager::instance().sendToRoom(wsData->room->id, user_joined_msg);
 
         setStatus(resp, chat::STATUS_SUCCESS);
         co_return resp;
@@ -334,8 +351,11 @@ drogon::Task<chat::JoinRoomResponse> MessageHandlers::handleJoinRoom(const std::
     }
 }
 
-drogon::Task<chat::LeaveRoomResponse> MessageHandlers::handleLeaveRoom(const std::shared_ptr<WsData>& wsData, const chat::LeaveRoomRequest&, IChatRoomService& room_service) const {
+drogon::Task<chat::LeaveRoomResponse> MessageHandlers::handleLeaveRoom(const WsDataPtr& wsDataGuarded, const chat::LeaveRoomRequest&, IChatRoomService& room_service) const {
     chat::LeaveRoomResponse resp;
+
+    auto wsData = co_await wsDataGuarded->lock_unique();
+
     if(wsData->status != USER_STATUS::Authenticated) {
         setStatus(resp, chat::STATUS_UNAUTHORIZED, "User not authenticated.");
         co_return resp;
@@ -345,15 +365,18 @@ drogon::Task<chat::LeaveRoomResponse> MessageHandlers::handleLeaveRoom(const std
         co_return resp;
     }
 
-    room_service.leaveCurrentRoom();
+    co_await room_service.leaveCurrentRoom(*wsData);
     wsData->room.reset();
 
     setStatus(resp, chat::STATUS_SUCCESS);
     co_return resp;
 }
 
-drogon::Task<chat::CreateRoomResponse> MessageHandlers::handleCreateRoom(const std::shared_ptr<WsData>& wsData, const chat::CreateRoomRequest& req) const {
+drogon::Task<chat::CreateRoomResponse> MessageHandlers::handleCreateRoom(const WsDataPtr& wsDataGuarded, const chat::CreateRoomRequest& req) const {
     chat::CreateRoomResponse resp;
+
+    auto wsData = co_await wsDataGuarded->lock_shared();
+
     if(wsData->status != USER_STATUS::Authenticated) {
         setStatus(resp, chat::STATUS_UNAUTHORIZED, "Not authenticated");
         co_return resp;
@@ -394,7 +417,7 @@ drogon::Task<chat::CreateRoomResponse> MessageHandlers::handleCreateRoom(const s
         new_room_resp->mutable_room()->set_room_id(room_id);
         new_room_resp->mutable_room()->set_room_name(req.room_name());
 
-        ChatRoomManager::instance().sendToAll(new_room_msg);
+        co_await ChatRoomManager::instance().sendToAll(new_room_msg);
         setStatus(resp, chat::STATUS_SUCCESS);
         co_return resp;
     } catch(const std::exception& e) {
@@ -404,8 +427,11 @@ drogon::Task<chat::CreateRoomResponse> MessageHandlers::handleCreateRoom(const s
     }
 }
 
-drogon::Task<chat::GetMessagesResponse> MessageHandlers::handleGetMessages(const std::shared_ptr<WsData>& wsData, const chat::GetMessagesRequest& req) const {
+drogon::Task<chat::GetMessagesResponse> MessageHandlers::handleGetMessages(const WsDataPtr& wsDataGuarded, const chat::GetMessagesRequest& req) const {
     chat::GetMessagesResponse resp;
+
+    auto wsData = co_await wsDataGuarded->lock_shared();
+
     if(wsData->status != USER_STATUS::Authenticated) {
         setStatus(resp, chat::STATUS_UNAUTHORIZED, "User not authenticated.");
         co_return resp;
@@ -416,7 +442,6 @@ drogon::Task<chat::GetMessagesResponse> MessageHandlers::handleGetMessages(const
     }
     try {
         
-
         auto limit = req.limit();
 
         LOG_TRACE << "Limit: " + std::to_string(limit);
@@ -453,13 +478,16 @@ drogon::Task<chat::GetMessagesResponse> MessageHandlers::handleGetMessages(const
     }
 }
 
-drogon::Task<chat::LogoutResponse> MessageHandlers::handleLogoutUser(const std::shared_ptr<WsData>& wsData, IChatRoomService& room_service) const {
+drogon::Task<chat::LogoutResponse> MessageHandlers::handleLogoutUser(const WsDataPtr& wsDataGuarded, IChatRoomService& room_service) const {
     chat::LogoutResponse resp;
+
+    auto wsData = co_await wsDataGuarded->lock_unique();
+
     if(wsData->status != USER_STATUS::Authenticated) {
         setStatus(resp, chat::STATUS_UNAUTHORIZED, "User not authenticated.");
         co_return resp;
     }
-    room_service.logout();
+    co_await room_service.logout(*wsData);
     wsData->room.reset();
     wsData->user.reset();
     wsData->status = USER_STATUS::Unauthenticated;
@@ -467,8 +495,11 @@ drogon::Task<chat::LogoutResponse> MessageHandlers::handleLogoutUser(const std::
     co_return resp;
 }
 
-drogon::Task<chat::RenameRoomResponse> MessageHandlers::handleRenameRoom(const std::shared_ptr<WsData>& wsData, const chat::RenameRoomRequest& req) {
+drogon::Task<chat::RenameRoomResponse> MessageHandlers::handleRenameRoom(const WsDataPtr& wsDataGuarded, const chat::RenameRoomRequest& req) {
     chat::RenameRoomResponse resp;
+
+    auto wsData = co_await wsDataGuarded->lock_shared();
+
     if(wsData->status != USER_STATUS::Authenticated) {
         setStatus(resp, chat::STATUS_UNAUTHORIZED, "Not authenticated");
         co_return resp;
@@ -490,8 +521,8 @@ drogon::Task<chat::RenameRoomResponse> MessageHandlers::handleRenameRoom(const s
             [&](auto tx) -> drogon::Task<ScopedTransactionResult> {
                 try {
                     using namespace drogon::orm;
-                    auto room = co_await CoroMapper<models::Rooms>(tx)
-                        .findOne(Criteria(models::Rooms::Cols::_room_id, CompareOperator::EQ, wsData->room->id));
+                    auto room = co_await switch_to_io_loop(CoroMapper<models::Rooms>(tx)
+                        .findOne(Criteria(models::Rooms::Cols::_room_id, CompareOperator::EQ, wsData->room->id)));
                     room.setRoomName(req.name());
                     co_await switch_to_io_loop(CoroMapper<models::Rooms>(tx).update(room));
                     co_return std::nullopt;
@@ -511,7 +542,7 @@ drogon::Task<chat::RenameRoomResponse> MessageHandlers::handleRenameRoom(const s
         auto* new_name = env.mutable_new_room_name();
         new_name->set_room_id(wsData->room->id);
         new_name->set_name(req.name());
-        ChatRoomManager::instance().sendToAll(env);
+        co_await ChatRoomManager::instance().sendToAll(env);
         setStatus(resp, chat::STATUS_SUCCESS);
         co_return resp;
     } catch(const std::exception& e) {
@@ -521,8 +552,11 @@ drogon::Task<chat::RenameRoomResponse> MessageHandlers::handleRenameRoom(const s
     }
 }
 
-drogon::Task<chat::DeleteRoomResponse> MessageHandlers::handleDeleteRoom(const std::shared_ptr<WsData>& wsData, const chat::DeleteRoomRequest& req) {
+drogon::Task<chat::DeleteRoomResponse> MessageHandlers::handleDeleteRoom(const WsDataPtr& wsDataGuarded, const chat::DeleteRoomRequest& req) {
     chat::DeleteRoomResponse resp;
+
+    auto wsData = co_await wsDataGuarded->lock_shared();
+
     if(wsData->status != USER_STATUS::Authenticated) {
         setStatus(resp, chat::STATUS_UNAUTHORIZED, "Not authenticated.");
         co_return resp;
@@ -565,7 +599,7 @@ drogon::Task<chat::DeleteRoomResponse> MessageHandlers::handleDeleteRoom(const s
         setStatus(resp, chat::STATUS_FAILURE, *err);
         co_return resp;
     }
-    ChatRoomManager::instance().onRoomDeleted(room_id);
+    co_await ChatRoomManager::instance().onRoomDeleted(room_id);
     setStatus(resp, chat::STATUS_SUCCESS);
     co_return resp;
 }

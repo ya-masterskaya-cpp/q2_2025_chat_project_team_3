@@ -28,7 +28,7 @@ WsController::~WsController() = default;
 
 void WsController::handleNewConnection(const drogon::HttpRequestPtr& req, const drogon::WebSocketConnectionPtr& conn) {
     LOG_TRACE << "WS connect: " << conn->peerAddr().toIpPort();
-    conn->setContext(std::make_shared<WsData>());
+    conn->setContext(std::make_shared<WsDataGuarded>());
     chat::Envelope helloEnv;
     helloEnv.mutable_server_hello()->set_type(chat::ServerType::TYPE_SERVER);
     helloEnv.mutable_server_hello()->set_protocol_version(version::PROTOCOL_VERSION);
@@ -46,5 +46,8 @@ void WsController::handleNewMessage(const drogon::WebSocketConnectionPtr& conn, 
 
 void WsController::handleConnectionClosed(const drogon::WebSocketConnectionPtr& conn) {
     LOG_TRACE << "WS closed: " << conn->peerAddr().toIpPort();
-    ChatRoomManager::instance().unregisterConnection(conn);
+    drogon::async_run([conn]() -> drogon::Task<> {
+        auto wsDataProxy = co_await conn->getContext<WsDataGuarded>()->lock_shared();
+        co_await ChatRoomManager::instance().unregisterConnection(conn, *wsDataProxy);
+    });
 }
