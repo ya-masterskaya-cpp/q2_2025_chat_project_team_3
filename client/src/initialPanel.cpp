@@ -3,6 +3,7 @@
 #include <client/wsClient.h>
 #include <client/app.h>
 #include <client/appConfig.h>
+#include <client/textUtil.h>
 
 InitialPanel::InitialPanel(MainWidget* parent)
  : wxPanel(parent), m_parent(parent) {
@@ -56,6 +57,7 @@ void InitialPanel::OnAdd(wxCommandEvent& event) {
     // Show the dialog and check if the user clicked OK
     if(dialog.ShowModal() == wxID_OK) {
         wxString newItem = dialog.GetValue();
+
         if (newItem.IsEmpty()) {
             wxMessageBox(
                 "Cannot add an empty hostname/URI.",
@@ -66,11 +68,23 @@ void InitialPanel::OnAdd(wxCommandEvent& event) {
             return;
         }
 
-        if (wxGetApp().GetConfig().addServer(std::string(newItem.utf8_str()))) {
-            m_listBox->Append(newItem);
+        auto validated = TextUtil::ValidateUrl(newItem);
+
+        if(!validated) {
+            wxMessageBox(
+                "Invalid URI.",
+                "Input Error",
+                wxOK | wxICON_ERROR,
+                this
+            );
+            return;
+        }
+
+        if (wxGetApp().GetConfig().addServer(*validated)) {
+            m_listBox->Append(wxString::FromUTF8(*validated));
         } else {
             wxMessageBox(
-                "This hostname/URI already exists.",
+                "This URI already exists.",
                 "Warning",
                 wxOK | wxICON_WARNING,
                 this

@@ -43,7 +43,7 @@ void RoomsPanel::AddRoom(Room* room) {
 }
 
 void RoomsPanel::RemoveRoom(uint32_t room_id) {
-    for (int i = 0; i < roomList->GetCount(); ++i) {
+    for (unsigned int i = 0; i < roomList->GetCount(); ++i) {
         Room* roomData = dynamic_cast<Room*>(roomList->GetClientObject(i));
         if (roomData && roomData->room_id == room_id) {
             roomList->Delete(i);

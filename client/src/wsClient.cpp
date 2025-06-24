@@ -11,14 +11,17 @@
 #include <common/version.h>
 #include <drogon/HttpRequest.h>
 #include <drogon/HttpAppFramework.h>
+#include <ada.h>
 #include <time.h>
 
 WebSocketClient::WebSocketClient(MainWidget* ui_) : ui(ui_) {}
 
 void WebSocketClient::stop() {
-    LOG_INFO << "WebSocketClient::stop()";
-    conn.reset();
-    client.reset();
+    drogon::app().getLoop()->runInLoop([this]{
+        LOG_INFO << "WebSocketClient::stop()";
+        conn.reset();
+        client.reset();
+    });
 }
 
 void WebSocketClient::start(const std::string& address) {
@@ -26,11 +29,18 @@ void WebSocketClient::start(const std::string& address) {
 
     LOG_INFO << "WebSocketClient::start()";
 
-    auto [server, path] = splitUrl(address);
+    auto result = ada::parse<ada::url_aggregator>(address);
+
+    auto server = std::string(result->get_protocol()) + "//" + std::string(result->get_hostname());
+
+    auto port = result->get_port();
+    if (!port.empty()) {
+        server += std::string(":") + std::string(port);
+    }
 
     client = drogon::WebSocketClient::newWebSocketClient(server);
     auto req = drogon::HttpRequest::newHttpRequest();
-    req->setPath(path);
+    req->setPath(std::string(result->get_pathname()));
 
     client->setMessageHandler([this](const std::string& message,
                                      const drogon::WebSocketClientPtr&,

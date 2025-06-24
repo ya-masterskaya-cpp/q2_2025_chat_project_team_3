@@ -21,10 +21,19 @@ void sendEnvelope(const drogon::WebSocketConnectionPtr& conn, const chat::Envelo
     }
 }
 
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable : 4996)
+#endif
+
 std::string getEnvVar(const std::string& name) {
     const char* val = std::getenv(name.c_str());
     return val == nullptr ? std::string() : std::string(val);
 }
+
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 
 std::pair<std::string, std::string> splitUrl(const std::string& url) {
     // Find the third slash to separate authority and path
