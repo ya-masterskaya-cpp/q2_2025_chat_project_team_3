@@ -27,43 +27,47 @@ void WebSocketClient::stop() {
 void WebSocketClient::start(const std::string& address) {
     stop();
 
-    LOG_INFO << "WebSocketClient::start()";
+    drogon::app().getLoop()->runInLoop([this, address = address]{
 
-    auto result = ada::parse<ada::url_aggregator>(address);
+        LOG_INFO << "WebSocketClient::start()";
 
-    auto server = std::string(result->get_protocol()) + "//" + std::string(result->get_hostname());
+        auto result = ada::parse<ada::url_aggregator>(address);
 
-    auto port = result->get_port();
-    if (!port.empty()) {
-        server += std::string(":") + std::string(port);
-    }
+        auto server = std::string(result->get_protocol()) + "//" + std::string(result->get_hostname());
 
-    client = drogon::WebSocketClient::newWebSocketClient(server);
-    auto req = drogon::HttpRequest::newHttpRequest();
-    req->setPath(std::string(result->get_pathname()));
-
-    client->setMessageHandler([this](const std::string& message,
-                                     const drogon::WebSocketClientPtr&,
-                                     const drogon::WebSocketMessageType& type) {
-        if(type == drogon::WebSocketMessageType::Binary) {
-            handleMessage(message);
+        auto port = result->get_port();
+        if (!port.empty()) {
+            server += std::string(":") + std::string(port);
         }
-    });
 
-    client->setConnectionClosedHandler([this](const drogon::WebSocketClientPtr&) {
-    });
+        client = drogon::WebSocketClient::newWebSocketClient(server);
+        auto req = drogon::HttpRequest::newHttpRequest();
+        req->setPath(std::string(result->get_pathname()));
 
-    LOG_INFO << "Connecting to WebSocket at " << server;
-    client->connectToServer(
-        req,
-        [this](drogon::ReqResult r, const drogon::HttpResponsePtr&, const drogon::WebSocketClientPtr& wsPtr) {
-            if(r != drogon::ReqResult::Ok) {
-                conn.reset();
-                return;
+        client->setMessageHandler([this](const std::string& message,
+                                        const drogon::WebSocketClientPtr&,
+                                        const drogon::WebSocketMessageType& type) {
+            if(type == drogon::WebSocketMessageType::Binary) {
+                handleMessage(message);
             }
-            conn = wsPtr->getConnection();
-        }
-    );
+        });
+
+        client->setConnectionClosedHandler([this](const drogon::WebSocketClientPtr&) {
+        });
+
+        LOG_INFO << "Connecting to WebSocket at " << server;
+        client->connectToServer(
+            req,
+            [this](drogon::ReqResult r, const drogon::HttpResponsePtr&, const drogon::WebSocketClientPtr& wsPtr) {
+                if(r != drogon::ReqResult::Ok) {
+                    conn.reset();
+                    return;
+                }
+                conn = wsPtr->getConnection();
+            }
+        );
+
+    });
 }
 
 void WebSocketClient::requestInitialRegister(const std::string &username) {
@@ -120,16 +124,18 @@ void WebSocketClient::sendMessage(const std::string& message) {
 }
 
 void WebSocketClient::sendEnvelope(const chat::Envelope& env) {
-    if(conn && conn->connected()) {
-        std::string out;
-        if(env.SerializeToString(&out)) {
-            conn->send(out, drogon::WebSocketMessageType::Binary);
+    drogon::app().getLoop()->runInLoop([this, env = env]{
+        if(conn && conn->connected()) {
+            std::string out;
+            if(env.SerializeToString(&out)) {
+                conn->send(out, drogon::WebSocketMessageType::Binary);
+            } else {
+                showError("Failed to serialize message!");
+            }
         } else {
-            showError("Failed to serialize message!");
+            showError("Not connected to server!");
         }
-    } else {
-        showError("Not connected to server!");
-    }
+    });
 }
 
 void WebSocketClient::getMessages(int32_t limit, int64_t offset_ts) {
