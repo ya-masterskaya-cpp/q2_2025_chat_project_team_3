@@ -52,32 +52,69 @@ void CachedColorText::InvalidateCacheAndRefresh() {
 
 wxSize CachedColorText::DoGetBestSize() const {
     wxWindow* parent = GetParent();
-    if(!parent) {
+    if (!parent) {
         return wxSize(20, 20);
     }
 
     const int availableWidth = parent->GetClientSize().GetWidth();
 
-    if(m_label.IsEmpty()) {
+    if (m_label.IsEmpty()) {
         return wxSize(availableWidth, 0);
     }
 
-    const wxDouble lineHeight = GetLineHeight();
+#ifdef __WXMSW__
+    // --- Windows-Specific Path with Caching ---
 
+    // Check if the line height for the current font is already cached.
+    if (m_cachedLineHeight < 0) {
+        // CACHE MISS: We must perform the expensive one-time calculation.
+        // This will only happen once per font change.
+
+        wxBitmap temp_bmp(1, 1);
+        wxMemoryDC temp_memDC(temp_bmp);
+        wxGraphicsContext* gc = nullptr;
+        wxGraphicsRenderer* d2dRenderer = wxGraphicsRenderer::GetDirect2DRenderer();
+        if (d2dRenderer) {
+            gc = d2dRenderer->CreateContext(temp_memDC);
+        }
+        if (!gc) {
+            gc = wxGraphicsContext::Create(temp_memDC);
+        }
+
+        if (gc) {
+            gc->SetFont(GetFont(), GetForegroundColour());
+            wxDouble w;
+            // Use a non-const version of ourself to update the cache
+            auto* self = const_cast<CachedColorText*>(this);
+            gc->GetTextExtent("Tg", &w, &self->m_cachedLineHeight);
+            delete gc;
+        }
+        else {
+            // Fallback for catastrophic GC failure
+            wxClientDC dc(const_cast<CachedColorText*>(this));
+            dc.SetFont(GetFont());
+            return wxSize(availableWidth, dc.GetMultiLineTextExtent(m_label).GetHeight());
+        }
+    }
+
+    // CACHE HIT: The line height is known. The rest is super fast.
+    // Count the lines in the string (this is very cheap).
     wxStringTokenizer tokenizer(m_label, "\n");
     int numLines = tokenizer.CountTokens();
-    // A trailing newline means an extra empty line.
-    if(!m_label.IsEmpty() && m_label.EndsWith("\n")) {
-        numLines++;
-    }
-    // If the string is not empty but has no newlines, it's still one line.
-    if(numLines == 0 && !m_label.IsEmpty()) {
-        numLines = 1;
-    }
+    if (m_label.EndsWith("\n")) numLines++;
+    if (numLines == 0 && !m_label.IsEmpty()) numLines = 1;
 
-    const int totalHeight = ceil(numLines * lineHeight);
+    const int totalHeight = ceil(numLines * m_cachedLineHeight);
 
     return wxSize(availableWidth, totalHeight);
+
+#else
+    // --- Linux/macOS/Other Path (already fast) ---
+    wxClientDC dc(const_cast<CachedColorText*>(this));
+    dc.SetFont(GetFont());
+    const int requiredHeight = dc.GetMultiLineTextExtent(m_label).GetHeight();
+    return wxSize(availableWidth, requiredHeight);
+#endif
 }
 
 void CachedColorText::RenderToCache() {
@@ -104,32 +141,13 @@ void CachedColorText::RenderToCache() {
         gc = d2dRenderer->CreateContext(memDC);
     }
 #else
-    // On macOS and Linux, Create() will use the best available renderer (CoreGraphics/Cairo).
     gc = wxGraphicsContext::Create(memDC);
 #endif
 
     if(gc) {
         gc->SetFont(GetFont(), GetForegroundColour());
-        
-        // The wxGraphicsContext implementation on macOS does not handle '\n' characters.
-        // To ensure consistent behavior on all platforms, we must manually parse the
-        // string and draw it line by line.
-        const wxDouble lineHeight = GetLineHeight();
-        wxStringTokenizer tokenizer(GetLabel(), "\n");
-        wxDouble y = 0.0;
-
-        while(tokenizer.HasMoreTokens()) {
-            wxString line = tokenizer.GetNextToken();
-            gc->DrawText(line, 0, y);
-            y += lineHeight;
-        }
-
+        gc->DrawText(GetLabel(), 0, 0);
         delete gc;
-    } else {
-        // Fallback to wxDC if GraphicsContext fails (though this would lose color emoji support).
-        memDC.SetFont(GetFont());
-        memDC.SetTextForeground(GetForegroundColour());
-        memDC.DrawLabel(GetLabel(), wxRect(0, 0, size.x, size.y));
     }
 }
 
@@ -155,31 +173,4 @@ void CachedColorText::OnSysColourChanged(wxSysColourChangedEvent& event) {
     // The system theme changed, so our colors are stale.
     InvalidateCache();
     event.Skip();
-}
-
-wxDouble CachedColorText::GetLineHeight() const {
-    // CACHE HIT: If the line height is already calculated, return it immediately.
-    if (m_cachedLineHeight >= 0) {
-        return m_cachedLineHeight;
-    }
-
-    // CACHE MISS: We must perform the one-time calculation.
-    // Use a temporary wxDC to get the true font metrics, as this is the most
-    // reliable way to determine line height for all scripts (Latin, CJK, etc.).
-    wxClientDC dc(const_cast<CachedColorText*>(this));
-    dc.SetFont(GetFont());
-
-    wxFontMetrics metrics = dc.GetFontMetrics();
-
-    // The standard line height is the sum of the height above and below the
-    // baseline, plus any recommended inter-line spacing (leading).
-    m_cachedLineHeight = metrics.ascent + metrics.descent + metrics.externalLeading;
-    
-    // A font might have zero height if it's invalid. Guard against division by zero later.
-    if (m_cachedLineHeight <= 0) {
-        // Fallback to a reasonable default if metrics are weird.
-        m_cachedLineHeight = dc.GetCharHeight();
-    }
-    
-    return m_cachedLineHeight;
 }

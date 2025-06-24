@@ -26,11 +26,10 @@ private:
     void OnSize(wxSizeEvent& event);
     void OnSysColourChanged(wxSysColourChangedEvent& event);
     void RenderToCache();
-    wxDouble GetLineHeight() const;
 
     wxString m_label;
     wxBitmap m_cache;
-    mutable double m_cachedLineHeight;
+    double m_cachedLineHeight;
 
     wxDECLARE_EVENT_TABLE();
 };
