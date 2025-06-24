@@ -31,4 +31,16 @@ namespace TextUtil {
      */
     wxString SanitizeInput(const wxString& input);
 
+    /**
+     * @brief Validates a URI, ensuring it has a 'ws' or 'wss' scheme.
+     *
+     * This function uses wxURI to check for syntactical validity and then
+     * specifically checks if the scheme is 'ws' or 'wss'.
+     *
+     * @param url The URI to validate, as a wxString.
+     * @return std::optional<std::string> containing the URI as a UTF-8 encoded
+     *         std::string if it's valid, or std::nullopt otherwise.
+     */
+    std::optional<std::string> ValidateUrl(wxString url);
+
 } // namespace TextUtil

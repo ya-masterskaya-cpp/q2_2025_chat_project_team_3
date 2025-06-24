@@ -5,6 +5,8 @@
 #include <wx/settings.h>
 #include <wx/font.h>
 #include <wx/utils.h>
+#include <ada.h>
+#include <idna.h>
 
 namespace Unicode {
     using CodePointRange = std::pair<std::uint32_t, std::uint32_t>;
@@ -1073,6 +1075,39 @@ namespace TextUtil {
 
         // All checks passed.
         return sanitizedStr;
+    }
+
+    std::optional<std::string> ValidateUrl(wxString url) {
+        std::string url_str(url.utf8_str());
+        
+        auto result = ada::parse<ada::url_aggregator>(url_str);
+        
+        if(!result.has_value()) {
+            return std::nullopt;
+        }
+
+        auto protocol = result->get_protocol();
+        if(protocol != "ws:" && protocol != "wss:") {
+            return std::nullopt;
+        }
+
+        std::stringstream out_url;
+
+        out_url << protocol << "//";
+
+        auto punycode_host = result->get_hostname();
+        out_url << ada::idna::to_unicode(punycode_host);
+
+        auto port = result->get_port();
+        if (!port.empty()) {
+            out_url << ":" << port;
+        }
+
+        out_url << result->get_pathname()
+                << result->get_search()
+                << result->get_hash();
+
+        return out_url.str();
     }
 
 } // namespace TextUtil

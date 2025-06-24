@@ -7,7 +7,9 @@
       "features": ["ctl","orm","postgres"]
     },
     "protobuf",
-    "argon2"
+    "argon2",
+    "ada-url",
+    "ada-idna"
   ],
   "features": {
     "client": {
