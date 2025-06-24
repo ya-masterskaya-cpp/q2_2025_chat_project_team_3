@@ -3,7 +3,8 @@
 #include <client/wsClient.h>
 #include <client/app.h>
 #include <client/appConfig.h>
-#include <drogon/drogon.h>
+#include <wx/uri.h>
+#include <wx/tokenzr.h>
 
 InitialPanel::InitialPanel(MainWidget* parent)
  : wxPanel(parent), m_parent(parent) {
@@ -57,10 +58,9 @@ void InitialPanel::OnAdd(wxCommandEvent& event) {
     // Show the dialog and check if the user clicked OK
     if(dialog.ShowModal() == wxID_OK) {
         wxString newItem = dialog.GetValue();
-        std::string serverAddress = std::string(newItem.utf8_str());
-        if (auto error = ValidateUrl(serverAddress)) {
+        if (auto error = ValidateUrl(newItem)) {
             wxMessageBox(
-                wxString(*error),
+                *error,
                 "Invalid URL format",
                 wxOK | wxICON_ERROR,
                 this
@@ -115,75 +115,72 @@ void InitialPanel::UpdateButtonsState() {
     });
 }
 
-std::optional<std::string> InitialPanel::ValidateUrl(std::string_view url) {
-    auto trim = [](std::string_view s) -> std::string_view {
-        while (!s.empty() && std::isspace(s.front())) s.remove_prefix(1);
-        while (!s.empty() && std::isspace(s.back())) s.remove_suffix(1);
-        return s;
-    };
-    url = trim(url);
+std::optional<wxString> InitialPanel::ValidateUrl(wxString url) {
+    // 1. Sanitize user input by removing leading/trailing whitespace for a better UX.
+    url.Trim(true);
+    url.Trim(false);
 
     if (url.empty()) {
         return "URL cannot be empty";
     }
 
-    // 1. Validate the scheme (must be ws:// or wss://)
-    constexpr std::string_view ws_scheme = "ws://";
-    constexpr std::string_view wss_scheme = "wss://";
-
-    if (url.starts_with(ws_scheme)) {
-        url.remove_prefix(ws_scheme.size());
-    } else if (url.starts_with(wss_scheme)) {
-        url.remove_prefix(wss_scheme.size());
-    } else {
+    wxURI uri(url);
+    // 2. Check for the required components of a valid WebSocket URL.
+    if (!uri.HasScheme()) {
         return "URL must start with 'ws://' or 'wss://'";
     }
-
-    // 2. Separate host:port from the path. The path is optional.
-    std::string_view host_port;
-    auto path_pos = url.find('/');
-    if (path_pos != std::string_view::npos) {
-        host_port = url.substr(0, path_pos);
-    } else {
-        host_port = url;
+    if (uri.GetScheme() != "ws" && uri.GetScheme() != "wss") {
+        return "The scheme must be 'ws' or 'wss'";
     }
 
-    // 3. Validate the host and port part
-    if (host_port.empty()) {
-        return "Host and port are missing";
+    if (!uri.HasServer() || uri.GetServer().empty()) {
+        return "The host name cannot be empty";
     }
 
-    auto colon_pos = host_port.rfind(':');
-    if (colon_pos == std::string_view::npos) {
+    if (!uri.HasPort()) {
         return "You must specify a port (e.g., ws://example.com:8840)";
     }
 
-    std::string host(host_port.substr(0, colon_pos));
-    std::string port_str(host_port.substr(colon_pos + 1));
-
-    if (host.empty()) {
-        return "Host name cannot be empty";
+    // 3. Validate that the port is a number within the valid range.
+    long port = 0;
+    if (!uri.GetPort().ToLong(&port) || port <= 0 || port > 65535) {
+        return "The port must be a number in the range 1–65535";
     }
 
-    int port = 0;
-    try {
-        port = std::stoi(port_str);
-    } catch (...) {
-        return "Port must be a number";
+    // 4. Perform a stricter, syntax-only check on the host's format.
+    wxURIHostType hostType = uri.GetHostType();
+    wxString host = uri.GetServer();
+
+    if (hostType == wxURI_REGNAME) {
+        // The host is a registered name (e.g., 'localhost', 'example.com').
+
+        // Rule 1: A valid hostname cannot contain consecutive dots.
+        if (host.Contains("..")) {
+            return "Invalid hostname format: cannot contain consecutive dots.";
+        }
+
+        // Rule 2: A valid hostname cannot start or end with a dot or a hyphen.
+        if (host.StartsWith(".") || host.EndsWith(".") || host.StartsWith("-") || host.EndsWith("-")) {
+            return "Invalid hostname format: cannot start or end with a dot or a hyphen.";
+        }
+
+        // Rule 3: Check each part of the hostname (label).
+        wxStringTokenizer tokenizer(host, ".");
+        while (tokenizer.HasMoreTokens()) {
+            wxString token = tokenizer.GetNextToken();
+            // Check for invalid characters in each label.
+            for (const auto& c : token) {
+                // Valid characters are letters, numbers, and hyphens.
+                if (!wxIsalnum(c) && c != '-') {
+                    return wxString::Format("Invalid character '%c' in hostname.", c);
+                }
+            }
+        }
+    } else {
+        // The host format is unrecognized or unsupported (e.g., wxURI_IPVFUTURE).
+        return "Unsupported or invalid host format.";
     }
 
-    if (port <= 0 || port > 65535) {
-        return "Port must be in the range 1–65535";
-    }
-
-    // 4. Validate the host using trantor's name resolution
-    try {
-        trantor::InetAddress addr(host, port, false);
-    } catch (const std::exception& e) {
-        return std::string("Invalid host: ") + e.what();
-    }
-
-    // 5. Path validation is no longer needed as its absence is a valid case.
-
-    return std::nullopt; // All checks passed, no error
+    // All syntax checks passed.
+    return std::nullopt;
 }
