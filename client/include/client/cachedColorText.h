@@ -10,13 +10,14 @@ class CachedColorText : public wxControl {
 public:
     CachedColorText(wxWindow* parent, wxWindowID id, const wxString& label,
         const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize,
-        long style = 0, const wxString& name = wxStaticTextNameStr);
+        long style = 0, const wxString& name = wxStaticTextNameStr, bool stretchToParentWidth = true);
 
     virtual void SetLabel(const wxString& label) override;
     virtual wxString GetLabel() const override;
     virtual bool SetFont(const wxFont& font) override;
     void InvalidateCache();
     void InvalidateCacheAndRefresh();
+    void InvalidateLayoutCaches();
 
 protected:
     virtual wxSize DoGetBestSize() const override;
@@ -28,8 +29,12 @@ private:
     void RenderToCache();
     wxDouble GetLineHeight() const;
 
+    bool m_stretchesToParentWidth;
+
     wxString m_label;
     wxBitmap m_cache;
+
+    mutable wxSize m_cachedBestSize;
     mutable double m_cachedLineHeight;
 
     wxDECLARE_EVENT_TABLE();

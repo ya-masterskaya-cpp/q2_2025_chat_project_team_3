@@ -29,7 +29,7 @@ private:
     CachedColorText* m_messageStaticText; // Pointer to the actual text control.
     int64_t m_timestamp_val;           // Stores the raw timestamp for sorting/querying
     wxStaticText* m_timeText;
-    wxStaticText* m_userText;
+    CachedColorText* m_userText;
 
     void OnRightClick(wxMouseEvent& event);
     void OnMouseEnter(wxMouseEvent& event);

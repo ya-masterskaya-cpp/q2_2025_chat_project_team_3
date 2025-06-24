@@ -1,10 +1,13 @@
 #include <client/userNameWidget.h>
+#include <client/cachedColorText.h>
 
 UserNameWidget::UserNameWidget(wxWindow* parent, const User& user)
     : wxPanel(parent, wxID_ANY), m_user(user) {
+    SetBackgroundColour(parent->GetBackgroundColour());
+
     auto* sizer = new wxBoxSizer(wxHORIZONTAL);
-    m_usernameText = new wxStaticText(this, wxID_ANY, user.username);
-    m_usernameText->Wrap(-1);
+    m_usernameText = new CachedColorText(this, wxID_ANY, user.username, wxDefaultPosition, wxDefaultSize, 0, wxStaticTextNameStr, false);
+    //m_usernameText->Wrap(-1);
     // Set color based on role
     wxColour textColor;
     switch (user.role) {

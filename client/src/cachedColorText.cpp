@@ -13,11 +13,12 @@ wxBEGIN_EVENT_TABLE(CachedColorText, wxControl)
 wxEND_EVENT_TABLE()
 
 CachedColorText::CachedColorText(wxWindow* parent, wxWindowID id, const wxString& label,
-    const wxPoint& pos, const wxSize& size, long style, const wxString& name)
+    const wxPoint& pos, const wxSize& size, long style, const wxString& name, bool stretchToParentWidth)
     : wxControl(parent, id, pos, size, style | wxBORDER_NONE, wxDefaultValidator, name) {
     SetBackgroundStyle(wxBG_STYLE_PAINT);
+    m_stretchesToParentWidth = stretchToParentWidth;
     m_label = label;
-    m_cachedLineHeight = -1.0;
+    InvalidateLayoutCaches();
 }
 
 void CachedColorText::SetLabel(const wxString& label) {
@@ -25,7 +26,7 @@ void CachedColorText::SetLabel(const wxString& label) {
         return;
     }
     m_label = label;
-    InvalidateBestSize();
+    InvalidateLayoutCaches();
     InvalidateCache();
 }
 
@@ -36,8 +37,7 @@ wxString CachedColorText::GetLabel() const {
 bool CachedColorText::SetFont(const wxFont& font) {
     bool ret = wxControl::SetFont(font);
     if(ret) {
-        m_cachedLineHeight = -1.0;
-        InvalidateBestSize();
+        InvalidateLayoutCaches();
         InvalidateCache();
     }
     return ret;
@@ -52,34 +52,78 @@ void CachedColorText::InvalidateCacheAndRefresh() {
     Refresh();
 }
 
+void CachedColorText::InvalidateLayoutCaches() {
+    m_cachedLineHeight = -1.0;
+    m_cachedBestSize.Set(-1, -1);
+    InvalidateBestSize();
+}
+
 wxSize CachedColorText::DoGetBestSize() const {
-    wxWindow* parent = GetParent();
-    if(!parent) {
-        return wxSize(20, 20);
+    if(m_cachedBestSize.IsFullySpecified()) {
+        return m_cachedBestSize;
     }
 
-    const int availableWidth = parent->GetClientSize().GetWidth();
-
+    // Handle empty label case for both modes first.
     if(m_label.IsEmpty()) {
-        return wxSize(availableWidth, 0);
+        int width = 0;
+        if (m_stretchesToParentWidth) {
+            wxWindow* parent = GetParent();
+            if (parent) {
+                width = parent->GetClientSize().GetWidth();
+            }
+        }
+        m_cachedBestSize = wxSize(width, 0);
+        return m_cachedBestSize;
     }
 
     const wxDouble lineHeight = GetLineHeight();
+    int totalWidth = 0;
+    int totalHeight = 0;
 
-    wxStringTokenizer tokenizer(m_label, "\n");
-    int numLines = tokenizer.CountTokens();
-    // A trailing newline means an extra empty line.
-    if(!m_label.IsEmpty() && m_label.EndsWith("\n")) {
-        numLines++;
+    if(m_stretchesToParentWidth) {
+        wxWindow* parent = GetParent();
+        if(!parent) {
+            return wxSize(20, 20);
+        }
+        totalWidth = parent->GetClientSize().GetWidth();
+
+        wxStringTokenizer tokenizer(m_label, "\n");
+        int numLines = tokenizer.CountTokens();
+        // A trailing newline means an extra empty line.
+        if(!m_label.IsEmpty() && m_label.EndsWith("\n")) {
+            numLines++;
+        }
+        // If the string is not empty but has no newlines, it's still one line.
+        if(numLines == 0 && !m_label.IsEmpty()) {
+            numLines = 1;
+        }
+        totalHeight = ceil(numLines * lineHeight);
+
+    } else {
+        totalHeight = ceil(lineHeight);
+
+        wxMemoryDC dc;
+        wxBitmap tempBitmap(1, 1);
+        dc.SelectObject(tempBitmap);
+        dc.SetFont(GetFont());
+
+        GraphicsContextManager ctx(dc);
+        wxGraphicsContext* gc = ctx.GetContext();
+
+        wxDouble measuredWidth = 0.0;
+        if(gc) {
+            gc->SetFont(GetFont(), GetForegroundColour());
+            gc->GetTextExtent(m_label, &measuredWidth, nullptr, nullptr, nullptr);
+        } else {
+            wxCoord w;
+            dc.GetTextExtent(m_label, &w, nullptr);
+            measuredWidth = w;
+        }
+        totalWidth = ceil(measuredWidth);
     }
-    // If the string is not empty but has no newlines, it's still one line.
-    if(numLines == 0 && !m_label.IsEmpty()) {
-        numLines = 1;
-    }
 
-    const int totalHeight = ceil(numLines * lineHeight);
-
-    return wxSize(availableWidth, totalHeight);
+    m_cachedBestSize = wxSize(totalWidth, totalHeight);
+    return m_cachedBestSize;
 }
 
 void CachedColorText::RenderToCache() {
@@ -92,35 +136,44 @@ void CachedColorText::RenderToCache() {
     m_cache.Create(size);
     wxMemoryDC memDC(m_cache);
 
-    if(wxWindow* parent = GetParent()) {
+    wxWindow* parent = GetParent();
+    if(parent) {
         memDC.SetBackground(parent->GetBackgroundColour());
     }
     memDC.Clear();
 
-    // Use the manager to create and destroy the graphics context.
     GraphicsContextManager ctx(memDC);
-    if(wxGraphicsContext* gc = ctx.GetContext()) {
-        // High-fidelity path: Use wxGraphicsContext for rendering.
+    wxGraphicsContext* gc = ctx.GetContext();
+
+    if(gc) {
         gc->SetFont(GetFont(), GetForegroundColour());
 
-        // The wxGraphicsContext implementation on macOS does not handle '\n' characters.
-        // To ensure consistent behavior on all platforms, we must manually parse theAdd commentMore actions
-        // string and draw it line by line.
-        const wxDouble lineHeight = GetLineHeight();
-        wxStringTokenizer tokenizer(GetLabel(), "\n");
-        wxDouble y = 0.0;
+        if(m_stretchesToParentWidth) {
+            // The wxGraphicsContext implementation on macOS does not handle '\n' characters.
+            // To ensure consistent behavior on all platforms, we must manually parse the
+            // string and draw it line by line.
+            const wxDouble lineHeight = GetLineHeight();
+            wxStringTokenizer tokenizer(GetLabel(), "\n");
+            wxDouble y = 0.0;
 
-        while(tokenizer.HasMoreTokens()) {
-            wxString line = tokenizer.GetNextToken();
-            gc->DrawText(line, 0, y);
-            y += lineHeight;
+            while(tokenizer.HasMoreTokens()) {
+                wxString line = tokenizer.GetNextToken();
+                gc->DrawText(line, 0, y);
+                y += lineHeight;
+            }
+        } else {
+            gc->DrawText(GetLabel(), 0, 0);
         }
     } else {
-        // Fallback path: Use the standard wxDC if GraphicsContext fails.
-        wxDC& dc = ctx.GetDC();
-        dc.SetFont(GetFont());
-        dc.SetTextForeground(GetForegroundColour());
-        dc.DrawLabel(GetLabel(), wxRect(wxPoint(0, 0), size));
+        // Fallback to wxDC if GraphicsContext fails (though this would lose color emoji support).
+        memDC.SetFont(GetFont());
+        memDC.SetTextForeground(GetForegroundColour());
+
+        if(m_stretchesToParentWidth) {
+            memDC.DrawLabel(GetLabel(), wxRect(0, 0, size.x, size.y));
+        } else {
+            memDC.DrawText(GetLabel(), 0, 0);
+        }
     }
 }
 
@@ -139,6 +192,14 @@ void CachedColorText::OnSize(wxSizeEvent& event) {
     if(m_cache.IsOk() && GetClientSize() != m_cache.GetSize()) {
         InvalidateCache();
     }
+
+    // If the control's best size depends on the parent's width,
+    // a size change implies that the parent may have been resized,
+    // making our layout cache stale.
+    if(m_stretchesToParentWidth) {
+        InvalidateLayoutCaches();
+    }
+
     event.Skip();
 }
 
@@ -165,12 +226,12 @@ wxDouble CachedColorText::GetLineHeight() const {
     // The standard line height is the sum of the height above and below the
     // baseline, plus any recommended inter-line spacing (leading).
     m_cachedLineHeight = metrics.ascent + metrics.descent + metrics.externalLeading;
-    
+
     // A font might have zero height if it's invalid. Guard against division by zero later.
     if (m_cachedLineHeight <= 0) {
         // Fallback to a reasonable default if metrics are weird.
         m_cachedLineHeight = dc.GetCharHeight();
     }
-    
+
     return m_cachedLineHeight;
 }
