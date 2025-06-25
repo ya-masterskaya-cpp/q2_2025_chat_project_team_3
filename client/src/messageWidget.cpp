@@ -96,7 +96,7 @@ void MessageWidget::SetWrappedMessage(int wrapWidth) {
     // Only update the label and re-layout if the wrapped text has actually changed
     // This prevents unnecessary redraws and layout passes.
     if (m_messageStaticText->GetLabel() != wrapped) {
-        m_messageStaticText->SetLabelText(wrapped);
+        m_messageStaticText->SetLabel(wrapped);
     }
 }
 
