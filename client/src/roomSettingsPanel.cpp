@@ -87,5 +87,5 @@ void RoomSettingsPanel::OnClose(wxCommandEvent& event) {
 
 void RoomSettingsPanel::OnInputRename(wxCommandEvent& event) {
     event.Skip();
-    TextUtil::LimitTextLength(m_roomNameCtrl, limits::MAX_USERNAME_LENGTH);
+    TextUtil::LimitTextLength(m_roomNameCtrl, limits::MAX_ROOMNAME_LENGTH);
 }
