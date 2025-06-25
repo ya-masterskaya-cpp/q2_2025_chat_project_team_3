@@ -49,9 +49,13 @@ RoomSettingsPanel::RoomSettingsPanel(wxWindow* parent, const wxString& roomName,
 }
 
 void RoomSettingsPanel::OnRename(wxCommandEvent& event) {
-    wxString newName = m_roomNameCtrl->GetValue();
-    if (newName.IsEmpty()) {
-        wxMessageBox("Room name cannot be empty.", "Error", wxOK | wxICON_ERROR, this);
+    auto newName = TextUtil::SanitizeInput(m_roomNameCtrl->GetValue());
+    if (!newName.length()) {
+        wxMessageBox("Room name must consist of at least 1 non special character",
+            "Rename room error",
+            wxOK | wxICON_ERROR, this
+        );
+        m_roomNameCtrl->SetFocus();
         return;
     }
     wxString confirmationMessage = wxString::Format("Are you sure you want to rename this room to \"%s\"?", newName);
