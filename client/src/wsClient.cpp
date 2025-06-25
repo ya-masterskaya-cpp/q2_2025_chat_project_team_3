@@ -342,7 +342,7 @@ void WebSocketClient::handleMessage(const std::string& msg) {
             if (ui->chatPanel->IsShown() && ui->chatPanel->GetRoomId() == response.room_id()) {
                 ui->chatPanel->SetRoomName(wxString::FromUTF8(response.name()));
             }
-            ui->roomsPanel->RenameRoom(response.room_id(), response.name());
+            ui->roomsPanel->RenameRoom(response.room_id(), wxString::FromUTF8(response.name()));
             });
             break;
         }

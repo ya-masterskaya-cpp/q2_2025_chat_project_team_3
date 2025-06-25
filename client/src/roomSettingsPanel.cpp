@@ -1,4 +1,6 @@
-#include "client/roomSettingsPanel.h"
+#include <client/roomSettingsPanel.h>
+#include <client/textUtil.h>
+#include <common/utils/limits.h>
 
 enum {
     ID_RENAME = wxID_HIGHEST + 100,
@@ -26,6 +28,7 @@ RoomSettingsPanel::RoomSettingsPanel(wxWindow* parent, const wxString& roomName,
     // Room name edit field
     m_roomNameCtrl = new wxTextCtrl(this, wxID_ANY, roomName, 
                                    wxDefaultPosition, wxDefaultSize);
+    m_roomNameCtrl->Bind(wxEVT_TEXT, &RoomSettingsPanel::OnInputRename, this);
     sizer->Add(m_roomNameCtrl, 0, wxEXPAND | wxALL, FromDIP(5));
     
     // Buttons
@@ -46,9 +49,13 @@ RoomSettingsPanel::RoomSettingsPanel(wxWindow* parent, const wxString& roomName,
 }
 
 void RoomSettingsPanel::OnRename(wxCommandEvent& event) {
-    wxString newName = m_roomNameCtrl->GetValue();
-    if (newName.IsEmpty()) {
-        wxMessageBox("Room name cannot be empty.", "Error", wxOK | wxICON_ERROR, this);
+    auto newName = TextUtil::SanitizeInput(m_roomNameCtrl->GetValue());
+    if (!newName.length()) {
+        wxMessageBox("Room name must consist of at least 1 non special character",
+            "Rename room error",
+            wxOK | wxICON_ERROR, this
+        );
+        m_roomNameCtrl->SetFocus();
         return;
     }
     wxString confirmationMessage = wxString::Format("Are you sure you want to rename this room to \"%s\"?", newName);
@@ -80,4 +87,9 @@ void RoomSettingsPanel::OnClose(wxCommandEvent& event) {
     evt.SetEventObject(this);
     
     GetParent()->GetEventHandler()->ProcessEvent(evt);
+}
+
+void RoomSettingsPanel::OnInputRename(wxCommandEvent& event) {
+    event.Skip();
+    TextUtil::LimitTextLength(m_roomNameCtrl, limits::MAX_ROOMNAME_LENGTH);
 }
