@@ -1,6 +1,6 @@
-#include "client/roomSettingsPanel.h"
-#include "client/textUtil.h"
-#include "common/utils/limits.h"
+#include <client/roomSettingsPanel.h>
+#include <client/textUtil.h>
+#include <common/utils/limits.h>
 
 enum {
     ID_RENAME = wxID_HIGHEST + 100,
