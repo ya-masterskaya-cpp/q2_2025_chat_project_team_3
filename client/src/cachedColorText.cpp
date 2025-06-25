@@ -54,7 +54,7 @@ void CachedColorText::InvalidateCacheAndRefresh() {
 
 void CachedColorText::InvalidateLayoutCaches() {
     m_cachedLineHeight = -1.0;
-    m_cachedBestSize.Set(-1, -1);
+    m_cachedBestSize.Set(wxDefaultCoord, wxDefaultCoord);
     InvalidateBestSize();
 }
 

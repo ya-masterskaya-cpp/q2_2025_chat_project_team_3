@@ -148,9 +148,9 @@ void MessageView::ReWrapAllMessages(int wrapWidth) {
     m_lastKnownWrapWidth = wrapWidth;
     wxCoord oldScrollY = GetVisibleRowsBegin();
     for(auto* widget : m_messageWidgets) {
-        if(widget->IsShown()) {
+        //if(widget->IsShown()) {
             widget->SetWrappedMessage(m_lastKnownWrapWidth);
-        }
+        //}
     }
     SetUnitCount(CalculateTotalHeight());
     ScrollToRow(oldScrollY);
