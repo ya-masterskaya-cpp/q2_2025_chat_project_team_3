@@ -1,4 +1,6 @@
 #include "client/roomSettingsPanel.h"
+#include "client/textUtil.h"
+#include "common/utils/limits.h"
 
 enum {
     ID_RENAME = wxID_HIGHEST + 100,
@@ -26,6 +28,7 @@ RoomSettingsPanel::RoomSettingsPanel(wxWindow* parent, const wxString& roomName,
     // Room name edit field
     m_roomNameCtrl = new wxTextCtrl(this, wxID_ANY, roomName, 
                                    wxDefaultPosition, wxDefaultSize);
+    m_roomNameCtrl->Bind(wxEVT_TEXT, &RoomSettingsPanel::OnInputRename, this);
     sizer->Add(m_roomNameCtrl, 0, wxEXPAND | wxALL, FromDIP(5));
     
     // Buttons
@@ -80,4 +83,9 @@ void RoomSettingsPanel::OnClose(wxCommandEvent& event) {
     evt.SetEventObject(this);
     
     GetParent()->GetEventHandler()->ProcessEvent(evt);
+}
+
+void RoomSettingsPanel::OnInputRename(wxCommandEvent& event) {
+    event.Skip();
+    TextUtil::LimitTextLength(m_roomNameCtrl, limits::MAX_USERNAME_LENGTH);
 }

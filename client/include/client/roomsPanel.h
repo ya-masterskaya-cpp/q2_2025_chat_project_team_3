@@ -18,7 +18,7 @@ public:
     void UpdateRoomList(const std::vector<Room*>& rooms);
     void AddRoom(Room* room);
     void RemoveRoom(uint32_t room_id);
-    void RenameRoom(uint32_t room_id, const std::string& name);
+    void RenameRoom(uint32_t room_id, const wxString& name);
     std::optional<Room> GetSelectedRoom();
 
     wxListBox* roomList;

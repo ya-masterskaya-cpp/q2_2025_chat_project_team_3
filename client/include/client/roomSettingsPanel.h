@@ -23,6 +23,7 @@ private:
     void OnRename(wxCommandEvent& event);
     void OnDelete(wxCommandEvent& event);
     void OnClose(wxCommandEvent& event);
+    void OnInputRename(wxCommandEvent& event);
 
     wxDECLARE_EVENT_TABLE();
 };
