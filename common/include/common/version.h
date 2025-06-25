@@ -1,3 +1,3 @@
 namespace version {
-    constexpr std::size_t PROTOCOL_VERSION = 2;
+    constexpr std::size_t PROTOCOL_VERSION = 3;
 }
