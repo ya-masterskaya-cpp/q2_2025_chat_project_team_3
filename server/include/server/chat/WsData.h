@@ -1,5 +1,7 @@
 #pragma once
 
+#include <common/utils/guarded.h>
+
 enum class USER_STATUS {
     Unauthenticated, // any ws conn
     Registering,     // 1'st step of reg
@@ -23,3 +25,9 @@ struct WsData {
     std::optional<CurrentRoom> room;
     USER_STATUS status = USER_STATUS::Unauthenticated;
 };
+
+using WsDataGuarded = Guarded<WsData>;
+using WsDataPtr = std::shared_ptr<WsDataGuarded>;
+
+using WsDataSharedProxy = WsDataGuarded::SharedProxy;
+using WsDataUniqueProxy = WsDataGuarded::UniqueProxy;

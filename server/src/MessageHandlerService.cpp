@@ -7,7 +7,7 @@ MessageHandlerService::MessageHandlerService(std::unique_ptr<MessageHandlers> ha
 
 MessageHandlerService::~MessageHandlerService() = default;
 
-drogon::Task<chat::Envelope> MessageHandlerService::processMessage(const std::shared_ptr<WsData>& wsData, const chat::Envelope& env, IChatRoomService& room_service) const {
+drogon::Task<chat::Envelope> MessageHandlerService::processMessage(const WsDataPtr& wsData, const chat::Envelope& env, IChatRoomService& room_service) const {
     chat::Envelope respEnv;
     switch(env.payload_case()) {
         case chat::Envelope::kInitialAuthRequest: {

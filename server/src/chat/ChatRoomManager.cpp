@@ -2,75 +2,119 @@
 #include <common/utils/utils.h>
 #include <server/chat/WsData.h>
 
+#include <server/chat/ChatRoomManager.h>
+#include <common/utils/utils.h>
+
 ChatRoomManager& ChatRoomManager::instance() {
     static ChatRoomManager inst;
     return inst;
 }
 
-std::vector<chat::UserInfo> ChatRoomManager::getUsersInRoom(int32_t room_id) const {
-    std::vector<chat::UserInfo> res;
-    {
-        std::shared_lock lock(m_mutex);
-
-        auto it = m_room_to_conns.find(room_id);
-
-        if(it != m_room_to_conns.end()) {
-            res.reserve(it->second.size());
-            for(const auto& conn : it->second) {
-                auto& ws_data = conn->getContextRef<WsData>();
-                chat::UserInfo ui;
-                ui.set_user_id(ws_data.user->id);
-                ui.set_user_name(ws_data.user->name);
-                ui.set_user_room_rights(ws_data.room->rights);
-                res.emplace_back(std::move(ui));
-            }
+// Helper function to create UserInfo from WsData.
+// This is synchronous because it operates on already-locked data.
+static chat::UserInfo makeUserInfo(const WsData& data) {
+    chat::UserInfo ui;
+    if(data.user) {
+        ui.set_user_id(data.user->id);
+        ui.set_user_name(data.user->name);
+        if(data.room) {
+            ui.set_user_room_rights(data.room->rights);
         }
     }
-    return res;
+    return ui;
 }
 
-void ChatRoomManager::registerConnection(const drogon::WebSocketConnectionPtr& conn) {
-    std::unique_lock lock(m_mutex);
-    auto& ws_data = conn->getContextRef<WsData>();
-    int32_t user_id = ws_data.user->id;
+drogon::Task<std::vector<chat::UserInfo>> ChatRoomManager::getUsersInRoomAsync(
+    int32_t room_id, const WsData& locked_caller_data) const {
+    auto manager_lock = co_await m_manager_mutex.lock_shared();
+
+    auto it = m_room_to_conns.find(room_id);
+    if(it == m_room_to_conns.end()) {
+        co_return {};
+    }
+
+    std::vector<chat::UserInfo> user_list;
+    user_list.reserve(it->second.size());
+
+    for(const auto& conn : it->second) {
+        auto peer_guarded = conn->getContext<WsDataGuarded>();
+
+        if(peer_guarded->isHolding(locked_caller_data)) {
+            user_list.push_back(makeUserInfo(locked_caller_data));
+        } else {
+            auto peer_proxy = co_await peer_guarded->lock_shared();
+            user_list.push_back(makeUserInfo(*peer_proxy));
+        }
+    }
+    co_return user_list;
+}
+
+drogon::Task<void> ChatRoomManager::registerConnection(int32_t user_id, const drogon::WebSocketConnectionPtr& conn) {
+    auto lock = co_await m_manager_mutex.lock_unique();
     m_user_id_to_conns[user_id].insert(conn);
 }
 
-void ChatRoomManager::addConnectionToRoom(const drogon::WebSocketConnectionPtr& conn) {
-    std::unique_lock lock(m_mutex);
-    auto& ws_data = conn->getContextRef<WsData>();
-    int32_t room_id = ws_data.room->id;
+drogon::Task<void> ChatRoomManager::addConnectionToRoom(int32_t room_id, const drogon::WebSocketConnectionPtr& conn) {
+    auto lock = co_await m_manager_mutex.lock_unique();
     m_room_to_conns[room_id].insert(conn);
 }
 
-void ChatRoomManager::removeConnectionFromRoom(const drogon::WebSocketConnectionPtr& conn) {
-    std::unique_lock lock(m_mutex);
-    removeFromRoom_unsafe(conn);
-}
-
-void ChatRoomManager::unregisterConnection(const drogon::WebSocketConnectionPtr& conn) {
-    std::unique_lock lock(m_mutex);
-
-    auto& ws_data = conn->getContextRef<WsData>();
-
-    // Clean up user-related mapping if user data is present
-    if (ws_data.user) {
-        int32_t user_id = ws_data.user->id;
-        // The user must be in the map if ws_data.user is present
-        m_user_id_to_conns[user_id].erase(conn);
-        if (m_user_id_to_conns[user_id].empty()) {
-            m_user_id_to_conns.erase(user_id);
+drogon::Task<void> ChatRoomManager::removeConnectionFromRoom(const drogon::WebSocketConnectionPtr& conn, const WsData& locked_data) {
+    auto lock = co_await m_manager_mutex.lock_unique();
+    
+    if (locked_data.user && locked_data.room) {
+        int32_t room_id = locked_data.room->id;
+        
+        chat::Envelope user_left_msg;
+        auto* user_info = user_left_msg.mutable_user_left()->mutable_user();
+        user_info->set_user_id(locked_data.user->id);
+        user_info->set_user_name(locked_data.user->name);
+        user_info->set_user_room_rights(locked_data.room->rights);
+        sendToRoom_unsafe(room_id, user_left_msg);
+        
+        if (auto it = m_room_to_conns.find(room_id); it != m_room_to_conns.end()) {
+            it->second.erase(conn);
+            if (it->second.empty()) {
+                m_room_to_conns.erase(it);
+            }
         }
     }
+}
 
-    // Clean up room-related mapping if room data is present
-    if (ws_data.room) {
-        removeFromRoom_unsafe(conn);
+drogon::Task<void> ChatRoomManager::unregisterConnection(const drogon::WebSocketConnectionPtr& conn, const WsData& locked_data) {
+    // First, handle the room departure logic if the user was in a room.
+    if (locked_data.room) {
+        co_await removeConnectionFromRoom(conn, locked_data);
+    }
+    
+    // Then, perform the final user cleanup.
+    auto lock = co_await m_manager_mutex.lock_unique();
+    if (locked_data.user) {
+        if (auto it = m_user_id_to_conns.find(locked_data.user->id); it != m_user_id_to_conns.end()) {
+            it->second.erase(conn);
+            if (it->second.empty()) {
+                m_user_id_to_conns.erase(it);
+            }
+        }
     }
 }
 
-void ChatRoomManager::sendToRoom(int32_t room_id, const chat::Envelope& message) const {
-    std::shared_lock lock(m_mutex);
+drogon::Task<std::vector<drogon::WebSocketConnectionPtr>> ChatRoomManager::onRoomDeleted(int32_t room_id) {
+    auto lock = co_await m_manager_mutex.lock_unique();
+    std::vector<drogon::WebSocketConnectionPtr> connections_in_room;
+    if (auto it = m_room_to_conns.find(room_id); it != m_room_to_conns.end()) {
+        connections_in_room.assign(it->second.begin(), it->second.end());
+        m_room_to_conns.erase(it);
+    }
+    
+    chat::Envelope room_deleted_msg;
+    room_deleted_msg.mutable_room_deleted()->set_room_id(room_id);
+    sendToAll_unsafe(room_deleted_msg);
+    co_return connections_in_room;
+}
+
+drogon::Task<void> ChatRoomManager::sendToRoom(int32_t room_id, const chat::Envelope& message) const {
+    auto lock = co_await m_manager_mutex.lock_shared();
     sendToRoom_unsafe(room_id, message);
 }
 
@@ -83,54 +127,15 @@ void ChatRoomManager::sendToRoom_unsafe(int32_t room_id, const chat::Envelope& m
     }
 }
 
-void ChatRoomManager::removeFromRoom_unsafe(const drogon::WebSocketConnectionPtr& conn) {
-    auto& ws_data = conn->getContextRef<WsData>();
-    int32_t room_id = ws_data.room->id;
-
-    chat::Envelope user_left_msg;
-    user_left_msg.mutable_user_left()->mutable_user()->set_user_id(ws_data.user->id);
-    user_left_msg.mutable_user_left()->mutable_user()->set_user_name(ws_data.user->name);
-    user_left_msg.mutable_user_left()->mutable_user()->set_user_room_rights(ws_data.room->rights);
-    ChatRoomManager::instance().sendToRoom_unsafe(ws_data.room->id, user_left_msg);
-
-    m_room_to_conns[room_id].erase(conn);
-    if (m_room_to_conns[room_id].empty()) {
-        m_room_to_conns.erase(room_id);
-    }
-}
-
-void ChatRoomManager::sendToAll(const chat::Envelope& message) const {
-    std::shared_lock lock(m_mutex);
-    for (const auto& [user_id, conns] : m_user_id_to_conns) {
-        for (const auto& conn : conns) {
-            if (conn->getContextRef<WsData>().status == USER_STATUS::Authenticated) {
-                sendEnvelope(conn, message);
-            }
-        }
-    }
-}
-
-void ChatRoomManager::onRoomDeleted(int32_t room_id) {
-    std::unique_lock lock(m_mutex);
-
-    if(auto it = m_room_to_conns.find(room_id); it != m_room_to_conns.end()) {
-        for (const auto& conn : it->second) {
-            conn->getContextRef<WsData>().room.reset();
-        }
-        m_room_to_conns.erase(it);
-    }
-
-    chat::Envelope room_deleted_msg;
-    room_deleted_msg.mutable_room_deleted()->set_room_id(room_id);
-    sendToAll_unsafe(room_deleted_msg);
+drogon::Task<void> ChatRoomManager::sendToAll(const chat::Envelope& message) const {
+    auto lock = co_await m_manager_mutex.lock_shared();
+    sendToAll_unsafe(message);
 }
 
 void ChatRoomManager::sendToAll_unsafe(const chat::Envelope& message) const {
     for (const auto& [user_id, conns] : m_user_id_to_conns) {
         for (const auto& conn : conns) {
-            if (conn->getContextRef<WsData>().status == USER_STATUS::Authenticated) {
-                sendEnvelope(conn, message);
-            }
+            sendEnvelope(conn, message);
         }
     }
 }
