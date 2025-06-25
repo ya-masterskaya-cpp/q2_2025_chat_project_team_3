@@ -52,6 +52,28 @@ void RoomsPanel::RemoveRoom(uint32_t room_id) {
     }
 }
 
+void RoomsPanel::RenameRoom(uint32_t room_id, const std::string &name) {
+    for (int i = 0; i < roomList->GetCount(); ++i) {
+        Room* roomData = dynamic_cast<Room*>(roomList->GetClientObject(i));
+        if (roomData && roomData->room_id == room_id) {
+            roomData->room_name = name;
+            roomList->SetString(i, wxString::FromUTF8(name));
+            break;
+        }
+    }
+}
+
+std::optional<Room> RoomsPanel::GetSelectedRoom()
+{
+    int sel = roomList->GetSelection();
+    if(sel != wxNOT_FOUND) {
+        Room* roomData = dynamic_cast<Room*>(roomList->GetClientObject(sel));
+        if (roomData){
+            return *roomData;
+        }
+    }
+    return std::nullopt;
+}
 void RoomsPanel::OnJoin(wxCommandEvent &)
 {
     int sel = roomList->GetSelection();

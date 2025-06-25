@@ -7,8 +7,16 @@
 #include <client/messageView.h>
 #include <client/textUtil.h>
 #include <common/utils/limits.h>
+#include <client/roomHeaderPanel.h>
+#include <client/roomSettingsPanel.h>
 
-enum { ID_SEND = wxID_HIGHEST+30, ID_LEAVE, ID_JUMP_TO_PRESENT };
+enum { ID_SEND = wxID_HIGHEST+30,
+    ID_LEAVE,
+    ID_JUMP_TO_PRESENT,
+    ID_RENAME_ROOM,
+    ID_DELETE_ROOM,
+    ID_BACK_FROM_SETTINGS
+};
 
 wxDEFINE_EVENT(wxEVT_SNAP_STATE_CHANGED, wxCommandEvent);
 
@@ -18,6 +26,7 @@ wxBEGIN_EVENT_TABLE(ChatPanel, wxPanel)
     EVT_BUTTON(ID_JUMP_TO_PRESENT, ChatPanel::JumpToPresent)
     //EVT_TIMER(ID_RESIZE_TIMER, ChatPanel::OnResizeTimerTick)
     //EVT_SIZE(ChatPanel::OnChatPanelSize)
+    //EVT_LEFT_DOWN(ChatPanel::OnRoomHeaderClicked)
 wxEND_EVENT_TABLE()
 
 ChatPanel::ChatPanel(MainWidget* parent)
@@ -29,10 +38,15 @@ ChatPanel::ChatPanel(MainWidget* parent)
     m_mainSizer = new wxBoxSizer(wxHORIZONTAL);
     SetSizer(m_mainSizer);
 
-    // --- Left side: Chat area (messages + input) ---
+    // --- Left side: Chat area (header + messages + input) ---
     m_chatSizer = new wxBoxSizer(wxVERTICAL);
     // Add the chat area to the main sizer, expanding horizontally and taking all available vertical space.
     m_mainSizer->Add(m_chatSizer, 1, wxEXPAND | wxALL, FromDIP(5));
+
+    // Add Room Header Panel
+    m_roomHeaderPanel = new RoomHeaderPanel(this);
+
+    m_chatSizer->Add(m_roomHeaderPanel, 0, wxEXPAND | wxALL, FromDIP(5));
 
     m_messageView = new MessageView(this);
     // Add the new message view directly to the chat sizer. It will fill the available space.
@@ -71,6 +85,15 @@ ChatPanel::ChatPanel(MainWidget* parent)
     m_jumpToPresentButton->Hide();
 
     Bind(wxEVT_SNAP_STATE_CHANGED, &ChatPanel::OnSnapStateChanged, this);
+    
+    m_roomHeaderPanel->Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent& event) {
+        ShowSettingsPanel();
+        event.Skip();
+    });
+
+    Bind(wxEVT_ROOM_RENAME, &ChatPanel::OnRoomRename, this);
+    Bind(wxEVT_ROOM_DELETE, &ChatPanel::OnRoomDelete, this);
+    Bind(wxEVT_ROOM_CLOSE, &ChatPanel::OnRoomClose, this);
 }
 
 // Event handler for when the message container (wxScrolledWindow) changes size.
@@ -118,6 +141,9 @@ void ChatPanel::OnSend(wxCommandEvent&) {
 }
 
 void ChatPanel::OnLeave(wxCommandEvent&) {
+    if (m_roomSettingsPanel) {
+        ShowChatPanel();
+    }
     m_messageView->Clear();
     m_parent->wsClient->leaveRoom();
 }
@@ -142,6 +168,63 @@ void ChatPanel::OnSnapStateChanged(wxCommandEvent& event) {
 void ChatPanel::OnInputText(wxCommandEvent& event) {
     event.Skip();
     TextUtil::LimitTextLength(m_input_ctrl, limits::MAX_MESSAGE_LENGTH);
+}
+
+void ChatPanel::ShowSettingsPanel() {
+    if (m_roomSettingsPanel) return;
+    m_roomSettingsPanel = new RoomSettingsPanel(this,
+                                              m_roomHeaderPanel->GetLabel(),
+                                              m_roomHeaderPanel->GetRoomId());
+    
+    m_roomHeaderPanel->Hide();
+    m_chatSizer->Replace(m_roomHeaderPanel, m_roomSettingsPanel);
+    m_roomSettingsPanel->Show();
+    Layout();
+}
+
+void ChatPanel::ShowChatPanel() {
+    if (!m_roomSettingsPanel) return;
+
+    m_roomHeaderPanel->Show();
+    m_roomSettingsPanel->Hide();
+    m_chatSizer->Replace(m_roomSettingsPanel, m_roomHeaderPanel);
+    m_roomSettingsPanel->Destroy();
+    m_roomSettingsPanel = nullptr;
+    Layout();
+}
+
+void ChatPanel::SetRoomName(wxString name) {
+    m_roomHeaderPanel->SetLabel(name);
+}
+
+int32_t ChatPanel::GetRoomId() {
+    return m_roomHeaderPanel->GetRoomId();
+}
+
+void ChatPanel::ResetState() {
+    ShowChatPanel();
+    m_input_ctrl->Clear();
+    m_messageView->Clear();
+    m_userListPanel->Clear();
+    m_jumpToPresentButton->Hide();
+    Layout();
+}
+
+void ChatPanel::OnRoomRename(wxCommandEvent &event) {
+    if (!m_parent || !m_parent->wsClient) return;
+    wxString newName = event.GetString();
+    int32_t roomId = event.GetInt();
+    m_parent->wsClient->renameRoom(roomId, std::string(newName.ToUTF8()));
+}
+
+void ChatPanel::OnRoomDelete(wxCommandEvent& event) {
+    if (!m_parent || !m_parent->wsClient) return;
+    int32_t roomId = event.GetInt();
+    m_parent->wsClient->deleteRoom(roomId);
+}
+
+void ChatPanel::OnRoomClose(wxCommandEvent& event) {
+    ShowChatPanel();
 }
 
 void ChatPanel::OnInputKeyDown(wxKeyEvent& event) {

@@ -9,6 +9,9 @@ class MainWidget;
 class UserListPanel;
 struct Message;
 class MessageView;
+class RoomHeaderPanel;
+struct Room;
+class RoomSettingsPanel;
 
 class ChatPanel : public wxPanel {
 public:
@@ -16,14 +19,24 @@ public:
 
     MainWidget* GetMainWidget() { return m_parent; }
 
+    void ShowSettingsPanel();
+    void ShowChatPanel();
+    void SetRoomName(wxString name);
+    int32_t GetRoomId();
+    void ResetState();
+
     UserListPanel* m_userListPanel = nullptr;
     MessageView* m_messageView = nullptr;
+    RoomHeaderPanel* m_roomHeaderPanel = nullptr;
+
 private:
     MainWidget* m_parent = nullptr;
     wxTextCtrl* m_input_ctrl = nullptr;
     wxBoxSizer* m_mainSizer = nullptr;         // Horizontal sizer for the entire ChatPanel
     wxBoxSizer* m_chatSizer = nullptr;         // Vertical sizer for messages and input area
     wxButton*   m_jumpToPresentButton = nullptr;
+    RoomSettingsPanel* m_roomSettingsPanel = nullptr;
+
     void OnSend(wxCommandEvent& event);
     void OnLeave(wxCommandEvent& event);
     void JumpToPresent(wxCommandEvent&);
@@ -39,6 +52,9 @@ private:
     void OnResizeTimerTick(wxTimerEvent& event);
     void OnInputText(wxCommandEvent& event);
     void OnInputKeyDown(wxKeyEvent& event);
-    
+    void OnRoomRename(wxCommandEvent& event);
+    void OnRoomDelete(wxCommandEvent& event);
+    void OnRoomClose(wxCommandEvent& event);
+
     wxDECLARE_EVENT_TABLE();
 };
