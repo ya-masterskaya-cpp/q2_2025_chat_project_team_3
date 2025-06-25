@@ -35,7 +35,7 @@ RoomHeaderPanel::RoomHeaderPanel(wxWindow* parent)
 }
     
 void RoomHeaderPanel::SetRoom(const Room& room) {
-    m_roomName->SetLabel(wxString::FromUTF8(room.room_name));
+    m_roomName->SetLabel(room.room_name);
     m_roomId = room.room_id;
     Layout();
 }
