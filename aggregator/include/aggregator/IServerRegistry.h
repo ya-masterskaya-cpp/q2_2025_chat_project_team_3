@@ -1,5 +1,7 @@
 #pragma once
 
+namespace aggregator {
+
 class IServerRegistry {
 public:
     virtual ~IServerRegistry() = default;
@@ -9,3 +11,5 @@ public:
     virtual std::vector<std::string> GetServers() = 0;
     virtual void SendToClients(const chat::Envelope env) const = 0;
 };
+
+} // namespace aggregator

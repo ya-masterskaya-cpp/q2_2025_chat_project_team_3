@@ -2,6 +2,8 @@
 
 #include <drogon/WebSocketConnection.h>
 
+namespace aggregator {
+
 class DrogonServerRegistry {
 public:
     static DrogonServerRegistry& instance();
@@ -19,3 +21,5 @@ private:
     std::unordered_map<std::string, drogon::WebSocketConnectionPtr> m_host_id_to_conn;
     mutable std::shared_mutex m_mutex;
 };
+
+} // namespace aggregator

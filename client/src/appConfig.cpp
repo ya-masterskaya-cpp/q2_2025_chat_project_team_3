@@ -9,6 +9,8 @@
 
 #include <fstream>
 
+namespace client {
+
 AppConfig::AppConfig(const wxString& appName)
     : m_instanceChecker(nullptr),
       m_isFirstInstance(false)
@@ -155,3 +157,5 @@ const Json::Value& AppConfig::getRoot() const {
 bool AppConfig::IsFirstInstance() const {
     return m_isFirstInstance;
 }
+
+} // namespace client

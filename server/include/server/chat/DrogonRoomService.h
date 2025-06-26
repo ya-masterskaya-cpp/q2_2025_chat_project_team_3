@@ -3,6 +3,8 @@
 #include <server/chat/IChatRoomService.h>
 #include <drogon/WebSocketConnection.h>
 
+namespace server {
+
 class DrogonRoomService : public IChatRoomService {
 public:
     DrogonRoomService(const drogon::WebSocketConnectionPtr& conn);
@@ -15,3 +17,5 @@ public:
 private:
     const drogon::WebSocketConnectionPtr& m_conn;
 };
+
+} // namespace server

@@ -3,6 +3,8 @@
 #include <wx/graphics.h>
 #include <wx/dcmemory.h>
 
+namespace client {
+
 /**
  * @class GraphicsContextManager
  * @brief An RAII helper to create and manage a wxGraphicsContext from a wxMemoryDC.
@@ -55,3 +57,5 @@ private:
     GraphicsContextManager(const GraphicsContextManager&) = delete;
     GraphicsContextManager& operator=(const GraphicsContextManager&) = delete;
 };
+
+} // namespace client

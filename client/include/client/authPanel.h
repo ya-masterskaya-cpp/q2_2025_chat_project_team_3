@@ -2,6 +2,8 @@
 
 #include <wx/wx.h>
 
+namespace client {
+
 class MainWidget;
 
 class AuthPanel : public wxPanel {
@@ -27,3 +29,5 @@ private:
     MainWidget* mainWin;
     wxString m_password;
 };
+
+} // namespace client

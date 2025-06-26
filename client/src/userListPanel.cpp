@@ -1,6 +1,8 @@
 #include <client/userListPanel.h>
 #include <client/userNameWidget.h>
 
+namespace client {
+
 UserListPanel::UserListPanel(wxWindow* parent)
     : wxPanel(parent, wxID_ANY) {
     SetBackgroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW));
@@ -102,3 +104,5 @@ void UserListPanel::Clear() {
     m_userContainer->SetVirtualSize(m_userSizer->GetMinSize());
     m_userContainer->Thaw();
 }
+
+} // namespace client

@@ -7,6 +7,8 @@
 #include <numeric>
 #include <limits>
 
+namespace client {
+
 MessageView::MessageView(ChatPanel* parent)
     : wxVScrolledWindow(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxBORDER_NONE),
       m_chatPanelParent(parent),
@@ -97,9 +99,9 @@ void MessageView::UpdateLayoutAndScroll(const std::vector<Message>& messages, bo
     } else {
         bool wasAtBottom = GetVisibleRowsBegin() + GetClientSize().y >= GetUnitCount() - 5;
         int removedHeight = 0;
-        int numToRemove = m_messageWidgets.size() + messages.size() - MAX_MESSAGES;
+        std::size_t numToRemove = m_messageWidgets.size() + messages.size() - MAX_MESSAGES;
         if(numToRemove > 0) {
-            for(int i = 0; i < numToRemove; ++i) {
+            for(std::size_t i = 0; i < numToRemove; ++i) {
                 if(i == m_messageWidgets.size()) {
                     break;
                 }
@@ -167,7 +169,7 @@ void MessageView::Clear() {
     m_loadingNewer = false;
 }
 
-wxCoord MessageView::OnGetRowHeight(size_t row) const {
+wxCoord MessageView::OnGetRowHeight([[maybe_unused]] size_t row) const {
     return 1;
 }
 
@@ -256,3 +258,5 @@ void MessageView::UpdateSnapState(bool isSnapped) {
 void MessageView::JumpToPresent() {
     Start();
 }
+
+} // namespace client

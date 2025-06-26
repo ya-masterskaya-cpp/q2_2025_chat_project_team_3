@@ -5,6 +5,8 @@
 #include <server/chat/ChatRoomManager.h>
 #include <common/utils/utils.h>
 
+namespace server {
+
 ChatRoomManager& ChatRoomManager::instance() {
     static ChatRoomManager inst;
     return inst;
@@ -122,7 +124,7 @@ void ChatRoomManager::sendToRoom_unsafe(int32_t room_id, const chat::Envelope& m
     if(auto it = m_room_to_conns.find(room_id); it != m_room_to_conns.end()) {
         const auto& connections_in_room = it->second;
         for (const auto& conn : connections_in_room) {
-            sendEnvelope(conn, message);
+            common::sendEnvelope(conn, message);
         }
     }
 }
@@ -135,7 +137,9 @@ drogon::Task<void> ChatRoomManager::sendToAll(const chat::Envelope& message) con
 void ChatRoomManager::sendToAll_unsafe(const chat::Envelope& message) const {
     for (const auto& [user_id, conns] : m_user_id_to_conns) {
         for (const auto& conn : conns) {
-            sendEnvelope(conn, message);
+            common::sendEnvelope(conn, message);
         }
     }
 }
+
+} // namespace server

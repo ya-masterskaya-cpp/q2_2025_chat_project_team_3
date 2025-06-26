@@ -3,6 +3,8 @@
 #include <string>
 #include <stdint.h>
 
+namespace client {
+
 namespace password {
 
 const uint32_t t_cost = 3; // itertaions
@@ -17,3 +19,5 @@ std::string generate_salt();
 
 
 } // namespace password
+
+} // namespace client

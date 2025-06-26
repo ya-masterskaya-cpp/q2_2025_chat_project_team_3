@@ -5,6 +5,8 @@
 #include <coroutine>
 #include <memory>
 
+namespace common {
+
 /**
  * @file asyncSharedMutex.h
  * @brief Defines the AsyncSharedMutex class, a low-level asynchronous synchronization primitive.
@@ -182,3 +184,5 @@ public:
         return {shared_from_this()};
     }
 };
+
+} // namespace common

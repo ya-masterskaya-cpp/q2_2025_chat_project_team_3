@@ -6,6 +6,8 @@
 #include <iomanip>
 #include <random>
 
+namespace client {
+
 namespace password {
 
 std::string to_hex(const uint8_t* data, size_t len) {
@@ -52,3 +54,5 @@ std::string generate_salt() {
 }
 
 } // namespace password
+
+} // namespace client

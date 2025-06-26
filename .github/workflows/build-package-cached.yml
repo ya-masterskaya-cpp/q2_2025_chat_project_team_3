@@ -5,7 +5,7 @@ on:
       - main
 
 jobs:
-  job:
+  build:
     name: ${{ matrix.os }}-${{ github.workflow }}
     runs-on: ${{ matrix.os }}
     strategy:
@@ -39,7 +39,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y mono-complete bison flex autoconf libltdl-dev python3-jinja2 libx11-dev libxft-dev libxext-dev libxi-dev libxtst-dev libxrandr-dev
+          sudo apt-get install -y mono-complete doxygen graphviz clang bison flex autoconf libltdl-dev python3-jinja2 libx11-dev libxft-dev libxext-dev libxi-dev libxtst-dev libxrandr-dev
 
       - name: Configure NuGet credentials using vcpkg's nuget.exe
         shell: bash
@@ -166,3 +166,27 @@ jobs:
           file: ./Dockerfile.aggregator
           push: true
           tags: ghcr.io/${{ steps.set_repo_lc.outputs.repo_lc }}-aggregator:latest
+
+      - name: Generate Doxygen documentation
+        if: runner.os == 'Linux'
+        run: doxygen Doxyfile
+
+      - name: Upload Pages artifact
+        if: runner.os == 'Linux'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: 'docs/html'
+
+  deploy-gh-pages:
+    needs: build
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

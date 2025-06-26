@@ -9,6 +9,8 @@
 #include <client/serversPanel.h>
 #include <client/roomHeaderPanel.h>
 
+namespace client {
+
 MainWidget::MainWidget() : wxFrame(NULL, wxID_ANY, "Slightly Pretty Chat", wxDefaultPosition, wxSize(450, 600)) {
     wsClient = new WebSocketClient(this);
     initialPanel = new InitialPanel(this);
@@ -90,3 +92,5 @@ void MainWidget::ShowChat(std::vector<User> users) {
     chatPanel->m_messageView->Start();
     Layout();
 }
+
+} // namespace client

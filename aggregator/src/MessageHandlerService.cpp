@@ -2,6 +2,8 @@
 #include <aggregator/MessageHandlers.h>
 #include <common/utils/utils.h>
 
+namespace aggregator {
+
 MessageHandlerService::MessageHandlerService(std::unique_ptr<MessageHandlers> handlers)
     : m_handlers(std::move(handlers)) {}
 
@@ -19,9 +21,11 @@ drogon::Task<chat::Envelope> MessageHandlerService::processMessage(const std::sh
             break;
         }
         default: {
-            respEnv = makeGenericErrorEnvelope("Unknown or empty payload");
+            respEnv = common::makeGenericErrorEnvelope("Unknown or empty payload");
             break;
         }
     }
     co_return respEnv;
 }
+
+} // namespace aggregator

@@ -2,6 +2,8 @@
 
 #include <server/chat/WsData.h>
 
+namespace server {
+
 class IChatRoomService {
 public:
     virtual ~IChatRoomService() = default;
@@ -10,3 +12,5 @@ public:
     virtual drogon::Task<void> joinRoom(const WsData& locked_caller_data) = 0;
     virtual drogon::Task<void> leaveCurrentRoom(const WsData& locked_caller_data) = 0;
 };
+
+} // namespace server

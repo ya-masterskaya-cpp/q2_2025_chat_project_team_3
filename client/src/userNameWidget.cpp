@@ -1,6 +1,8 @@
 #include <client/userNameWidget.h>
 #include <client/cachedColorText.h>
 
+namespace client {
+
 UserNameWidget::UserNameWidget(wxWindow* parent, const User& user)
     : wxPanel(parent, wxID_ANY), m_user(user) {
     SetBackgroundColour(parent->GetBackgroundColour());
@@ -57,3 +59,5 @@ void UserNameWidget::OnRightClick(wxMouseEvent& event) {
     
     PopupMenu(&menu, event.GetPosition());
 }
+
+} // namespace client

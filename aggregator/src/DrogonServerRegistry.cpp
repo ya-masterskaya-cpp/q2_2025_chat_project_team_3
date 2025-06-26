@@ -2,6 +2,8 @@
 #include <aggregator/WsData.h>
 #include <common/utils/utils.h>
 
+namespace aggregator {
+
 DrogonServerRegistry& DrogonServerRegistry::instance() {
     static DrogonServerRegistry inst;
     return inst;
@@ -55,6 +57,8 @@ void DrogonServerRegistry::SendToClients_unsafe(const chat::Envelope env) const 
         if(ws_data.serverHost) {
             continue;
         }
-        sendEnvelope(conn, env);
+        common::sendEnvelope(conn, env);
     }
 }
+
+} // namespace aggregator

@@ -6,6 +6,8 @@
 #include <wx/dcmemory.h>
 #include <wx/tokenzr.h>
 
+namespace client {
+
 wxBEGIN_EVENT_TABLE(CachedColorText, wxControl)
     EVT_PAINT(CachedColorText::OnPaint)
     EVT_SIZE(CachedColorText::OnSize)
@@ -177,7 +179,7 @@ void CachedColorText::RenderToCache() {
     }
 }
 
-void CachedColorText::OnPaint(wxPaintEvent& event) {
+void CachedColorText::OnPaint([[maybe_unused]] wxPaintEvent& event) {
     wxPaintDC dc{this};
     if(!m_cache.IsOk()) {
         RenderToCache();
@@ -240,3 +242,5 @@ wxDouble CachedColorText::GetLineHeight() const {
 
     return m_cachedLineHeight;
 }
+
+} // namespace client

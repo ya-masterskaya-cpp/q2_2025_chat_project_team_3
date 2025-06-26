@@ -9,6 +9,8 @@
 #include <ada.h>
 #include <idna.h>
 
+namespace client {
+
 namespace Unicode {
     using CodePointRange = std::pair<std::uint32_t, std::uint32_t>;
 
@@ -1132,3 +1134,5 @@ namespace TextUtil {
     }
 
 } // namespace TextUtil
+
+} // namespace client

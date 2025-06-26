@@ -5,6 +5,8 @@
 #include <wx/window.h> // Required for wxClientDC in the implementation
 #include <wx/textctrl.h>
 
+namespace client {
+
 namespace TextUtil {
     // Function to manually wrap text based on a given width and font.
     // 'targetWindow' is needed for the wxClientDC to measure text.
@@ -44,3 +46,5 @@ namespace TextUtil {
     std::optional<std::string> ValidateUrl(wxString url);
 
 } // namespace TextUtil
+
+} // namespace client

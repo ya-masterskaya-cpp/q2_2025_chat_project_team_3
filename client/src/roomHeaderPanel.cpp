@@ -1,6 +1,8 @@
 #include <client/roomHeaderPanel.h>
 #include <client/roomsPanel.h>
 
+namespace client {
+
 RoomHeaderPanel::RoomHeaderPanel(wxWindow* parent)
     : wxPanel(parent, wxID_ANY) {
 
@@ -51,3 +53,5 @@ void RoomHeaderPanel::OnLeaveWindow(wxMouseEvent& event) {
     Refresh();
     event.Skip();
 }
+
+} // namespace client

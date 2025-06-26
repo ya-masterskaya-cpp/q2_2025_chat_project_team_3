@@ -3,6 +3,8 @@
 #include <common/utils/asyncSharedMutex.h>
 #include <utility>
 
+namespace common {
+
 /**
  * @class Guarded
  * @brief A template class that bundles a data object with an `AsyncSharedMutex`.
@@ -143,3 +145,5 @@ private:
     std::shared_ptr<AsyncSharedMutex> mutex_;
     T data_;
 };
+
+} // namespace common

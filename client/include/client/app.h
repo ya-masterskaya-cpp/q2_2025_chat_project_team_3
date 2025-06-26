@@ -4,6 +4,8 @@
 #include <memory>
 #include <thread>
 
+namespace client {
+
 class AppConfig;
 class MainWidget;
 
@@ -23,5 +25,7 @@ private:
     MainWidget* mw;
 };
 
+} // namespace client
+
 // This macro allows us to use wxGetApp() to get a MyApp& instead of wxApp&
-wxDECLARE_APP(MyApp);
+wxDECLARE_APP(client::MyApp);

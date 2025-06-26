@@ -2,6 +2,8 @@
 
 #include <wx/wx.h>
 
+namespace client {
+
 wxDECLARE_EVENT(wxEVT_ROOM_RENAME, wxCommandEvent);
 wxDECLARE_EVENT(wxEVT_ROOM_DELETE, wxCommandEvent);
 wxDECLARE_EVENT(wxEVT_ROOM_CLOSE, wxCommandEvent);
@@ -27,3 +29,5 @@ private:
 
     wxDECLARE_EVENT_TABLE();
 };
+
+} // namespace client

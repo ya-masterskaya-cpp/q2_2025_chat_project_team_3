@@ -6,6 +6,8 @@
 #include <deque>
 #include <vector>
 
+namespace client {
+
 template<typename T>
 class GenericCacher {
 private:
@@ -76,7 +78,7 @@ protected:
 
     virtual wxCoord OnGetRowHeight(size_t row) const override;
 
-    virtual void SetScrollbar(int orientation, int position, int thumbSize, int range, bool refresh = true) override {
+    virtual void SetScrollbar([[maybe_unused]] int orientation, [[maybe_unused]] int position, [[maybe_unused]] int thumbSize, [[maybe_unused]] int range, [[maybe_unused]] bool refresh = true) override {
         //Make scroll bar disappear
     }
 
@@ -111,3 +113,5 @@ private:
     static const int LOAD_THRESHOLD_ROWS = 10;
     const int SCROLL_STEP = 1;//FromDIP(10);
 };
+
+} // namespace client

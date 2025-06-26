@@ -3,6 +3,8 @@
 #include <drogon/WebSocketClient.h>
 #include <common/utils/utils.h>
 
+namespace server {
+
 class WsClient {
 public:
 
@@ -13,7 +15,7 @@ public:
         }
 
         LOG_TRACE << "Starting connection to aggregator: " << address;
-        auto [server, path] = splitUrl(address);
+        auto [server, path] = common::splitUrl(address);
 
         client = drogon::WebSocketClient::newWebSocketClient(server);
         auto req = drogon::HttpRequest::newHttpRequest();
@@ -38,10 +40,10 @@ public:
                 conn = wsPtr->getConnection();
 
                 chat::Envelope env;
-                auto host = getEnvVar("SERVER_HOST") + "/ws";
+                auto host = common::getEnvVar("SERVER_HOST") + "/ws";
                 LOG_TRACE << "Sendong host: " << host;
                 env.mutable_register_server_request()->set_host(host);
-                sendEnvelope(conn, env);
+                common::sendEnvelope(conn, env);
             }
         );
     }
@@ -50,3 +52,5 @@ private:
     std::shared_ptr<drogon::WebSocketConnection> conn;
     drogon::WebSocketClientPtr client;
 };
+
+} // namespace server

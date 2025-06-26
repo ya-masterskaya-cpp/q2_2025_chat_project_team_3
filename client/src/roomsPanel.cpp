@@ -4,6 +4,8 @@
 #include <common/utils/limits.h>
 #include <client/textUtil.h>
 
+namespace client {
+
 enum { ID_JOIN = wxID_HIGHEST+20, ID_CREATE, ID_LOGOUT };
 
 wxBEGIN_EVENT_TABLE(RoomsPanel, wxPanel)
@@ -42,7 +44,7 @@ void RoomsPanel::AddRoom(Room* room) {
     roomList->Append(room->room_name, room);
 }
 
-void RoomsPanel::RemoveRoom(uint32_t room_id) {
+void RoomsPanel::RemoveRoom(int32_t room_id) {
     for (unsigned int i = 0; i < roomList->GetCount(); ++i) {
         Room* roomData = dynamic_cast<Room*>(roomList->GetClientObject(i));
         if (roomData && roomData->room_id == room_id) {
@@ -52,7 +54,7 @@ void RoomsPanel::RemoveRoom(uint32_t room_id) {
     }
 }
 
-void RoomsPanel::RenameRoom(uint32_t room_id, const wxString &name) {
+void RoomsPanel::RenameRoom(int32_t room_id, const wxString &name) {
     for (unsigned int i = 0; i < roomList->GetCount(); ++i) {
         Room* roomData = dynamic_cast<Room*>(roomList->GetClientObject(i));
         if (roomData && roomData->room_id == room_id) {
@@ -87,7 +89,7 @@ void RoomsPanel::OnJoin(wxCommandEvent &)
 
 void RoomsPanel::OnCreate(wxCommandEvent&) {
     wxTextEntryDialog dlg(this, "Room name?", "Create Room");
-    dlg.SetMaxLength(limits::MAX_ROOMNAME_LENGTH);
+    dlg.SetMaxLength(common::limits::MAX_ROOMNAME_LENGTH);
     if(dlg.ShowModal() == wxID_OK) {
         wxString roomName = dlg.GetValue();
         if (roomName.IsEmpty()) {
@@ -112,3 +114,5 @@ void RoomsPanel::OnCreate(wxCommandEvent&) {
 void RoomsPanel::OnLogout(wxCommandEvent &) {
     mainWin->wsClient->logout();
 }
+
+} // namespace client

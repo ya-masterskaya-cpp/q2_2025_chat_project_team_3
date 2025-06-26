@@ -4,7 +4,7 @@
 #include <server/aggregator/WsClient.h>
 
 int main() {
-    WsClient aggregator_client{};
+    server::WsClient aggregator_client{};
 
     std::filesystem::create_directory("logs");
 
@@ -25,7 +25,7 @@ int main() {
         }
 
         try {
-            auto success = drogon::sync_wait(MigrateDatabase(dbClient));
+            auto success = drogon::sync_wait(server::MigrateDatabase(dbClient));
             if(success) {
                 LOG_INFO << "Migrations check/apply process completed.";
             } else {
@@ -42,7 +42,7 @@ int main() {
             drogon::app().quit();
         }
 
-        aggregator_client.start(getEnvVar("AGGREGATOR_ADDR"));
+        aggregator_client.start(common::getEnvVar("AGGREGATOR_ADDR"));
     });
 
     LOG_INFO << "Entering main loop...";

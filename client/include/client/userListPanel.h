@@ -4,6 +4,8 @@
 
 #include <client/user.h>
 
+namespace client {
+
 class UserListPanel : public wxPanel {
 public:
     UserListPanel(wxWindow* parent);
@@ -18,3 +20,5 @@ private:
     wxScrolledWindow* m_userContainer;
     wxBoxSizer* m_userSizer;
 };
+
+} // namespace client

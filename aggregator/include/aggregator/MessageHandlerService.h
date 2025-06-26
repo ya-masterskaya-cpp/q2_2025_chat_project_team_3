@@ -1,5 +1,7 @@
 #pragma once
 
+namespace aggregator {
+
 class MessageHandlers;
 class IServerRegistry;
 struct WsData;
@@ -13,3 +15,5 @@ public:
 private:
     std::unique_ptr<MessageHandlers> m_handlers;
 };
+
+} // namespace aggregator

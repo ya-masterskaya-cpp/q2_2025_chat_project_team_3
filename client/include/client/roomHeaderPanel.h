@@ -2,6 +2,8 @@
 
 #include <wx/wx.h>
 
+namespace client {
+
 struct Room;
 
 class RoomHeaderPanel : public wxPanel {
@@ -21,3 +23,5 @@ private:
     void OnEnterWindow(wxMouseEvent& event);
     void OnLeaveWindow(wxMouseEvent& event);
 };
+
+} // namespace client

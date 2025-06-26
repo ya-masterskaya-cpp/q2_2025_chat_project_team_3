@@ -7,6 +7,32 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 option(BUILD_SERVER "Build the server application" ON)
 option(BUILD_CLIENT "Build the client application" ON)
+option(TREAT_WARNINGS_AS_ERRORS "Treat warnings as errors" OFF)
+
+set(COMMON_CXX_WARNING_FLAGS "")
+set(ERROR_CXX_FLAG "")
+
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
+    list(APPEND COMMON_CXX_WARNING_FLAGS "-Wall" "-Wextra" "-Wpedantic" "-Wformat=2")
+    set(ERROR_CXX_FLAG "-Werror")
+elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+    list(APPEND COMMON_CXX_WARNING_FLAGS "/W4" "/permissive-")
+    set(ERROR_CXX_FLAG "/WX")
+endif()
+
+if(TREAT_WARNINGS_AS_ERRORS)
+    list(APPEND COMMON_CXX_WARNING_FLAGS "${ERROR_CXX_FLAG}")
+endif()
+
+foreach(FLAG ${COMMON_CXX_WARNING_FLAGS})
+    string(APPEND CMAKE_CXX_FLAGS_DEBUG " ${FLAG}")
+    string(APPEND CMAKE_CXX_FLAGS_RELEASE " ${FLAG}")
+endforeach()
+
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
+    add_compile_options("$<$<CONFIG:Debug>:-fsanitize=address,undefined;-fno-omit-frame-pointer>")
+    add_link_options("$<$<CONFIG:Debug>:-fsanitize=address,undefined>")
+endif()
 
 set(CPACK_PACKAGE_NAME "${PROJECT_NAME}")
 set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
@@ -18,6 +44,9 @@ if(APPLE)
     endif()
     set(BUILD_SERVER OFF)
 endif()
+
+set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE)
+set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_MINSIZEREL TRUE)
 
 add_subdirectory(common)
 
