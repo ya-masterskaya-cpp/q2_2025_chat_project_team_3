@@ -1,33 +1,39 @@
 # Чат-приложение
 
+[Doxygen](https://cuteboibutt.github.io/test_ci_123123/index.html)
+
 ## Быстрый старт
 
 ### Запуск и отладка
 
 1. **Devcontainer**  
-   Рекомендуется открывать проект в devcontainer через VS Code.  
-   Встроенный CMake Preset пока поддерживает обычный debug.
+   Рекомендуется открывать проект в devcontainer через VS Code.
+   В обычной VIsual Studio тоже откроется и будет без проблем работать, но документация описывает именено devcontainer
 
 2. **Сборка**  
    Пока собирать через CMake-плагин в VS Code.  
-   - F1 -> "CMake: Select Configure Preset"  
+   - F1 -> "CMake: Select Configure Preset"
+   - F1 -> "CMake: Select Build Preset"
    - F1 -> "CMake: Build"
 
 3. **Запуск**
-   - бинарники лежат по `build/linux-debug-{server,client}/{server,client}/app_{server,client}`
-   - Сервер слушает порт `8848`.
+   - бинарники лежат по `build/{server,client,aggregator}/{Release,Debug}/app_{server,client,aggregator}`
+   - Аггрегатор слушает порт `8848` по умолчанию.
+   - Сервер слушает порт `8849` по умолчанию.
    - Подключение к WebSocket:  
      ```
      ws://localhost:8848/ws
      ```
    - Логи сервера можно найти в директории:
      ```
-     build/linux-debug-server/server/logs
+     build/server/{Release,Debug}/logs
      ```
    - Логи клиента пока пишутся только в консоль
 
 4. **Дебаг**
-   - F1 -> "CMake: Select Configure Preset"  
+   - F1 -> "CMake: Select Configure Preset"
+   - F1 -> "CMake: Select Build Preset"
+   - F1 -> "CMake: Set Launch/Debug target"
    - F1 -> "CMake: Debug"
 
 5. **Скрипты**  
@@ -36,6 +42,19 @@
    - `generate_models.sh` — автогенерация исходников моделей для ORM (запускать при изменении схемы БД).
 
 ---
+
+## Запуск нескольких серверов "в один клик"
+
+Скопируйте себе examples/docker-compose.yml
+ - docker compose up -d
+
+В том compose файле пример поднимающий 1 аггрегатор и 6 серверов для него
+
+### Env переменные
+ - `AGGREGATOR_ADDR` - адресс агррегатора к которому подключится сервер
+ - `SERVER_HOST` - хост по которому будет доступен сервер извне, там может быть йпишник или доменное имя, как с портом тк и без
+
+в examples/docker-compose.yml есть примеры этих переменных
 
 ## Формат сообщений
 
