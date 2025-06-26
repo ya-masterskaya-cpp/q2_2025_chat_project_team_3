@@ -3,6 +3,8 @@
 #include <aggregator/IServerRegistry.h>
 #include <drogon/WebSocketConnection.h>
 
+namespace aggregator {
+
 class ServerRegistry : public IServerRegistry {
 public:
     ServerRegistry(const drogon::WebSocketConnectionPtr& conn);
@@ -15,3 +17,5 @@ public:
 private:
     const drogon::WebSocketConnectionPtr& m_conn;
 };
+
+} // namespace aggregator

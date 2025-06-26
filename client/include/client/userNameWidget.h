@@ -3,6 +3,8 @@
 #include <wx/wx.h>
 #include <client/user.h>
 
+namespace client {
+
 class CachedColorText;
 
 class UserNameWidget : public wxPanel {
@@ -19,3 +21,5 @@ private:
     CachedColorText* m_usernameText;
     User m_user;
 };
+
+} // namespace client

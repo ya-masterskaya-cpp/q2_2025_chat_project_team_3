@@ -5,6 +5,8 @@
 
 class wxSingleInstanceChecker;
 
+namespace client {
+
 class AppConfig {
 public:
     // The constructor takes app's name to create a unique directory
@@ -48,3 +50,5 @@ private:
     AppConfig(const AppConfig&) = delete;
     AppConfig& operator=(const AppConfig&) = delete;
 };
+
+} // namespace client

@@ -3,13 +3,15 @@
 #include <drogon/orm/DbClient.h>
 #include <server/chat/WsData.h>
 
-class IChatRoomService;
-
 namespace drogon_model {
 namespace drogon_test {
     class Rooms;
 }
 }
+
+namespace server {
+
+class IChatRoomService;
 
 class MessageHandlers {
 public:
@@ -30,10 +32,12 @@ public:
 private:
 
     std::optional<std::string> validateUtf8String(const std::string_view& textToValidate, size_t maxLength, const std::string_view& fieldName) const;
-    drogon::Task<std::optional<chat::UserRights>> getUserRights(uint32_t user_id, uint32_t room_id) const;
-    drogon::Task<std::optional<chat::UserRights>> getUserRights(uint32_t user_id, uint32_t room_id, const drogon_model::drogon_test::Rooms& room) const;
-    drogon::Task<std::optional<chat::UserRights>> findStoredUserRole(uint32_t user_id, uint32_t room_id) const;
+    drogon::Task<std::optional<chat::UserRights>> getUserRights(int32_t user_id, int32_t room_id) const;
+    drogon::Task<std::optional<chat::UserRights>> getUserRights(int32_t user_id, int32_t room_id, const drogon_model::drogon_test::Rooms& room) const;
+    drogon::Task<std::optional<chat::UserRights>> findStoredUserRole(int32_t user_id, int32_t room_id) const;
 
     drogon::orm::DbClientPtr m_dbClient;
 
 };
+
+} // namespace server

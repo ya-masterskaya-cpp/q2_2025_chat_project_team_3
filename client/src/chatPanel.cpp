@@ -10,6 +10,8 @@
 #include <client/roomHeaderPanel.h>
 #include <client/roomSettingsPanel.h>
 
+namespace client {
+
 enum { ID_SEND = wxID_HIGHEST+30,
     ID_LEAVE,
     ID_JUMP_TO_PRESENT,
@@ -124,7 +126,7 @@ void ChatPanel::OnChatPanelSize(wxSizeEvent& event) {
 }
 
 // Event handler for the debouncing timer. This is where the actual re-wrapping happens.
-void ChatPanel::OnResizeTimerTick(wxTimerEvent& event) {
+void ChatPanel::OnResizeTimerTick([[maybe_unused]] wxTimerEvent& event) {
     // The timer has fired, meaning resizing has stopped (or paused) for 200ms.
     // Now, perform the re-wrapping for all messages using the last known accurate width.
     if (m_lastKnownWrapWidth > 20) {
@@ -167,7 +169,7 @@ void ChatPanel::OnSnapStateChanged(wxCommandEvent& event) {
 
 void ChatPanel::OnInputText(wxCommandEvent& event) {
     event.Skip();
-    TextUtil::LimitTextLength(m_input_ctrl, limits::MAX_MESSAGE_LENGTH);
+    TextUtil::LimitTextLength(m_input_ctrl, common::limits::MAX_MESSAGE_LENGTH);
 }
 
 void ChatPanel::ShowSettingsPanel() {
@@ -223,7 +225,7 @@ void ChatPanel::OnRoomDelete(wxCommandEvent& event) {
     m_parent->wsClient->deleteRoom(roomId);
 }
 
-void ChatPanel::OnRoomClose(wxCommandEvent& event) {
+void ChatPanel::OnRoomClose([[maybe_unused]] wxCommandEvent& event) {
     ShowChatPanel();
 }
 
@@ -248,3 +250,5 @@ void ChatPanel::OnInputKeyDown(wxKeyEvent& event) {
         event.Skip();
     }
 }
+
+} // namespace client

@@ -2,6 +2,8 @@
 
 #include <drogon/WebSocketConnection.h>
 
+namespace server {
+
 class MessageHandlerService;
 
 class WsRequestProcessor {
@@ -13,3 +15,5 @@ public:
 private:
     std::unique_ptr<MessageHandlerService> m_dispatcher;
 };
+
+} // namespace server

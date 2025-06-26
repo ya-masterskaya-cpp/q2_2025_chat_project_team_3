@@ -6,6 +6,8 @@ using namespace std::literals;
 using namespace drogon::orm;
 using namespace drogon_model::drogon_test;
 
+namespace server {
+
 struct MigrationFile {
     int64_t    timestamp;
     std::string name;
@@ -76,7 +78,7 @@ std::optional<std::vector<MigrationFile>> scanMigrationFiles(const std::filesyst
     return out;
 }
 
-drogon::Task<bool> applyMigration(drogon::orm::DbClientPtr db, const MigrationFile& f) {
+drogon::Task<bool> applyMigration([[maybe_unused]] drogon::orm::DbClientPtr db, const MigrationFile& f) {
     std::ifstream file(f.fullPath);
     if (!file) {
         LOG_FATAL << "Error opening file: "sv << f.fullPath;
@@ -186,3 +188,5 @@ drogon::Task<bool> MigrateDatabase(drogon::orm::DbClientPtr db) {
     LOG_INFO << "Migrated db"sv;
     co_return true;
 }
+
+} // namespace server

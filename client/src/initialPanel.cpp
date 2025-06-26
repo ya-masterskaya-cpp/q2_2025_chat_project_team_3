@@ -5,6 +5,8 @@
 #include <client/appConfig.h>
 #include <client/textUtil.h>
 
+namespace client {
+
 InitialPanel::InitialPanel(MainWidget* parent)
  : wxPanel(parent), m_parent(parent) {
     // 1) Create controls
@@ -43,7 +45,7 @@ InitialPanel::InitialPanel(MainWidget* parent)
     UpdateButtonsState();
 }
 
-void InitialPanel::OnConnect(wxCommandEvent& event) {
+void InitialPanel::OnConnect([[maybe_unused]] wxCommandEvent& event) {
     int selection = m_listBox->GetSelection();
     if (selection != wxNOT_FOUND) {
         wxString selectedItem = m_listBox->GetString(selection);
@@ -51,7 +53,7 @@ void InitialPanel::OnConnect(wxCommandEvent& event) {
     }
 }
 
-void InitialPanel::OnAdd(wxCommandEvent& event) {
+void InitialPanel::OnAdd([[maybe_unused]] wxCommandEvent& event) {
     wxTextEntryDialog dialog(this, "Enter a new item:", "Add Item");
 
     // Show the dialog and check if the user clicked OK
@@ -93,7 +95,7 @@ void InitialPanel::OnAdd(wxCommandEvent& event) {
     }
 }
 
-void InitialPanel::OnDelete(wxCommandEvent& event) {
+void InitialPanel::OnDelete([[maybe_unused]] wxCommandEvent& event) {
     int selection = m_listBox->GetSelection();
     
     // Check if an item is actually selected
@@ -110,7 +112,7 @@ void InitialPanel::OnDelete(wxCommandEvent& event) {
     }
 }
 
-void InitialPanel::OnListSelect(wxCommandEvent& event) {
+void InitialPanel::OnListSelect([[maybe_unused]] wxCommandEvent& event) {
     // Whenever the selection changes, update the button states
     UpdateButtonsState();
 }
@@ -126,3 +128,5 @@ void InitialPanel::UpdateButtonsState() {
         m_deleteButton->Enable(isItemSelected);
     });
 }
+
+} // namespace client

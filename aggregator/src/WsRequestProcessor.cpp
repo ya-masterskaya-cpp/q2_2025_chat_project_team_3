@@ -4,6 +4,8 @@
 #include <aggregator/ServerRegistry.h>
 #include <aggregator/MessageHandlerService.h>
 
+namespace aggregator {
+
 WsRequestProcessor::WsRequestProcessor(std::unique_ptr<MessageHandlerService> dispatcher)
     : m_dispatcher(std::move(dispatcher)) {}
 
@@ -13,15 +15,17 @@ drogon::Task<> WsRequestProcessor::handleIncomingMessage(drogon::WebSocketConnec
     try {
         chat::Envelope env;
         if(!env.ParseFromString(bytes)) {
-            sendEnvelope(conn, makeGenericErrorEnvelope("Malformed protobuf message"));
+            common::sendEnvelope(conn, common::makeGenericErrorEnvelope("Malformed protobuf message"));
             co_return;
         }
         bytes.resize(0);
         ServerRegistry registry{conn};
-        sendEnvelope(conn, co_await m_dispatcher->processMessage(conn->getContext<WsData>(), env, registry));
+        common::sendEnvelope(conn, co_await m_dispatcher->processMessage(conn->getContext<WsData>(), env, registry));
     } catch(const std::exception& e) {
         LOG_ERROR << "Critical error in WsRequestProcessor::handleIncomingMessage: " << e.what();
-        sendEnvelope(conn, makeGenericErrorEnvelope("Critical server error during message handling."));
+        common::sendEnvelope(conn, common::makeGenericErrorEnvelope("Critical server error during message handling."));
         co_return;
     }
 }
+
+} // namespace aggregator

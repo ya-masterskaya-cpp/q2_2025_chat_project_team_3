@@ -10,7 +10,9 @@
 #include <client/appConfig.h>
 #include <client/app.h>
 
-wxIMPLEMENT_APP(MyApp);
+wxIMPLEMENT_APP(client::MyApp);
+
+namespace client {
 
 MyApp::MyApp() = default;
 MyApp::~MyApp() = default;
@@ -77,3 +79,5 @@ int MyApp::OnExit() {
     if(drogonThread.joinable()) drogonThread.join();
     return 0;
 }
+
+} // namespace client

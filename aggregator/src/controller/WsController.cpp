@@ -7,6 +7,8 @@
 #include <common/utils/utils.h>
 #include <common/version.h>
 
+namespace aggregator {
+
 WsController::WsController() {
     LOG_INFO << "Constructing WsController service chain...";
 
@@ -19,14 +21,14 @@ WsController::WsController() {
 
 WsController::~WsController() = default;
 
-void WsController::handleNewConnection(const drogon::HttpRequestPtr& req, const drogon::WebSocketConnectionPtr& conn) {
+void WsController::handleNewConnection([[maybe_unused]] const drogon::HttpRequestPtr& req, const drogon::WebSocketConnectionPtr& conn) {
     LOG_TRACE << "WS connect: " << conn->peerAddr().toIpPort();
     conn->setContext(std::make_shared<WsData>());
     DrogonServerRegistry::instance().AddConnection(conn);
     chat::Envelope helloEnv;
     helloEnv.mutable_server_hello()->set_type(chat::ServerType::TYPE_AGGREGATOR);
-    helloEnv.mutable_server_hello()->set_protocol_version(version::PROTOCOL_VERSION);
-    sendEnvelope(conn, helloEnv);
+    helloEnv.mutable_server_hello()->set_protocol_version(common::version::PROTOCOL_VERSION);
+    common::sendEnvelope(conn, helloEnv);
 }
 
 void WsController::handleNewMessage(const drogon::WebSocketConnectionPtr& conn, std::string&& msg_str, const drogon::WebSocketMessageType& type) {
@@ -42,3 +44,5 @@ void WsController::handleConnectionClosed(const drogon::WebSocketConnectionPtr& 
     LOG_TRACE << "WS closed: " << conn->peerAddr().toIpPort();
     DrogonServerRegistry::instance().RemoveConnection(conn);
 }
+
+} // namespace aggregator

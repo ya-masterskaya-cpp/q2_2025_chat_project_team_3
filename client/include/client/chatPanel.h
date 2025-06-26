@@ -3,6 +3,8 @@
 #include <wx/wx.h>
 #include <client/user.h>
 
+namespace client {
+
 wxDECLARE_EVENT(wxEVT_SNAP_STATE_CHANGED, wxCommandEvent);
 
 class MainWidget;
@@ -58,3 +60,5 @@ private:
 
     wxDECLARE_EVENT_TABLE();
 };
+
+} // namespace client

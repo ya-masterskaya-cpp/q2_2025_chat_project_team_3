@@ -2,6 +2,8 @@
 
 #include <wx/wx.h>
 
+namespace client {
+
 class MainWidget;
 
 class InitialPanel : public wxPanel {
@@ -26,3 +28,5 @@ private:
     wxButton* m_addButton;
     wxButton* m_deleteButton;
 };
+
+} // namespace client

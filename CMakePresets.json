@@ -14,7 +14,8 @@
             "generator": "Ninja Multi-Config",
             "toolchainFile": "${sourceDir}/vcpkg/scripts/buildsystems/vcpkg.cmake",
 			"cacheVariables": {
-                "VCPKG_MANIFEST_FEATURES": "client"
+                "VCPKG_MANIFEST_FEATURES": "client",
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
 			}
         }
     ],

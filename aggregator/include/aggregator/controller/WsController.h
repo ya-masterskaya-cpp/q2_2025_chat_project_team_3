@@ -2,6 +2,8 @@
 
 #include <drogon/WebSocketController.h>
 
+namespace aggregator {
+
 class WsRequestProcessor;
 
 class WsController : public drogon::WebSocketController<WsController> {
@@ -20,3 +22,5 @@ public:
 private:
     std::unique_ptr<WsRequestProcessor> m_requestProcessor;
 };
+
+} // namespace aggregator

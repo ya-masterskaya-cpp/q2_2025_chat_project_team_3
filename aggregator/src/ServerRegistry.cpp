@@ -1,6 +1,8 @@
 #include <aggregator/ServerRegistry.h>
 #include <aggregator/DrogonServerRegistry.h>
 
+namespace aggregator {
+
 ServerRegistry::ServerRegistry(const drogon::WebSocketConnectionPtr& conn)
     : m_conn(conn) {
 }
@@ -24,3 +26,5 @@ std::vector<std::string> ServerRegistry::GetServers() {
 void ServerRegistry::SendToClients(const chat::Envelope env) const {
     DrogonServerRegistry::instance().SendToClients(env);
 }
+
+} // namespace aggregator

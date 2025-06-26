@@ -1,6 +1,8 @@
 #include <server/chat/DrogonRoomService.h>
 #include <server/chat/ChatRoomManager.h>
 
+namespace server {
+
 DrogonRoomService::DrogonRoomService(const drogon::WebSocketConnectionPtr& conn)
     : m_conn(conn) {}
 
@@ -23,3 +25,5 @@ drogon::Task<void> DrogonRoomService::joinRoom(const WsData& locked_caller_data)
 drogon::Task<void> DrogonRoomService::leaveCurrentRoom(const WsData& locked_caller_data) {
     co_await ChatRoomManager::instance().removeConnectionFromRoom(m_conn, locked_caller_data);
 }
+
+} // namespace server

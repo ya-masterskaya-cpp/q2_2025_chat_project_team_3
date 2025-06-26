@@ -2,6 +2,8 @@
 
 #include <server/chat/WsData.h>
 
+namespace server {
+
 class MessageHandlers;
 class IChatRoomService;
 
@@ -15,3 +17,5 @@ private:
     std::unique_ptr<MessageHandlers> m_handlers;
 
 };
+
+} // namespace server

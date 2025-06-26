@@ -1,0 +1,153 @@
+# ===================================================================
+# DOXYFILE: THE "ABSOLUTE MAXIMALIST" CONFIGURATION
+# This configuration enables every feature that could be remotely useful for
+# generating comprehensive, interactive HTML documentation.
+# ===================================================================
+
+#---------------------------------------------------------------------------
+# Project & Pathing Information
+#---------------------------------------------------------------------------
+PROJECT_NAME           = "Slightly Pretty Chat"
+PROJECT_BRIEF          = "A comprehensive, cross-linked documentation of the SPC codebase."
+PROJECT_NUMBER         = 0.0.3
+OUTPUT_DIRECTORY       = docs
+INPUT                  = .
+RECURSIVE              = YES
+FULL_PATH_NAMES        = NO
+STRIP_FROM_PATH        = .
+EXCLUDE_PATTERNS       = */vcpkg/* \
+                         */build/* \
+                         */.github/* \
+                         */.git/* \
+                         */extern/* \
+                         */models/* \
+                         */docker_contexts/* \
+                         */scripts/* \
+                         */docs/* \
+                         */vcpkg-overlays/* \
+                         */fonts/*
+
+TAB_SIZE               = 4
+# Enable full Markdown support, including for creating a Table of Contents from headings.
+MARKDOWN_SUPPORT       = YES
+TOC_INCLUDE_HEADINGS   = 5
+AUTOLINK_SUPPORT       = YES
+
+#---------------------------------------------------------------------------
+# Documentation Extraction & Quality Enforcement
+#---------------------------------------------------------------------------
+# Extract absolutely everything, including private members and static variables.
+EXTRACT_ALL            = YES
+EXTRACT_PRIVATE        = YES
+EXTRACT_STATIC         = YES
+EXTRACT_LOCAL_CLASSES  = YES
+EXTRACT_ANON_NSPACES   = YES
+# Inherit documentation from base classes for undocumented members.
+INHERIT_DOCS           = YES
+# Create separate pages for members of large classes for clarity.
+SEPARATE_MEMBER_PAGES  = YES
+# Enable support for linking to built-in C++/STL components.
+BUILTIN_STL_SUPPORT    = YES
+
+WARNINGS               = YES
+WARN_IF_UNDOCUMENTED   = YES
+WARN_IF_DOC_ERROR      = YES
+WARN_NO_PARAMDOC       = YES
+
+
+#---------------------------------------------------------------------------
+# Source Browser & Code Integration
+#---------------------------------------------------------------------------
+# Embed source code directly into the documentation for maximum context.
+SOURCE_BROWSER         = YES
+# Display source code inline with the documentation, instead of on a separate page.
+INLINE_SOURCES         = YES
+# Create deep cross-references between source code elements.
+REFERENCES_RELATION    = YES
+REFERENCED_BY_RELATION = YES
+REFERENCES_LINK_SOURCE = YES
+# Create a verbatim, syntax-highlighted copy of every header file.
+VERBATIM_HEADERS       = YES
+
+#---------------------------------------------------------------------------
+# HTML Output & Features
+#---------------------------------------------------------------------------
+GENERATE_HTML          = YES
+HTML_OUTPUT            = html
+# Distribute generated files into subdirectories for better performance on large projects.
+CREATE_SUBDIRS         = YES
+# Allow users to collapse/expand sections of the documentation.
+HTML_DYNAMIC_SECTIONS  = YES
+# Allow users to fold large code blocks.
+HTML_CODE_FOLDING      = YES
+# Enable the built-in search engine.
+SEARCHENGINE           = YES
+
+#---------------------------------------------------------------------------
+# To-Do, Bug, and Test Lists
+#---------------------------------------------------------------------------
+# Enable generation of custom pages by scanning for commands like \todo, \test, \bug.
+GENERATE_TODOLIST      = YES
+GENERATE_TESTLIST      = YES
+GENERATE_BUGLIST       = YES
+GENERATE_DEPRECATEDLIST= YES
+
+#---------------------------------------------------------------------------
+# Theme & Navigation Configuration
+#---------------------------------------------------------------------------
+# Enable the main navigation panel.
+GENERATE_TREEVIEW      = YES
+# Give the navigation panel adequate width.
+TREEVIEW_WIDTH         = 280
+HTML_EXTRA_STYLESHEET  = extern/doxygen-awesome-css/doxygen-awesome.css
+HTML_EXTRA_FILES       = extern/doxygen-awesome-css/doxygen-awesome-fragment-copy-button.js \
+                         extern/doxygen-awesome-css/doxygen-awesome-paragraph-link.js \
+                         extern/doxygen-awesome-css/doxygen-awesome-interactive-toc.js \
+                         extern/doxygen-awesome-css/doxygen-awesome-darkmode-toggle.js \
+                         extern/doxygen-awesome-css/doxygen-awesome-tabs.js
+
+#---------------------------------------------------------------------------
+# Diagram and Graph Generation (Maximalist Configuration)
+#---------------------------------------------------------------------------
+# Master switch for all Graphviz-based diagrams.
+HAVE_DOT               = YES
+# Make the generated SVG graphs zoomable, pannable, and clickable.
+INTERACTIVE_SVG        = YES
+DOT_IMAGE_FORMAT       = svg
+# Generate diagrams in a style similar to UML.
+UML_LOOK               = YES
+# Show more members in UML diagrams before truncating them.
+UML_LIMIT_NUM_FIELDS   = 20
+# Enable EVERY available graph type for maximum visualization.
+CLASS_GRAPH            = YES
+COLLABORATION_GRAPH    = YES
+GRAPHICAL_HIERARCHY    = YES
+CALL_GRAPH             = YES
+CALLER_GRAPH           = YES
+DIRECTORY_GRAPH        = YES
+GROUP_GRAPHS           = YES
+INCLUDE_GRAPH          = YES
+INCLUDED_BY_GRAPH      = YES
+TEMPLATE_RELATIONS     = NO
+# Set graph limits to be as permissive as possible to avoid truncated diagrams.
+DOT_GRAPH_MAX_NODES    = 500
+MAX_DOT_GRAPH_DEPTH    = 0 # 0 means unlimited depth.
+# Generate a legend explaining the colors and shapes in the graphs.
+GENERATE_LEGEND        = YES
+
+#---------------------------------------------------------------------------
+# Preprocessor & Output Configuration
+#---------------------------------------------------------------------------
+ENABLE_PREPROCESSING   = YES
+MACRO_EXPANSION        = YES
+SEARCH_INCLUDES        = YES
+# Do not generate other output formats, to keep the pipeline focused and fast.
+GENERATE_LATEX         = NO
+
+#---------------------------------------------------------------------------
+# Clang-Assisted Parsing for 100% Accurate Relationship Detection
+# This uses the Clang compiler frontend to parse the code, resulting in
+# perfect resolution of all relationships, including those hidden in .cpp files.
+#---------------------------------------------------------------------------
+CLANG_ASSISTED_PARSING = YES
+CLANG_DATABASE_PATH = ./build/

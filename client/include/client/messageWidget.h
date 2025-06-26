@@ -3,6 +3,8 @@
 #include <wx/wx.h>
 #include <wx/popupwin.h>
 
+namespace client {
+
 struct Message;
 class CachedColorText;
 
@@ -35,3 +37,5 @@ private:
     void OnMouseEnter(wxMouseEvent& event);
     void OnMouseLeave(wxMouseEvent& event);
 };
+
+} // namespace client

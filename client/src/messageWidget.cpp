@@ -6,6 +6,8 @@
 #include <client/wsClient.h>
 #include <client/cachedColorText.h>
 
+namespace client {
+
 enum {
     ID_COPY = wxID_HIGHEST + 40
 };
@@ -74,7 +76,7 @@ MessageWidget::MessageWidget(wxWindow* parent,
     m_messageStaticText->Bind(wxEVT_LEAVE_WINDOW, &MessageWidget::OnMouseLeave, this);
 }
 
-void MessageWidget::Update(wxWindow* parent, const Message& msg, int lastKnownWrapWidth) {
+void MessageWidget::Update([[maybe_unused]] wxWindow* parent, const Message& msg, int lastKnownWrapWidth) {
     m_originalMessage = msg.msg;
     m_timestamp_val = msg.timestamp;
     m_messageStaticText->SetLabelText(TextUtil::WrapText(this, m_originalMessage, lastKnownWrapWidth - FromDIP(9), this->GetFont()));
@@ -146,3 +148,5 @@ void MessageWidget::OnMouseLeave(wxMouseEvent& event) {
     }
     event.Skip();
 }
+
+} // namespace client

@@ -2,6 +2,8 @@
 
 #include <wx/wx.h>
 
+namespace client {
+
 class MainWidget;
 
 struct Room : public wxClientData {
@@ -17,8 +19,8 @@ public:
     RoomsPanel(MainWidget* parent);
     void UpdateRoomList(const std::vector<Room*>& rooms);
     void AddRoom(Room* room);
-    void RemoveRoom(uint32_t room_id);
-    void RenameRoom(uint32_t room_id, const wxString& name);
+    void RemoveRoom(int32_t room_id);
+    void RenameRoom(int32_t room_id, const wxString& name);
     std::optional<Room> GetSelectedRoom();
 
     wxListBox* roomList;
@@ -32,3 +34,5 @@ private:
     MainWidget* mainWin;
     wxDECLARE_EVENT_TABLE();
 };
+
+} // namespace client

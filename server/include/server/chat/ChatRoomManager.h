@@ -3,6 +3,8 @@
 #include <drogon/WebSocketConnection.h>
 #include <server/chat/WsData.h>
 
+namespace server {
+
 class ChatRoomManager {
 public:
     static ChatRoomManager& instance();
@@ -28,8 +30,10 @@ private:
     void sendToRoom_unsafe(int32_t room_id, const chat::Envelope& message) const;
     void sendToAll_unsafe(const chat::Envelope& message) const;
 
-    mutable Guarded<int> m_manager_mutex{0};
+    mutable common::Guarded<int> m_manager_mutex{0};
 
     std::unordered_map<int32_t, std::unordered_set<drogon::WebSocketConnectionPtr>> m_user_id_to_conns;
     std::unordered_map<int32_t, std::unordered_set<drogon::WebSocketConnectionPtr>> m_room_to_conns;
 };
+
+} // namespace server

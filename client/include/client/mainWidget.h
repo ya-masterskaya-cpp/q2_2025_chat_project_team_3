@@ -2,6 +2,8 @@
 
 #include <wx/wx.h>
 
+namespace client {
+
 class InitialPanel;
 class ServersPanel;
 class AuthPanel;
@@ -29,3 +31,5 @@ public:
     ChatPanel* chatPanel;
     WebSocketClient* wsClient;
 };
+
+} // namespace client

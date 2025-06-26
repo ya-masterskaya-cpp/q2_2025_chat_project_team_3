@@ -2,6 +2,8 @@
 #include <client/mainWidget.h>
 #include <client/wsClient.h>
 
+namespace client {
+
 ServersPanel::ServersPanel(MainWidget* parent)
  : wxPanel(parent), m_parent(parent) {
     // 1) Create controls
@@ -31,7 +33,7 @@ ServersPanel::ServersPanel(MainWidget* parent)
     UpdateButtonsState();
 }
 
-void ServersPanel::OnConnect(wxCommandEvent& event) {
+void ServersPanel::OnConnect([[maybe_unused]] wxCommandEvent& event) {
     int selection = m_listBox->GetSelection();
     if (selection != wxNOT_FOUND) {
         wxString selectedItem = m_listBox->GetString(selection);
@@ -39,11 +41,11 @@ void ServersPanel::OnConnect(wxCommandEvent& event) {
     }
 }
 
-void ServersPanel::OnBack(wxCommandEvent& event) {
+void ServersPanel::OnBack([[maybe_unused]] wxCommandEvent& event) {
     m_parent->ShowInitial();
 }
 
-void ServersPanel::OnListSelect(wxCommandEvent& event) {
+void ServersPanel::OnListSelect([[maybe_unused]] wxCommandEvent& event) {
     // Whenever the selection changes, update the button states
     UpdateButtonsState();
 }
@@ -62,3 +64,5 @@ void ServersPanel::SetServers(const std::vector<std::string>& servers) {
         m_listBox->Append(wxString(server));
     }
 }
+
+} // namespace client

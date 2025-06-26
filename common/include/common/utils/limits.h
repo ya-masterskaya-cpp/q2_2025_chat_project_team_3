@@ -1,5 +1,7 @@
 #pragma once
 
+namespace common {
+
 namespace limits {
 
 	constexpr std::size_t MAX_USERNAME_LENGTH = 16;
@@ -7,3 +9,5 @@ namespace limits {
 	constexpr std::size_t MAX_ROOMNAME_LENGTH = 32;
 
 } // namespace limits
+
+} // namespace common

@@ -4,6 +4,8 @@
 #include <wx/bitmap.h>
 #include <wx/stattext.h>
 
+namespace client {
+
 // This class behaves like a wxStaticText for layout and API purposes,
 // but is built on a reliable, paintable base.
 class CachedColorText : public wxControl {
@@ -39,3 +41,5 @@ private:
 
     wxDECLARE_EVENT_TABLE();
 };
+
+} // namespace client

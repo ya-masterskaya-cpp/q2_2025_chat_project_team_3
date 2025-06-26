@@ -1,5 +1,7 @@
 #include <client/graphicsContextManager.h>
 
+namespace client {
+
 GraphicsContextManager::GraphicsContextManager(wxMemoryDC& dc)
     : m_dc(dc), m_gc(nullptr)
 {
@@ -31,3 +33,5 @@ wxGraphicsContext* GraphicsContextManager::GetContext() const {
 wxMemoryDC& GraphicsContextManager::GetDC() const {
     return m_dc;
 }
+
+} // namespace client

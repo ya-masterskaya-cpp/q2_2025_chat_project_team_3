@@ -6,6 +6,8 @@
 #include <common/utils/limits.h>
 #include <optional>
 
+namespace client {
+
 void AuthPanel::SetButtonsEnabled(bool enabled) {
     m_usernameInput->Enable(enabled);
     m_passwordInput->Enable(enabled);
@@ -93,7 +95,7 @@ void AuthPanel::OnBack(wxCommandEvent&) {
 
 void AuthPanel::OnInputLogin(wxCommandEvent& event) {
     event.Skip();
-    TextUtil::LimitTextLength(m_usernameInput, limits::MAX_USERNAME_LENGTH);
+    TextUtil::LimitTextLength(m_usernameInput, common::limits::MAX_USERNAME_LENGTH);
 }
 
 void AuthPanel::HandleRegisterContinue() {
@@ -122,3 +124,5 @@ void AuthPanel::HandleAuthContinue(const std::string &salt) {
     }
     m_password.clear();
 }
+
+} // namespace client

@@ -2,6 +2,8 @@
 
 #include <coroutine>
 
+namespace server {
+
 /**
  * @brief A basic, fire-and-forget coroutine task type.
  * @note This is used as the return type for the internal lambda-coroutine
@@ -131,7 +133,7 @@ public:
             }
         };
 
-        return awaiter{std::move(inner_awaiter_)};
+        return awaiter{std::move(inner_awaiter_), 0, {}};
     }
 
 private:
@@ -163,3 +165,5 @@ template <typename AwaiterType>
 auto switch_to_io_loop(AwaiterType&& awaiter) {
     return resume_on_io_loop<AwaiterType>(std::forward<AwaiterType>(awaiter));
 }
+
+} // namespace server

@@ -1,6 +1,8 @@
 #include <cstdlib>
 #include <common/utils/utils.h>
 
+namespace common {
+
 chat::Envelope makeGenericErrorEnvelope(const std::string& msg) {
     chat::Envelope errEnv;
     auto* err = errEnv.mutable_generic_error();
@@ -53,3 +55,5 @@ std::pair<std::string, std::string> splitUrl(const std::string& url) {
     std::string part2 = url.substr(path_start);                // /ws or /
     return {part1, part2.empty() ? "/" : part2};
 }
+
+} // namespace common

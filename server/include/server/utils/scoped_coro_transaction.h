@@ -3,6 +3,8 @@
 #include <common/utils/utils.h>
 #include <server/utils/switch_to_io_loop.h>
 
+namespace server {
+
 using ScopedTransactionResult =
     std::optional<std::string>;
 using ScopedTransactionFunc =
@@ -77,3 +79,5 @@ inline drogon::Task<ScopedTransactionResult> WithTransaction(ScopedTransactionFu
 
     co_return std::nullopt;
 }
+
+} // namespace server

@@ -6,6 +6,8 @@
 #include <drogon/WebSocketClient.h>
 #include <optional>
 
+namespace client {
+
 class MainWidget;
 struct Room;
 struct Message;
@@ -57,3 +59,5 @@ private:
     std::shared_ptr<drogon::WebSocketConnection> conn;
     drogon::WebSocketClientPtr client;
 };
+
+} // namespace client

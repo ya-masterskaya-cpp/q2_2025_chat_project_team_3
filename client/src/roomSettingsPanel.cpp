@@ -2,6 +2,8 @@
 #include <client/textUtil.h>
 #include <common/utils/limits.h>
 
+namespace client {
+
 enum {
     ID_RENAME = wxID_HIGHEST + 100,
     ID_DELETE,
@@ -48,7 +50,7 @@ RoomSettingsPanel::RoomSettingsPanel(wxWindow* parent, const wxString& roomName,
     SetSizer(sizer);
 }
 
-void RoomSettingsPanel::OnRename(wxCommandEvent& event) {
+void RoomSettingsPanel::OnRename([[maybe_unused]] wxCommandEvent& event) {
     auto newName = TextUtil::SanitizeInput(m_roomNameCtrl->GetValue());
     if (!newName.length()) {
         wxMessageBox("Room name must consist of at least 1 non special character",
@@ -70,7 +72,7 @@ void RoomSettingsPanel::OnRename(wxCommandEvent& event) {
     }
 }
 
-void RoomSettingsPanel::OnDelete(wxCommandEvent& event) {
+void RoomSettingsPanel::OnDelete([[maybe_unused]] wxCommandEvent& event) {
     wxString confirmationMessage = "Are you sure you want to permanently delete this room? This action cannot be undone.";
     int response = wxMessageBox(confirmationMessage, "Confirm Deletion", wxYES_NO | wxICON_WARNING, this);
     if (response == wxYES) {
@@ -82,7 +84,7 @@ void RoomSettingsPanel::OnDelete(wxCommandEvent& event) {
     }
 }
 
-void RoomSettingsPanel::OnClose(wxCommandEvent& event) {
+void RoomSettingsPanel::OnClose([[maybe_unused]] wxCommandEvent& event) {
     wxCommandEvent evt(wxEVT_ROOM_CLOSE);
     evt.SetEventObject(this);
     
@@ -91,5 +93,7 @@ void RoomSettingsPanel::OnClose(wxCommandEvent& event) {
 
 void RoomSettingsPanel::OnInputRename(wxCommandEvent& event) {
     event.Skip();
-    TextUtil::LimitTextLength(m_roomNameCtrl, limits::MAX_ROOMNAME_LENGTH);
+    TextUtil::LimitTextLength(m_roomNameCtrl, common::limits::MAX_ROOMNAME_LENGTH);
 }
+
+} // namespace client

@@ -14,6 +14,8 @@
 #include <ada.h>
 #include <time.h>
 
+namespace client {
+
 WebSocketClient::WebSocketClient(MainWidget* ui_) : ui(ui_) {}
 
 void WebSocketClient::stop() {
@@ -188,7 +190,7 @@ void WebSocketClient::handleMessage(const std::string& msg) {
             //wxTheApp->CallAfter([this] { ui->authPanel->SetButtonsEnabled(true); });
             //showInfo("Connected!");
 
-            if(env.server_hello().protocol_version() != version::PROTOCOL_VERSION) {
+            if(env.server_hello().protocol_version() != common::version::PROTOCOL_VERSION) {
                 showError("Version mismatch, update your client");
                 showInitial();
             } else if(env.server_hello().type() == chat::ServerType::TYPE_AGGREGATOR) {
@@ -470,3 +472,4 @@ std::string WebSocketClient::formatMessageTimestamp(uint64_t timestamp) {
     }
 }
 
+} // namespace client

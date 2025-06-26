@@ -2,6 +2,8 @@
 
 #include <wx/string.h> // For wxString
 
+namespace client {
+
 // Define the User struct with server-provided details
 struct User {
     int32_t id;
@@ -37,3 +39,5 @@ struct User {
         return id == other.id;
     }
 };
+
+} // namespace client
