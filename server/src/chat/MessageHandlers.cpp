@@ -509,27 +509,30 @@ drogon::Task<chat::RenameRoomResponse> MessageHandlers::handleRenameRoom(const W
         common::setStatus(resp, chat::STATUS_FAILURE, "Empty room name or id.");
         co_return resp;
     }
-    if(!wsData->room) {
-        common::setStatus(resp, chat::STATUS_FAILURE, "User is not in any room.");
+    if(!wsData->room || wsData->room->id != req.room_id()) {
+        common::setStatus(resp, chat::STATUS_FAILURE, "User is not in the specified room.");
+        co_return resp;
+    }
+    if (wsData->room->rights < chat::UserRights::OWNER) {
+        common::setStatus(resp, chat::STATUS_FAILURE, "Insufficient rights to rename room.");
         co_return resp;
     }
     try {
-        if ((co_await getUserRights(wsData->user->id, wsData->room->id)).value() < chat::UserRights::OWNER) {
-            common::setStatus(resp, chat::STATUS_FAILURE, "Insufficient rights to rename room.");
-            co_return resp;
-        }
         auto err = co_await WithTransaction(
             [&](auto tx) -> drogon::Task<ScopedTransactionResult> {
                 try {
                     auto room = co_await switch_to_io_loop(CoroMapper<models::Rooms>(tx)
-                        .findOne(Criteria(models::Rooms::Cols::_room_id, CompareOperator::EQ, wsData->room->id)));
+                        .findOne(Criteria(models::Rooms::Cols::_room_id, CompareOperator::EQ, req.room_id())));
+                    if (!room.getRoomId()) {
+                        co_return "Room not found.";
+                    }
                     room.setRoomName(req.name());
                     co_await switch_to_io_loop(CoroMapper<models::Rooms>(tx).update(room));
                     co_return std::nullopt;
                 } catch(const DrogonDbException& e) {
                     const std::string w = e.base().what();
-                    LOG_ERROR << "Room insert error: " << w;
-                    co_return "Database error during room creation.";
+                    LOG_ERROR << "Room rename error: " << w;
+                    co_return "Database error during room rename.";
                 }
             });
 
@@ -570,8 +573,9 @@ drogon::Task<chat::DeleteRoomResponse> MessageHandlers::handleDeleteRoom(const W
         co_return resp;
     }
     const auto room_id = req.room_id();
-    auto err = co_await WithTransaction(
-        [&](auto tx) -> drogon::Task<ScopedTransactionResult> {
+    try {
+        auto err = co_await WithTransaction(
+            [&](auto tx) -> drogon::Task<ScopedTransactionResult> {
             try {
                 co_await switch_to_io_loop(CoroMapper<models::Messages>(tx)
                     .deleteBy(Criteria(models::Messages::Cols::_room_id, CompareOperator::EQ, room_id)));
@@ -590,8 +594,13 @@ drogon::Task<chat::DeleteRoomResponse> MessageHandlers::handleDeleteRoom(const W
             }
         });
 
-    if(err) {
-        common::setStatus(resp, chat::STATUS_FAILURE, *err);
+        if(err) {
+            common::setStatus(resp, chat::STATUS_FAILURE, *err);
+            co_return resp;
+        }
+    } catch (const std::exception& e) {
+        LOG_ERROR << "Delete room error: " << e.what();
+        common::setStatus(resp, chat::STATUS_FAILURE, std::string("Delete room failed: ") + e.what());
         co_return resp;
     }
     co_await room_service.onRoomDeleted(room_id);
