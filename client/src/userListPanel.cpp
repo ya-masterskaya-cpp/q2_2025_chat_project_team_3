@@ -1,5 +1,6 @@
 #include <client/userListPanel.h>
 #include <client/userNameWidget.h>
+#include <client/chatPanel.h>
 
 namespace client {
 
@@ -24,7 +25,23 @@ UserListPanel::UserListPanel(wxWindow* parent)
     SetSizer(sizer);
 }
 
+void UserListPanel::SetCurrentUser(const User& user) {
+    m_currentUser = user;
+}
+
+void UserListPanel::UpdateUserRole(int32_t userId, chat::UserRights newRole) {
+    auto it = std::find_if(m_users.begin(), m_users.end(), [userId](const User& u) {
+        return u.id == userId; });
+
+    if (it != m_users.end()) {
+        it->role = newRole;
+        SetUserList(m_users);
+    }
+}
+
 void UserListPanel::SetUserList(std::vector<User> users) {
+    m_users = users;
+
     m_userContainer->Freeze();
     m_userSizer->Clear(true); // Destroy existing widgets
 
@@ -35,6 +52,7 @@ void UserListPanel::SetUserList(std::vector<User> users) {
 
     for (const auto& user : users) {
         auto* userWidget = new UserNameWidget(m_userContainer, user);
+        userWidget->Bind(wxEVT_RIGHT_DOWN, &UserListPanel::OnUserRightClick, this);
         m_userSizer->Add(userWidget, 0, wxEXPAND | wxALL, FromDIP(2));
     }
 
@@ -45,64 +63,64 @@ void UserListPanel::SetUserList(std::vector<User> users) {
 }
 
 void UserListPanel::AddUser(const User& user) {
-    m_userContainer->Freeze();
-
-    // Find the correct insertion index to maintain sorted order
-    int insertIndex = 0;
-    for (auto* item : m_userSizer->GetChildren()) {
-        if (item->IsWindow()) {
-            UserNameWidget* existingWidget = static_cast<UserNameWidget*>(item->GetWindow());
-            // Use the User::operator< to compare and find the insertion point
-            if (existingWidget && user < existingWidget->GetUser()) {
-                break; // Found the spot where the new user should be inserted
-            }
-            insertIndex++;
-        }
+    auto it = std::find_if(m_users.begin(), m_users.end(),[&](const User& u) {
+        return u.id == user.id; });
+    if (it == m_users.end()) {
+        m_users.push_back(user);
+        SetUserList(m_users);
     }
-
-    auto* userWidget = new UserNameWidget(m_userContainer, user);
-    m_userSizer->Insert(insertIndex, userWidget, 0, wxEXPAND | wxALL, FromDIP(2));
-
-    m_userSizer->Layout();
-    m_userContainer->SetVirtualSize(m_userSizer->GetMinSize());
-    m_userContainer->Thaw();
 }
 
-void UserListPanel::RemoveUser(int userId) { // Now accepts user ID
-    m_userContainer->Freeze();
+void UserListPanel::RemoveUser(int userId) {
+    auto it = std::remove_if(m_users.begin(), m_users.end(), [userId](const User& u) {
+        return u.id == userId; });
 
-    UserNameWidget* widgetToRemove = nullptr;
-    int removeIndex = wxNOT_FOUND;
-
-    // Iterate through current widgets to find the one matching the ID
-    for (size_t i = 0; i < m_userSizer->GetChildren().size(); ++i) {
-        wxSizerItem* item = m_userSizer->GetChildren()[i];
-        if (item->IsWindow()) {
-            UserNameWidget* userWidget = static_cast<UserNameWidget*>(item->GetWindow());
-            if (userWidget && userWidget->GetUser().id == userId) { // Compare by ID
-                widgetToRemove = userWidget;
-                removeIndex = i;
-                break;
-            }
-        }
+    if (it != m_users.end()) {
+        m_users.erase(it, m_users.end());
+        SetUserList(m_users);
     }
-
-    if (widgetToRemove) {
-        m_userSizer->Remove(removeIndex); // Remove from sizer
-        widgetToRemove->Destroy();         // Destroy the widget (important for memory management)
-    }
-
-    m_userSizer->Layout();
-    m_userContainer->SetVirtualSize(m_userSizer->GetMinSize());
-    m_userContainer->Thaw();
 }
 
 void UserListPanel::Clear() {
-    m_userContainer->Freeze();
-    m_userSizer->Clear(true);
-    m_userSizer->Layout();
-    m_userContainer->SetVirtualSize(m_userSizer->GetMinSize());
-    m_userContainer->Thaw();
+    m_users.clear();
+    SetUserList({});
+}
+
+void UserListPanel::OnUserRightClick(wxMouseEvent& event) {
+    if (m_currentUser.role != chat::UserRights::OWNER) {
+        event.Skip();
+        return;
+    }
+    UserNameWidget* clickedWidget = dynamic_cast<UserNameWidget*>(event.GetEventObject());
+    if (!clickedWidget) {
+        event.Skip();
+        return;
+    }
+    const User& targetUser = clickedWidget->GetUser();
+    if (m_currentUser.id == targetUser.id) {
+        event.Skip();
+        return;
+    }
+    wxMenu menu;
+    if (targetUser.role == chat::UserRights::REGULAR) {
+        menu.Append(wxID_ANY, "Assign Moderator");
+        menu.Bind(wxEVT_MENU, [this, targetUser](wxCommandEvent&) {
+            wxCommandEvent newEvent(wxEVT_ASSIGN_MODERATOR, GetId());
+            newEvent.SetEventObject(this);
+            newEvent.SetInt(targetUser.id);
+            ProcessEvent(newEvent);
+        });
+    } else if (targetUser.role == chat::UserRights::MODERATOR) {
+        menu.Append(wxID_ANY, "Unassign Moderator");
+        menu.Bind(wxEVT_MENU, [this, targetUser](wxCommandEvent&) {
+            wxCommandEvent newEvent(wxEVT_UNASSIGN_MODERATOR, GetId());
+            newEvent.SetEventObject(this);
+            newEvent.SetInt(targetUser.id);
+            ProcessEvent(newEvent);
+        });
+    }
+    PopupMenu(&menu);
+    event.Skip();
 }
 
 } // namespace client

@@ -2,6 +2,7 @@
 
 #include <drogon/orm/DbClient.h>
 #include <server/chat/WsData.h>
+#include <server/utils/scoped_coro_transaction.h>
 
 /**
  * @file MessageHandlers.h
@@ -80,7 +81,9 @@ public:
 
     /** @brief Handles a request to delete an existing room and all its messages. */
     drogon::Task<chat::DeleteRoomResponse> handleDeleteRoom(const WsDataPtr& wsDataGuarded, const chat::DeleteRoomRequest& req, IChatRoomService& room_service);
-
+    
+    /** @brief Handles a request to assign a new role to a user in a specific room. */
+    drogon::Task<chat::AssignRoleResponse> handleAssignRole(const WsDataPtr&, const chat::AssignRoleRequest&, IChatRoomService&);
 private:
     /**
      * @brief Validates a string for valid UTF-8 encoding and maximum length.
@@ -115,6 +118,12 @@ private:
      * @return A task resolving to an optional UserRights enum if a role is found.
      */
     drogon::Task<std::optional<chat::UserRights>> findStoredUserRole(int32_t user_id, int32_t room_id) const;
+
+    /** @brief Updates or creates a user's role entry in the UserRoomRoles table within a transaction. */
+    drogon::Task<ScopedTransactionResult> updateUserRoleInDb(const std::shared_ptr<drogon::orm::Transaction>& tx, int32_t userId, int32_t roomId, chat::UserRights newRole);
+
+    /** @brief Transfers room ownership within a transaction. */
+    drogon::Task<ScopedTransactionResult> transferRoomOwnershipInDb(const std::shared_ptr<drogon::orm::Transaction>& tx, int32_t roomId, int32_t newOwnerId, int32_t oldOwnerId);
 
     /// @brief The shared database client for all ORM operations.
     drogon::orm::DbClientPtr m_dbClient;

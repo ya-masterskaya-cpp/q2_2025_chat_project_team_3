@@ -89,6 +89,15 @@ public:
      * @return A drogon::Task<void> to be awaited.
      */
     virtual drogon::Task<void> onRoomDeleted(int32_t room_id) = 0;
+
+    /**
+     * @brief Updates the in-memory room rights for a specific user.
+     * @param userId The ID of the user whose rights are being updated.
+     * @param roomId The ID of the room where the rights changed.
+     * @param newRights The new rights for the user in that room.
+     * @return A drogon::Task<void> to be awaited.
+     */
+    virtual drogon::Task<void> updateUserRoomRights(int32_t userId, int32_t roomId, chat::UserRights newRights) = 0;
 };
 
 } // namespace server

@@ -32,6 +32,14 @@ void MainWidget::ShowPopup(const wxString& msg, long icon) {
     wxMessageBox(msg, "Info", wxOK | icon, this);
 }
 
+void MainWidget::SetCurrentUser(const User& user) {
+    m_currentUser = user; 
+}
+
+const User& MainWidget::GetCurrentUser() const {
+    return m_currentUser;
+}
+
 void MainWidget::ShowInitial() {
     wsClient->stop();
     if (chatPanel->IsShown()) {
@@ -88,6 +96,10 @@ void MainWidget::ShowChat(std::vector<User> users) {
     roomsPanel->Hide();
     chatPanel->Show();
     chatPanel->m_roomHeaderPanel->SetRoom(roomsPanel->GetSelectedRoom().value());
+    auto it = std::find_if(users.begin(), users.end(), [&](const User& u){ return u.id == m_currentUser.id; });
+    if (it != users.end()) {
+        chatPanel->SetCurrentUser(*it);
+    }
     chatPanel->m_userListPanel->SetUserList(std::move(users));
     chatPanel->m_messageView->Start();
     Layout();

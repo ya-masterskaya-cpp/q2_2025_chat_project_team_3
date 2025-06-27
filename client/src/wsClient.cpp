@@ -175,6 +175,14 @@ void WebSocketClient::deleteRoom(int32_t roomId) {
     sendEnvelope(env);
 }
 
+void WebSocketClient::assignRole(int32_t roomId, int32_t userId, chat::UserRights role) {
+    chat::Envelope env;
+    auto* req = env.mutable_assign_role_request();
+    req->set_room_id(roomId);
+    req->set_user_id(userId);
+    req->set_new_role(role);
+    sendEnvelope(env);
+}
 
 void WebSocketClient::handleMessage(const std::string& msg) {
     chat::Envelope env;
@@ -277,6 +285,13 @@ void WebSocketClient::handleMessage(const std::string& msg) {
                 for (const auto& proto_room : env.auth_response().rooms()){
                     rooms.emplace_back(new Room{proto_room.room_id(), wxString::FromUTF8(proto_room.room_name())});
                 }
+                client::User user;
+                user.id = env.auth_response().authenticated_user().user_id();
+                user.username = wxString::FromUTF8(env.auth_response().authenticated_user().user_name());
+                user.role = chat::UserRights::REGULAR;
+                wxTheApp->CallAfter([this, user]() {
+                    ui->SetCurrentUser(user);
+                });
                 updateRoomsPanel(rooms);
                 showRooms();
             } else {
@@ -365,6 +380,17 @@ void WebSocketClient::handleMessage(const std::string& msg) {
             });
             break;
         }
+        case chat::Envelope::kAssignRoleResponse: {
+            if (!statusOk(env.assign_role_response().status())) {
+                showError("Failed to assign role: " + wxString(env.assign_role_response().status().message()));
+            }
+            break;
+        }
+        case chat::Envelope::kUserRoleChanged: {
+            const auto& roleChange = env.user_role_changed();
+            updateUserRole(roleChange.user_id(), roleChange.new_role());
+            break;
+        }
         default: {
             showError("Unknown message received from server!");
             break;
@@ -438,7 +464,19 @@ void WebSocketClient::SetServers(const std::vector<std::string> &servers) {
     wxTheApp->CallAfter([this, servers] {ui->serversPanel->SetServers(servers);});
 }
 
-std::string WebSocketClient::formatMessageTimestamp(uint64_t timestamp) {
+void WebSocketClient::updateUserRole(int32_t userId, chat::UserRights newRole) {
+    wxTheApp->CallAfter([this, userId, newRole] {
+        ui->chatPanel->m_userListPanel->UpdateUserRole(userId, newRole);
+        if (ui->GetCurrentUser().id == userId) {
+            User updatedCurrentUser = ui->GetCurrentUser();
+            updatedCurrentUser.role = newRole;
+            ui->SetCurrentUser(updatedCurrentUser);
+        }
+    });
+}
+
+std::string WebSocketClient::formatMessageTimestamp(uint64_t timestamp)
+{
     trantor::Date msgDate(timestamp);
     auto now = trantor::Date::now();
     auto zeroTime = [](const trantor::Date& dt) {

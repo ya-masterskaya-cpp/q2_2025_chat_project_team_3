@@ -6,6 +6,8 @@
 namespace client {
 
 wxDECLARE_EVENT(wxEVT_SNAP_STATE_CHANGED, wxCommandEvent);
+wxDECLARE_EVENT(wxEVT_ASSIGN_MODERATOR, wxCommandEvent);
+wxDECLARE_EVENT(wxEVT_UNASSIGN_MODERATOR, wxCommandEvent);
 
 class MainWidget;
 class UserListPanel;
@@ -26,6 +28,7 @@ public:
     void SetRoomName(wxString name);
     int32_t GetRoomId();
     void ResetState();
+    void SetCurrentUser(const User& user);
 
     UserListPanel* m_userListPanel = nullptr;
     MessageView* m_messageView = nullptr;
@@ -57,7 +60,8 @@ private:
     void OnRoomRename(wxCommandEvent& event);
     void OnRoomDelete(wxCommandEvent& event);
     void OnRoomClose(wxCommandEvent& event);
-
+    void OnAssignModerator(wxCommandEvent& event);
+    void OnUnassignModerator(wxCommandEvent& event);
     wxDECLARE_EVENT_TABLE();
 };
 

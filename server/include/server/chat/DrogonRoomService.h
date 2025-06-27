@@ -56,6 +56,9 @@ public:
     /** @see IChatRoomService::onRoomDeleted */
     drogon::Task<void> onRoomDeleted(int32_t room_id) override;
 
+    /** @see IChatRoomService::updateUserRoomRights */
+    drogon::Task<void> updateUserRoomRights(int32_t userId, int32_t roomId, chat::UserRights newRights) override;
+
 private:
     /// @brief The specific WebSocket connection this service instance operates on.
     const drogon::WebSocketConnectionPtr& m_conn;
