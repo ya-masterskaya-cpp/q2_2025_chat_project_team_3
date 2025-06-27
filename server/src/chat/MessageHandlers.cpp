@@ -1,8 +1,6 @@
 #include <server/chat/MessageHandlers.h>
 #include <server/chat/WsData.h>
-
 #include <server/chat/IChatRoomService.h>
-#include <server/chat/ChatRoomManager.h>
 
 #include <server/models/Users.h>
 #include <server/models/Rooms.h>
@@ -222,7 +220,7 @@ drogon::Task<chat::RegisterResponse> MessageHandlers::handleRegister(const WsDat
     }
 }
 
-drogon::Task<chat::SendMessageResponse> MessageHandlers::handleSendMessage(const WsDataPtr& wsDataGuarded, const chat::SendMessageRequest& req) const {
+drogon::Task<chat::SendMessageResponse> MessageHandlers::handleSendMessage(const WsDataPtr& wsDataGuarded, const chat::SendMessageRequest& req, IChatRoomService& room_service) const {
     chat::SendMessageResponse resp;
 
     auto wsData = co_await wsDataGuarded->lock_shared();
@@ -285,7 +283,7 @@ drogon::Task<chat::SendMessageResponse> MessageHandlers::handleSendMessage(const
     user_info->set_user_id(wsData->user->id);
     user_info->set_user_name(wsData->user->name);
 
-    co_await ChatRoomManager::instance().sendToRoom(wsData->room->id, msgEnv);
+    co_await room_service.sendToRoom(wsData->room->id, msgEnv);
 
     common::setStatus(resp, chat::STATUS_SUCCESS);
     co_return resp;
@@ -335,7 +333,7 @@ drogon::Task<chat::JoinRoomResponse> MessageHandlers::handleJoinRoom(const WsDat
         wsData->room = CurrentRoom{req.room_id(), role.value_or(chat::UserRights::REGULAR)};
         
         co_await room_service.joinRoom(*wsData);
-        auto users = co_await ChatRoomManager::instance().getUsersInRoomAsync(req.room_id(), *wsData);
+        auto users = co_await room_service.getUsersInRoom(req.room_id(), *wsData);
         *resp.mutable_users() = {std::make_move_iterator(users.begin()), 
                                   std::make_move_iterator(users.end())};
 
@@ -343,7 +341,7 @@ drogon::Task<chat::JoinRoomResponse> MessageHandlers::handleJoinRoom(const WsDat
         user_joined_msg.mutable_user_joined()->mutable_user()->set_user_id(wsData->user->id);
         user_joined_msg.mutable_user_joined()->mutable_user()->set_user_name(wsData->user->name);
         user_joined_msg.mutable_user_joined()->mutable_user()->set_user_room_rights(wsData->room->rights);
-        co_await ChatRoomManager::instance().sendToRoom(wsData->room->id, user_joined_msg);
+        co_await room_service.sendToRoom(wsData->room->id, user_joined_msg);
 
         common::setStatus(resp, chat::STATUS_SUCCESS);
         co_return resp;
@@ -374,7 +372,7 @@ drogon::Task<chat::LeaveRoomResponse> MessageHandlers::handleLeaveRoom(const WsD
     co_return resp;
 }
 
-drogon::Task<chat::CreateRoomResponse> MessageHandlers::handleCreateRoom(const WsDataPtr& wsDataGuarded, const chat::CreateRoomRequest& req) const {
+drogon::Task<chat::CreateRoomResponse> MessageHandlers::handleCreateRoom(const WsDataPtr& wsDataGuarded, const chat::CreateRoomRequest& req, IChatRoomService& room_service) const {
     chat::CreateRoomResponse resp;
 
     auto wsData = co_await wsDataGuarded->lock_shared();
@@ -419,7 +417,7 @@ drogon::Task<chat::CreateRoomResponse> MessageHandlers::handleCreateRoom(const W
         new_room_resp->mutable_room()->set_room_id(room_id);
         new_room_resp->mutable_room()->set_room_name(req.room_name());
 
-        co_await ChatRoomManager::instance().sendToAll(new_room_msg);
+        co_await room_service.sendToAll(new_room_msg);
         common::setStatus(resp, chat::STATUS_SUCCESS);
         co_return resp;
     } catch(const std::exception& e) {
@@ -497,7 +495,7 @@ drogon::Task<chat::LogoutResponse> MessageHandlers::handleLogoutUser(const WsDat
     co_return resp;
 }
 
-drogon::Task<chat::RenameRoomResponse> MessageHandlers::handleRenameRoom(const WsDataPtr& wsDataGuarded, const chat::RenameRoomRequest& req) {
+drogon::Task<chat::RenameRoomResponse> MessageHandlers::handleRenameRoom(const WsDataPtr& wsDataGuarded, const chat::RenameRoomRequest& req, IChatRoomService& room_service) {
     chat::RenameRoomResponse resp;
 
     auto wsData = co_await wsDataGuarded->lock_shared();
@@ -543,7 +541,7 @@ drogon::Task<chat::RenameRoomResponse> MessageHandlers::handleRenameRoom(const W
         auto* new_name = env.mutable_new_room_name();
         new_name->set_room_id(wsData->room->id);
         new_name->set_name(req.name());
-        co_await ChatRoomManager::instance().sendToAll(env);
+        co_await room_service.sendToAll(env);
         common::setStatus(resp, chat::STATUS_SUCCESS);
         co_return resp;
     } catch(const std::exception& e) {
@@ -553,7 +551,7 @@ drogon::Task<chat::RenameRoomResponse> MessageHandlers::handleRenameRoom(const W
     }
 }
 
-drogon::Task<chat::DeleteRoomResponse> MessageHandlers::handleDeleteRoom(const WsDataPtr& wsDataGuarded, const chat::DeleteRoomRequest& req) {
+drogon::Task<chat::DeleteRoomResponse> MessageHandlers::handleDeleteRoom(const WsDataPtr& wsDataGuarded, const chat::DeleteRoomRequest& req, IChatRoomService& room_service) {
     chat::DeleteRoomResponse resp;
 
     auto wsData = co_await wsDataGuarded->lock_shared();
@@ -600,7 +598,7 @@ drogon::Task<chat::DeleteRoomResponse> MessageHandlers::handleDeleteRoom(const W
         common::setStatus(resp, chat::STATUS_FAILURE, *err);
         co_return resp;
     }
-    co_await ChatRoomManager::instance().onRoomDeleted(room_id);
+    co_await room_service.onRoomDeleted(room_id);
     common::setStatus(resp, chat::STATUS_SUCCESS);
     co_return resp;
 }
