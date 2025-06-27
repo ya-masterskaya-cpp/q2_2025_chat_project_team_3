@@ -2,6 +2,7 @@
 
 #include <drogon/orm/DbClient.h>
 #include <server/chat/WsData.h>
+#include <server/utils/scoped_coro_transaction.h>
 
 /**
  * @file MessageHandlers.h
@@ -117,6 +118,12 @@ private:
      * @return A task resolving to an optional UserRights enum if a role is found.
      */
     drogon::Task<std::optional<chat::UserRights>> findStoredUserRole(int32_t user_id, int32_t room_id) const;
+
+    /** @brief Updates or creates a user's role entry in the UserRoomRoles table within a transaction. */
+    drogon::Task<ScopedTransactionResult> updateUserRoleInDb(drogon::orm::DbClientPtr tx, int32_t userId, int32_t roomId, chat::UserRights newRole);
+
+    /** @brief Transfers room ownership within a transaction. */
+    drogon::Task<ScopedTransactionResult> transferRoomOwnershipInDb(drogon::orm::DbClientPtr tx, int32_t roomId, int32_t newOwnerId, int32_t oldOwnerId);
 
     /// @brief The shared database client for all ORM operations.
     drogon::orm::DbClientPtr m_dbClient;

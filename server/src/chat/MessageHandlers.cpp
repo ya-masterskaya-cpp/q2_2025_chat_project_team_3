@@ -7,7 +7,6 @@
 #include <server/models/Messages.h>
 #include <server/models/UserRoomRoles.h>
 
-#include <server/utils/scoped_coro_transaction.h>
 #include <server/utils/switch_to_io_loop.h>
 #include <common/utils/utils.h>
 #include <common/utils/limits.h>
@@ -610,7 +609,6 @@ drogon::Task<chat::DeleteRoomResponse> MessageHandlers::handleDeleteRoom(const W
 
 drogon::Task<chat::AssignRoleResponse> MessageHandlers::handleAssignRole(const WsDataPtr& wsDataGuarded, const chat::AssignRoleRequest& req, IChatRoomService& room_service) {
     chat::AssignRoleResponse resp;
-
     auto wsData = co_await wsDataGuarded->lock_shared();
 
     if (wsData->status != USER_STATUS::Authenticated) {
@@ -618,59 +616,57 @@ drogon::Task<chat::AssignRoleResponse> MessageHandlers::handleAssignRole(const W
         co_return resp;
     }
     if (!wsData->room || wsData->room->id != req.room_id()) {
-        common::setStatus(resp, chat::STATUS_FAILURE, "User is not in request room.");
+        common::setStatus(resp, chat::STATUS_FAILURE, "User is not in the request room.");
         co_return resp;
     }
-    if (wsData->room->rights < chat::UserRights::OWNER) {
-        common::setStatus(resp, chat::STATUS_FAILURE, "Insufficient rights to assign roles.");
-        co_return resp;
-    }
-    if (req.new_role() >= chat::UserRights::OWNER) {
-        common::setStatus(resp, chat::STATUS_FAILURE, "Cannot assign Owner or Admin roles.");
-        co_return resp;
-    }
-    if (wsData->user->id == req.user_id()) {
-        common::setStatus(resp, chat::STATUS_FAILURE, "Cannot change your own role.");
-        co_return resp;
-    }
-    auto err = co_await WithTransaction(
-        [&](auto tx) -> drogon::Task<ScopedTransactionResult> {
-            try {
-                auto roles = co_await switch_to_io_loop(CoroMapper<models::UserRoomRoles>(tx)
-                    .findBy(Criteria(models::UserRoomRoles::Cols::_user_id, CompareOperator::EQ, req.user_id()) &&
-                            Criteria(models::UserRoomRoles::Cols::_room_id, CompareOperator::EQ, req.room_id())));
 
-                if (roles.empty()) {
-                    models::UserRoomRoles newRole;
-                    newRole.setUserId(req.user_id());
-                    newRole.setRoomId(req.room_id());
-                    newRole.setRoleType(chat::UserRights_Name(req.new_role()));
-                    co_await switch_to_io_loop(CoroMapper<models::UserRoomRoles>(tx).insert(newRole));
-                } else {
-                    auto roleToUpdate = roles.front();
-                    roleToUpdate.setRoleType(chat::UserRights_Name(req.new_role()));
-                    co_await switch_to_io_loop(CoroMapper<models::UserRoomRoles>(tx).update(roleToUpdate));
-                }
-                co_return std::nullopt;
-            } catch (const DrogonDbException& e) {
-                LOG_ERROR << "Role assignment failed: " << e.base().what();
-                co_return "Database error during role assignment.";
+    try {
+        auto targetUserRightsOpt = co_await getUserRights(req.user_id(), req.room_id());
+        auto targetUserRights = targetUserRightsOpt.value_or(chat::UserRights::REGULAR);
+
+        if (wsData->room->rights <= targetUserRights) {
+            common::setStatus(resp, chat::STATUS_FAILURE, "Insufficient rights to change this user's role.");
+            co_return resp;
+        }
+        ScopedTransactionResult err;
+        if (req.new_role() == chat::UserRights::OWNER) {
+            err = co_await WithTransaction([&](auto tx) {
+                return transferRoomOwnershipInDb(tx, req.room_id(), req.user_id(), wsData->user->id);
+            });
+            if (!err) {
+                chat::Envelope newOwnerEnv;
+                newOwnerEnv.mutable_user_role_changed()->set_user_id(req.user_id());
+                newOwnerEnv.mutable_user_role_changed()->set_new_role(chat::UserRights::OWNER);
+                co_await room_service.sendToRoom(req.room_id(), newOwnerEnv);
+
+                chat::Envelope oldOwnerEnv;
+                oldOwnerEnv.mutable_user_role_changed()->set_user_id(wsData->user->id);
+                oldOwnerEnv.mutable_user_role_changed()->set_new_role(chat::UserRights::MODERATOR);
+                co_await room_service.sendToRoom(req.room_id(), oldOwnerEnv);
             }
-        });
+        } else {
+            err = co_await WithTransaction([&](auto tx) {
+                return updateUserRoleInDb(tx, req.user_id(), req.room_id(), req.new_role());
+            });
 
-    if (err) {
-        common::setStatus(resp, chat::STATUS_FAILURE, *err);
+            if (!err) {
+                chat::Envelope roleChangedEnv;
+                roleChangedEnv.mutable_user_role_changed()->set_user_id(req.user_id());
+                roleChangedEnv.mutable_user_role_changed()->set_new_role(req.new_role());
+                co_await room_service.sendToRoom(req.room_id(), roleChangedEnv);
+            }
+        }
+        if (err) {
+            common::setStatus(resp, chat::STATUS_FAILURE, *err);
+            co_return resp;
+        }
+        common::setStatus(resp, chat::STATUS_SUCCESS);
+        co_return resp;
+    } catch (const std::exception& e) {
+        LOG_ERROR << "Assign role error: " << e.what();
+        common::setStatus(resp, chat::STATUS_FAILURE, std::string("Assign role failed: ") + e.what());
         co_return resp;
     }
-
-    chat::Envelope roleChangedEnv;
-    auto* notification = roleChangedEnv.mutable_user_role_changed();
-    notification->set_user_id(req.user_id());
-    notification->set_new_role(req.new_role());
-    co_await room_service.sendToRoom(req.room_id(), roleChangedEnv);
-
-    common::setStatus(resp, chat::STATUS_SUCCESS);
-    co_return resp;
 }
 
 drogon::Task<std::optional<chat::UserRights>> MessageHandlers::getUserRights(int32_t user_id, int32_t room_id) const {
@@ -740,5 +736,62 @@ std::optional<std::string> MessageHandlers::validateUtf8String(
 
     return std::nullopt;
 }
+
+
+drogon::Task<ScopedTransactionResult> MessageHandlers::updateUserRoleInDb(drogon::orm::DbClientPtr tx, int32_t userId, int32_t roomId, chat::UserRights newRole) {
+    try {
+        auto roles = co_await switch_to_io_loop(CoroMapper<models::UserRoomRoles>(tx)
+            .findBy(Criteria(models::UserRoomRoles::Cols::_user_id, CompareOperator::EQ, userId) &&
+                    Criteria(models::UserRoomRoles::Cols::_room_id, CompareOperator::EQ, roomId)));
+
+        if (roles.empty()) {
+            models::UserRoomRoles roleEntry;
+            roleEntry.setUserId(userId);
+            roleEntry.setRoomId(roomId);
+            roleEntry.setRoleType(chat::UserRights_Name(newRole));
+            co_await switch_to_io_loop(CoroMapper<models::UserRoomRoles>(tx).insert(roleEntry));
+        } else {
+            auto roleToUpdate = roles.front();
+            roleToUpdate.setRoleType(chat::UserRights_Name(newRole));
+            co_await switch_to_io_loop(CoroMapper<models::UserRoomRoles>(tx).update(roleToUpdate));
+        }
+        co_return std::nullopt;
+    } catch (const DrogonDbException& e) {
+        LOG_ERROR << "Role update/insert failed: " << e.base().what();
+        co_return "Database error during role update.";
+    }
+}
+
+drogon::Task<ScopedTransactionResult> MessageHandlers::transferRoomOwnershipInDb(drogon::orm::DbClientPtr tx, int32_t roomId, int32_t newOwnerId, int32_t oldOwnerId) {
+    try {
+        // 1. Находим комнату
+        auto room = co_await switch_to_io_loop(CoroMapper<models::Rooms>(tx)
+            .findOne(Criteria(models::Rooms::Cols::_room_id, CompareOperator::EQ, roomId)));
+        if (!room.getRoomId()) {
+            co_return "Room not found during ownership transfer.";
+        }
+
+        // 2. Назначаем нового владельца
+        room.setOwnerId(newOwnerId);
+        co_await switch_to_io_loop(CoroMapper<models::Rooms>(tx).update(room));
+
+        // 3. Понижаем старого владельца до модератора, используя уже существующий хелпер
+        auto demoteResult = co_await updateUserRoleInDb(tx, oldOwnerId, roomId, chat::UserRights::MODERATOR);
+        if (demoteResult) {
+            co_return "Failed to demote old owner: " + *demoteResult;
+        }
+
+        // 4. Удаляем запись о роли для нового владельца из UserRoomRoles (если она была)
+        co_await switch_to_io_loop(CoroMapper<models::UserRoomRoles>(tx)
+            .deleteBy(Criteria(models::UserRoomRoles::Cols::_user_id, CompareOperator::EQ, newOwnerId) &&
+                        Criteria(models::UserRoomRoles::Cols::_room_id, CompareOperator::EQ, roomId)));
+        
+        co_return std::nullopt;
+    } catch (const DrogonDbException& e) {
+        LOG_ERROR << "Ownership transfer failed: " << e.base().what();
+        co_return "Database error during ownership transfer.";
+    }
+}
+
 
 } // namespace server
