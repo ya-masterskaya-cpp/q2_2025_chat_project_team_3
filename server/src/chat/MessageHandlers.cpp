@@ -764,24 +764,18 @@ drogon::Task<ScopedTransactionResult> MessageHandlers::updateUserRoleInDb(drogon
 
 drogon::Task<ScopedTransactionResult> MessageHandlers::transferRoomOwnershipInDb(drogon::orm::DbClientPtr tx, int32_t roomId, int32_t newOwnerId, int32_t oldOwnerId) {
     try {
-        // 1. Находим комнату
         auto room = co_await switch_to_io_loop(CoroMapper<models::Rooms>(tx)
             .findOne(Criteria(models::Rooms::Cols::_room_id, CompareOperator::EQ, roomId)));
         if (!room.getRoomId()) {
             co_return "Room not found during ownership transfer.";
         }
-
-        // 2. Назначаем нового владельца
         room.setOwnerId(newOwnerId);
         co_await switch_to_io_loop(CoroMapper<models::Rooms>(tx).update(room));
 
-        // 3. Понижаем старого владельца до модератора, используя уже существующий хелпер
         auto demoteResult = co_await updateUserRoleInDb(tx, oldOwnerId, roomId, chat::UserRights::MODERATOR);
         if (demoteResult) {
             co_return "Failed to demote old owner: " + *demoteResult;
         }
-
-        // 4. Удаляем запись о роли для нового владельца из UserRoomRoles (если она была)
         co_await switch_to_io_loop(CoroMapper<models::UserRoomRoles>(tx)
             .deleteBy(Criteria(models::UserRoomRoles::Cols::_user_id, CompareOperator::EQ, newOwnerId) &&
                         Criteria(models::UserRoomRoles::Cols::_room_id, CompareOperator::EQ, roomId)));
