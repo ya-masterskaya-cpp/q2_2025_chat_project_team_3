@@ -112,6 +112,23 @@ drogon::Task<void> ChatRoomManager::onRoomDeleted(int32_t room_id) {
     sendToAll_unsafe(room_deleted_msg);
 }
 
+drogon::Task<void> ChatRoomManager::updateUserRoomRights(int32_t userId, int32_t roomId, chat::UserRights newRights) {
+    auto lock = co_await m_manager_mutex.lock_shared();
+
+    auto it = m_user_id_to_conns.find(userId);
+    if (it == m_user_id_to_conns.end()) {
+        co_return;
+    }
+
+    for (const auto& conn : it->second) {
+        auto peer_guarded = conn->getContext<WsDataGuarded>();
+        auto peer_proxy = co_await peer_guarded->lock_unique();
+        if (peer_proxy->room && peer_proxy->room->id == roomId) {
+            peer_proxy->room->rights = newRights;
+        }
+    }
+}
+
 drogon::Task<void> ChatRoomManager::sendToRoom(int32_t room_id, const chat::Envelope& message) const {
     auto lock = co_await m_manager_mutex.lock_shared();
     sendToRoom_unsafe(room_id, message);

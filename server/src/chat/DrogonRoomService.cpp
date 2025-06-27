@@ -43,4 +43,7 @@ drogon::Task<void> DrogonRoomService::onRoomDeleted(int32_t room_id) {
     co_await ChatRoomManager::instance().onRoomDeleted(room_id);
 }
 
+drogon::Task<void> DrogonRoomService::updateUserRoomRights(int32_t userId, int32_t roomId, chat::UserRights newRights) {
+    co_await ChatRoomManager::instance().updateUserRoomRights(userId, roomId, newRights);
+}
 } // namespace server

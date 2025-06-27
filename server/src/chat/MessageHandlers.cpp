@@ -630,10 +630,14 @@ drogon::Task<chat::AssignRoleResponse> MessageHandlers::handleAssignRole(const W
         }
         ScopedTransactionResult err;
         if (req.new_role() == chat::UserRights::OWNER) {
-            err = co_await WithTransaction([&](auto tx) {
-                return transferRoomOwnershipInDb(tx, req.room_id(), req.user_id(), wsData->user->id);
+            int32_t oldOwnerId = wsData->user->id;
+            err = co_await WithTransaction([&](auto tx) -> drogon::Task<ScopedTransactionResult> {
+                co_return co_await transferRoomOwnershipInDb(tx, req.room_id(), req.user_id(), wsData->user->id);
             });
             if (!err) {
+                co_await room_service.updateUserRoomRights(req.user_id(), req.room_id(), chat::UserRights::OWNER);
+                co_await room_service.updateUserRoomRights(oldOwnerId, req.room_id(), chat::UserRights::MODERATOR);
+
                 chat::Envelope newOwnerEnv;
                 newOwnerEnv.mutable_user_role_changed()->set_user_id(req.user_id());
                 newOwnerEnv.mutable_user_role_changed()->set_new_role(chat::UserRights::OWNER);
@@ -645,11 +649,13 @@ drogon::Task<chat::AssignRoleResponse> MessageHandlers::handleAssignRole(const W
                 co_await room_service.sendToRoom(req.room_id(), oldOwnerEnv);
             }
         } else {
-            err = co_await WithTransaction([&](auto tx) {
-                return updateUserRoleInDb(tx, req.user_id(), req.room_id(), req.new_role());
+            err = co_await WithTransaction([&](auto tx) -> drogon::Task<ScopedTransactionResult> {
+                co_return co_await updateUserRoleInDb(tx, req.user_id(), req.room_id(), req.new_role());
             });
 
             if (!err) {
+                co_await room_service.updateUserRoomRights(req.user_id(), req.room_id(), req.new_role());
+
                 chat::Envelope roleChangedEnv;
                 roleChangedEnv.mutable_user_role_changed()->set_user_id(req.user_id());
                 roleChangedEnv.mutable_user_role_changed()->set_new_role(req.new_role());
@@ -738,7 +744,7 @@ std::optional<std::string> MessageHandlers::validateUtf8String(
 }
 
 
-drogon::Task<ScopedTransactionResult> MessageHandlers::updateUserRoleInDb(drogon::orm::DbClientPtr tx, int32_t userId, int32_t roomId, chat::UserRights newRole) {
+drogon::Task<ScopedTransactionResult> MessageHandlers::updateUserRoleInDb(const std::shared_ptr<drogon::orm::Transaction>& tx, int32_t userId, int32_t roomId, chat::UserRights newRole) {
     try {
         auto roles = co_await switch_to_io_loop(CoroMapper<models::UserRoomRoles>(tx)
             .findBy(Criteria(models::UserRoomRoles::Cols::_user_id, CompareOperator::EQ, userId) &&
@@ -762,7 +768,7 @@ drogon::Task<ScopedTransactionResult> MessageHandlers::updateUserRoleInDb(drogon
     }
 }
 
-drogon::Task<ScopedTransactionResult> MessageHandlers::transferRoomOwnershipInDb(drogon::orm::DbClientPtr tx, int32_t roomId, int32_t newOwnerId, int32_t oldOwnerId) {
+drogon::Task<ScopedTransactionResult> MessageHandlers::transferRoomOwnershipInDb(const std::shared_ptr<drogon::orm::Transaction>& tx, int32_t roomId, int32_t newOwnerId, int32_t oldOwnerId) {
     try {
         auto room = co_await switch_to_io_loop(CoroMapper<models::Rooms>(tx)
             .findOne(Criteria(models::Rooms::Cols::_room_id, CompareOperator::EQ, roomId)));

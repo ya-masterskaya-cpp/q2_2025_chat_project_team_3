@@ -120,10 +120,10 @@ private:
     drogon::Task<std::optional<chat::UserRights>> findStoredUserRole(int32_t user_id, int32_t room_id) const;
 
     /** @brief Updates or creates a user's role entry in the UserRoomRoles table within a transaction. */
-    drogon::Task<ScopedTransactionResult> updateUserRoleInDb(drogon::orm::DbClientPtr tx, int32_t userId, int32_t roomId, chat::UserRights newRole);
+    drogon::Task<ScopedTransactionResult> updateUserRoleInDb(const std::shared_ptr<drogon::orm::Transaction>& tx, int32_t userId, int32_t roomId, chat::UserRights newRole);
 
     /** @brief Transfers room ownership within a transaction. */
-    drogon::Task<ScopedTransactionResult> transferRoomOwnershipInDb(drogon::orm::DbClientPtr tx, int32_t roomId, int32_t newOwnerId, int32_t oldOwnerId);
+    drogon::Task<ScopedTransactionResult> transferRoomOwnershipInDb(const std::shared_ptr<drogon::orm::Transaction>& tx, int32_t roomId, int32_t newOwnerId, int32_t oldOwnerId);
 
     /// @brief The shared database client for all ORM operations.
     drogon::orm::DbClientPtr m_dbClient;
