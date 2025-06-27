@@ -73,7 +73,8 @@ message AuthRequest {
 }
 message AuthResponse {
     Status status = 1;
-    repeated RoomInfo rooms = 2;
+    optional UserInfo authenticated_user = 2;
+    repeated RoomInfo rooms = 3;
 }
 
 message InitialRegisterRequest {
@@ -192,6 +193,20 @@ message RoomDeleted {
     int32 room_id = 1;
 }
 
+message AssignRoleRequest {
+    int32 room_id = 1;
+    int32 user_id = 2;
+    UserRights new_role = 3;
+}
+message AssignRoleResponse {
+    Status status = 1;
+}
+
+message UserRoleChanged {
+    int32 user_id = 1;
+    UserRights new_role = 2;
+}
+
 message Envelope {
     oneof payload {
         ServerHello server_hello = 1;
@@ -232,5 +247,8 @@ message Envelope {
         DeleteRoomRequest delete_room_request = 36;
         DeleteRoomResponse delete_room_response = 37;
         RoomDeleted room_deleted = 38;
+        AssignRoleRequest assign_role_request = 39;
+        AssignRoleResponse assign_role_response = 40;
+        UserRoleChanged user_role_changed = 41;
     }
 }

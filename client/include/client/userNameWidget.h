@@ -16,8 +16,8 @@ public:
     }
 
 private:
-    void OnRightClick(wxMouseEvent& event);
-
+    void PropagateRightClick(wxMouseEvent& event);
+    
     CachedColorText* m_usernameText;
     User m_user;
 };

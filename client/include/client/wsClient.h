@@ -33,7 +33,8 @@ public:
     void getServers();
     void renameRoom(int32_t roomId, const std::string& newName);
     void deleteRoom(int32_t roomId);
-    
+    void assignRole(int32_t roomId, int32_t userId, chat::UserRights role);
+
     static std::string formatMessageTimestamp(uint64_t timestamp);
 
 private:
@@ -54,6 +55,7 @@ private:
     void showServers();
     void showInitial();
     void SetServers(const std::vector<std::string> &servers);
+    void updateUserRole(int32_t userId, chat::UserRights newRole);
     
     MainWidget* ui;
     std::shared_ptr<drogon::WebSocketConnection> conn;

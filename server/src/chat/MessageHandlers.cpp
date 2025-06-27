@@ -151,14 +151,15 @@ drogon::Task<chat::AuthResponse> MessageHandlers::handleAuth(const WsDataPtr& ws
                 co_return resp;
             }
         }
-        
         auto rooms = co_await switch_to_io_loop(CoroMapper<models::Rooms>(m_dbClient).findAll());
         for(const auto& room : rooms) {
             chat::RoomInfo* room_info = resp.add_rooms();
             room_info->set_room_id(room.getValueOfRoomId());
             room_info->set_room_name(room.getValueOfRoomName());
         }
-
+        chat::UserInfo* user_info = resp.mutable_authenticated_user();
+        user_info->set_user_id(*user.getUserId());
+        user_info->set_user_name(*user.getUsername());
         wsData->user->id = *user.getUserId();
         wsData->status = USER_STATUS::Authenticated;
         co_await room_service.login(*wsData);
@@ -599,6 +600,71 @@ drogon::Task<chat::DeleteRoomResponse> MessageHandlers::handleDeleteRoom(const W
         co_return resp;
     }
     co_await room_service.onRoomDeleted(room_id);
+    common::setStatus(resp, chat::STATUS_SUCCESS);
+    co_return resp;
+}
+
+drogon::Task<chat::AssignRoleResponse> MessageHandlers::handleAssignRole(const WsDataPtr& wsDataGuarded, const chat::AssignRoleRequest& req, IChatRoomService& room_service) {
+    chat::AssignRoleResponse resp;
+
+    auto wsData = co_await wsDataGuarded->lock_shared();
+
+    if (wsData->status != USER_STATUS::Authenticated) {
+        common::setStatus(resp, chat::STATUS_UNAUTHORIZED, "Not authenticated.");
+        co_return resp;
+    }
+    if (!wsData->room || wsData->room->id != req.room_id()) {
+        common::setStatus(resp, chat::STATUS_FAILURE, "User is not in request room.");
+        co_return resp;
+    }
+    if (wsData->room->rights < chat::UserRights::OWNER) {
+        common::setStatus(resp, chat::STATUS_FAILURE, "Insufficient rights to assign roles.");
+        co_return resp;
+    }
+    if (req.new_role() >= chat::UserRights::OWNER) {
+        common::setStatus(resp, chat::STATUS_FAILURE, "Cannot assign Owner or Admin roles.");
+        co_return resp;
+    }
+    if (wsData->user->id == req.user_id()) {
+        common::setStatus(resp, chat::STATUS_FAILURE, "Cannot change your own role.");
+        co_return resp;
+    }
+    auto err = co_await WithTransaction(
+        [&](auto tx) -> drogon::Task<ScopedTransactionResult> {
+            try {
+                auto roles = co_await switch_to_io_loop(CoroMapper<models::UserRoomRoles>(tx)
+                    .findBy(Criteria(models::UserRoomRoles::Cols::_user_id, CompareOperator::EQ, req.user_id()) &&
+                            Criteria(models::UserRoomRoles::Cols::_room_id, CompareOperator::EQ, req.room_id())));
+
+                if (roles.empty()) {
+                    models::UserRoomRoles newRole;
+                    newRole.setUserId(req.user_id());
+                    newRole.setRoomId(req.room_id());
+                    newRole.setRoleType(chat::UserRights_Name(req.new_role()));
+                    co_await switch_to_io_loop(CoroMapper<models::UserRoomRoles>(tx).insert(newRole));
+                } else {
+                    auto roleToUpdate = roles.front();
+                    roleToUpdate.setRoleType(chat::UserRights_Name(req.new_role()));
+                    co_await switch_to_io_loop(CoroMapper<models::UserRoomRoles>(tx).update(roleToUpdate));
+                }
+                co_return std::nullopt;
+            } catch (const DrogonDbException& e) {
+                LOG_ERROR << "Role assignment failed: " << e.base().what();
+                co_return "Database error during role assignment.";
+            }
+        });
+
+    if (err) {
+        common::setStatus(resp, chat::STATUS_FAILURE, *err);
+        co_return resp;
+    }
+
+    chat::Envelope roleChangedEnv;
+    auto* notification = roleChangedEnv.mutable_user_role_changed();
+    notification->set_user_id(req.user_id());
+    notification->set_new_role(req.new_role());
+    co_await room_service.sendToRoom(req.room_id(), roleChangedEnv);
+
     common::setStatus(resp, chat::STATUS_SUCCESS);
     co_return resp;
 }

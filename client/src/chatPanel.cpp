@@ -21,6 +21,8 @@ enum { ID_SEND = wxID_HIGHEST+30,
 };
 
 wxDEFINE_EVENT(wxEVT_SNAP_STATE_CHANGED, wxCommandEvent);
+wxDEFINE_EVENT(wxEVT_ASSIGN_MODERATOR, wxCommandEvent);
+wxDEFINE_EVENT(wxEVT_UNASSIGN_MODERATOR, wxCommandEvent);
 
 wxBEGIN_EVENT_TABLE(ChatPanel, wxPanel)
     EVT_BUTTON(ID_SEND, ChatPanel::OnSend)
@@ -96,6 +98,8 @@ ChatPanel::ChatPanel(MainWidget* parent)
     Bind(wxEVT_ROOM_RENAME, &ChatPanel::OnRoomRename, this);
     Bind(wxEVT_ROOM_DELETE, &ChatPanel::OnRoomDelete, this);
     Bind(wxEVT_ROOM_CLOSE, &ChatPanel::OnRoomClose, this);
+    Bind(wxEVT_ASSIGN_MODERATOR, &ChatPanel::OnAssignModerator, this);
+    Bind(wxEVT_UNASSIGN_MODERATOR, &ChatPanel::OnUnassignModerator, this);
 }
 
 // Event handler for when the message container (wxScrolledWindow) changes size.
@@ -212,6 +216,12 @@ void ChatPanel::ResetState() {
     Layout();
 }
 
+void ChatPanel::SetCurrentUser(const User& user) {
+    if (m_userListPanel) {
+        m_userListPanel->SetCurrentUser(user);
+    }
+}
+
 void ChatPanel::OnRoomRename(wxCommandEvent &event) {
     if (!m_parent || !m_parent->wsClient) return;
     wxString newName = event.GetString();
@@ -227,6 +237,22 @@ void ChatPanel::OnRoomDelete(wxCommandEvent& event) {
 
 void ChatPanel::OnRoomClose([[maybe_unused]] wxCommandEvent& event) {
     ShowChatPanel();
+}
+
+void ChatPanel::OnAssignModerator(wxCommandEvent& event) {
+    if (!m_parent || !m_parent->wsClient) return;
+
+    int32_t roomId = GetRoomId();
+    int32_t userId = event.GetInt();
+    m_parent->wsClient->assignRole(roomId, userId, chat::UserRights::MODERATOR);
+}
+
+void ChatPanel::OnUnassignModerator(wxCommandEvent& event) {
+    if (!m_parent || !m_parent->wsClient) return;
+
+    int32_t roomId = GetRoomId();
+    int32_t userId = event.GetInt();
+    m_parent->wsClient->assignRole(roomId, userId, chat::UserRights::REGULAR);
 }
 
 void ChatPanel::OnInputKeyDown(wxKeyEvent& event) {

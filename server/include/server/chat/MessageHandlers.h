@@ -80,7 +80,9 @@ public:
 
     /** @brief Handles a request to delete an existing room and all its messages. */
     drogon::Task<chat::DeleteRoomResponse> handleDeleteRoom(const WsDataPtr& wsDataGuarded, const chat::DeleteRoomRequest& req, IChatRoomService& room_service);
-
+    
+    /** @brief Handles a request to assign a new role to a user in a specific room. */
+    drogon::Task<chat::AssignRoleResponse> handleAssignRole(const WsDataPtr&, const chat::AssignRoleRequest&, IChatRoomService&);
 private:
     /**
      * @brief Validates a string for valid UTF-8 encoding and maximum length.

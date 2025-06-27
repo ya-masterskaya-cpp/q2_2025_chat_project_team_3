@@ -60,6 +60,10 @@ drogon::Task<chat::Envelope> MessageHandlerService::processMessage(const WsDataP
             *respEnv.mutable_delete_room_response() = co_await m_handlers->MessageHandlers::handleDeleteRoom(wsData, env.delete_room_request(), room_service);
             break;
         }
+        case chat::Envelope::kAssignRoleRequest: {
+            *respEnv.mutable_assign_role_response() = co_await m_handlers->handleAssignRole(wsData, env.assign_role_request(), room_service);
+            break;
+        }
         default: {
             respEnv = common::makeGenericErrorEnvelope("Unknown or empty payload");
             break;
