@@ -561,20 +561,15 @@ drogon::Task<chat::DeleteRoomResponse> MessageHandlers::handleDeleteRoom(const W
         common::setStatus(resp, chat::STATUS_UNAUTHORIZED, "Not authenticated.");
         co_return resp;
     }
-    const auto room_id = req.room_id();
-    try {
-        auto rights = co_await getUserRights(wsData->user->id, room_id);
-
-        if (!rights.has_value() || rights.value() < chat::UserRights::OWNER) {
-            common::setStatus(resp, chat::STATUS_FAILURE, "Insufficient rights to delete this room.");
-            co_return resp;
-        }
-    } catch (const std::exception& e) {
-        LOG_ERROR << "Failed to get user rights for room deletion: " << e.what();
-        common::setStatus(resp, chat::STATUS_FAILURE, "Failed to verify permissions.");
+    if (!wsData->room || wsData->room->id != req.room_id()) {
+        common::setStatus(resp, chat::STATUS_FAILURE, "User must be in the room to delete it.");
         co_return resp;
     }
-
+    if (wsData->room->rights < chat::UserRights::OWNER) {
+        common::setStatus(resp, chat::STATUS_FAILURE, "Insufficient rights to delete this room.");
+        co_return resp;
+    }
+    const auto room_id = req.room_id();
     auto err = co_await WithTransaction(
         [&](auto tx) -> drogon::Task<ScopedTransactionResult> {
             try {
