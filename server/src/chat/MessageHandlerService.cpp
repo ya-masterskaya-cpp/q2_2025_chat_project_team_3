@@ -29,7 +29,7 @@ drogon::Task<chat::Envelope> MessageHandlerService::processMessage(const WsDataP
             break;
         }
         case chat::Envelope::kSendMessageRequest: {
-            *respEnv.mutable_send_message_response() = co_await m_handlers->handleSendMessage(wsData, env.send_message_request());
+            *respEnv.mutable_send_message_response() = co_await m_handlers->handleSendMessage(wsData, env.send_message_request(), room_service);
             break;
         }
         case chat::Envelope::kJoinRoomRequest: {
@@ -41,7 +41,7 @@ drogon::Task<chat::Envelope> MessageHandlerService::processMessage(const WsDataP
             break;
         }
         case chat::Envelope::kCreateRoomRequest: {
-            *respEnv.mutable_create_room_response() = co_await m_handlers->handleCreateRoom(wsData, env.create_room_request());
+            *respEnv.mutable_create_room_response() = co_await m_handlers->handleCreateRoom(wsData, env.create_room_request(), room_service);
             break;
         }
         case chat::Envelope::kGetMessagesRequest: {
@@ -53,11 +53,11 @@ drogon::Task<chat::Envelope> MessageHandlerService::processMessage(const WsDataP
             break;
         }
         case chat::Envelope::kRenameRoomRequest: {
-            *respEnv.mutable_rename_room_response() = co_await m_handlers->MessageHandlers::handleRenameRoom(wsData, env.rename_room_request());
+            *respEnv.mutable_rename_room_response() = co_await m_handlers->MessageHandlers::handleRenameRoom(wsData, env.rename_room_request(), room_service);
             break;
         }
         case chat::Envelope::kDeleteRoomRequest: {
-            *respEnv.mutable_delete_room_response() = co_await m_handlers->MessageHandlers::handleDeleteRoom(wsData, env.delete_room_request());
+            *respEnv.mutable_delete_room_response() = co_await m_handlers->MessageHandlers::handleDeleteRoom(wsData, env.delete_room_request(), room_service);
             break;
         }
         default: {

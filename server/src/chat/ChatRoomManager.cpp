@@ -26,8 +26,8 @@ static chat::UserInfo makeUserInfo(const WsData& data) {
     return ui;
 }
 
-drogon::Task<std::vector<chat::UserInfo>> ChatRoomManager::getUsersInRoomAsync(
-    int32_t room_id, const WsData& locked_caller_data) const {
+drogon::Task<std::vector<chat::UserInfo>> ChatRoomManager::getUsersInRoom(
+    int32_t room_id, const WsData& locked_data) const {
     auto manager_lock = co_await m_manager_mutex.lock_shared();
 
     auto it = m_room_to_conns.find(room_id);
@@ -41,8 +41,8 @@ drogon::Task<std::vector<chat::UserInfo>> ChatRoomManager::getUsersInRoomAsync(
     for(const auto& conn : it->second) {
         auto peer_guarded = conn->getContext<WsDataGuarded>();
 
-        if(peer_guarded->isHolding(locked_caller_data)) {
-            user_list.push_back(makeUserInfo(locked_caller_data));
+        if(peer_guarded->isHolding(locked_data)) {
+            user_list.push_back(makeUserInfo(locked_data));
         } else {
             auto peer_proxy = co_await peer_guarded->lock_shared();
             user_list.push_back(makeUserInfo(*peer_proxy));
@@ -101,18 +101,15 @@ drogon::Task<void> ChatRoomManager::unregisterConnection(const drogon::WebSocket
     }
 }
 
-drogon::Task<std::vector<drogon::WebSocketConnectionPtr>> ChatRoomManager::onRoomDeleted(int32_t room_id) {
+drogon::Task<void> ChatRoomManager::onRoomDeleted(int32_t room_id) {
     auto lock = co_await m_manager_mutex.lock_unique();
-    std::vector<drogon::WebSocketConnectionPtr> connections_in_room;
     if (auto it = m_room_to_conns.find(room_id); it != m_room_to_conns.end()) {
-        connections_in_room.assign(it->second.begin(), it->second.end());
         m_room_to_conns.erase(it);
     }
     
     chat::Envelope room_deleted_msg;
     room_deleted_msg.mutable_room_deleted()->set_room_id(room_id);
     sendToAll_unsafe(room_deleted_msg);
-    co_return connections_in_room;
 }
 
 drogon::Task<void> ChatRoomManager::sendToRoom(int32_t room_id, const chat::Envelope& message) const {
