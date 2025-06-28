@@ -27,7 +27,7 @@ struct User {
         // 2. If roles are the same, sort by Username (case-insensitive)
         int usernameCmp = username.CmpNoCase(other.username);
         if (usernameCmp != 0) {
-            return usernameCmp < 0;
+            return usernameCmp > 0;
         }
 
         // 3. If roles and usernames are the same, sort by ID (tie-breaker)

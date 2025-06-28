@@ -112,7 +112,7 @@ drogon::Task<void> ChatRoomManager::onRoomDeleted(int32_t room_id) {
     sendToAll_unsafe(room_deleted_msg);
 }
 
-drogon::Task<void> ChatRoomManager::updateUserRoomRights(int32_t userId, int32_t roomId, chat::UserRights newRights) {
+drogon::Task<void> ChatRoomManager::updateUserRoomRights(int32_t userId, int32_t roomId, chat::UserRights newRights, WsData& locked_data) {
     auto lock = co_await m_manager_mutex.lock_shared();
 
     auto it = m_user_id_to_conns.find(userId);
@@ -122,11 +122,21 @@ drogon::Task<void> ChatRoomManager::updateUserRoomRights(int32_t userId, int32_t
 
     for (const auto& conn : it->second) {
         auto peer_guarded = conn->getContext<WsDataGuarded>();
-        auto peer_proxy = co_await peer_guarded->lock_unique();
-        if (peer_proxy->room && peer_proxy->room->id == roomId) {
-            peer_proxy->room->rights = newRights;
+
+        if(peer_guarded->isHolding(locked_data)) {
+            locked_data.room->rights = newRights;
+        } else {
+            auto peer_proxy = co_await peer_guarded->lock_unique();
+            if (peer_proxy->room && peer_proxy->room->id == roomId) {
+                peer_proxy->room->rights = newRights;
+            }
         }
     }
+
+    chat::Envelope env;
+    env.mutable_user_role_changed()->set_user_id(userId);
+    env.mutable_user_role_changed()->set_new_role(newRights);
+    sendToRoom_unsafe(roomId, env);
 }
 
 drogon::Task<void> ChatRoomManager::sendToRoom(int32_t room_id, const chat::Envelope& message) const {

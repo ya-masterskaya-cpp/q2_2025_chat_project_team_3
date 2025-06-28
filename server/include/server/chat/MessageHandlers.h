@@ -96,34 +96,34 @@ private:
 
     /**
      * @brief Determines a user's rights (e.g., ADMIN, OWNER) for a specific room.
+     * @param db DbClientPtr
      * @param user_id The ID of the user.
      * @param room_id The ID of the room.
      * @return A task resolving to an optional UserRights enum. Returns nullopt if the user has no specific role.
      */
-    drogon::Task<std::optional<chat::UserRights>> getUserRights(int32_t user_id, int32_t room_id) const;
+    drogon::Task<std::optional<chat::UserRights>> getUserRights(const drogon::orm::DbClientPtr& db, int32_t user_id, int32_t room_id) const;
 
     /**
      * @brief Overload of getUserRights that accepts a pre-fetched room object to avoid an extra DB query.
+     * @param db DbClientPtr
      * @param user_id The ID of the user.
      * @param room_id The ID of the room.
      * @param room A pre-fetched room model object.
      * @return A task resolving to an optional UserRights enum.
      */
-    drogon::Task<std::optional<chat::UserRights>> getUserRights(int32_t user_id, int32_t room_id, const drogon_model::drogon_test::Rooms& room) const;
+    drogon::Task<std::optional<chat::UserRights>> getUserRights(const drogon::orm::DbClientPtr& db, int32_t user_id, int32_t room_id, const drogon_model::drogon_test::Rooms& room) const;
 
     /**
      * @brief Helper to query the `user_room_roles` table for an explicit role assignment.
+     * @param db DbClientPtr
      * @param user_id The ID of the user.
      * @param room_id The ID of the room.
      * @return A task resolving to an optional UserRights enum if a role is found.
      */
-    drogon::Task<std::optional<chat::UserRights>> findStoredUserRole(int32_t user_id, int32_t room_id) const;
+    drogon::Task<std::optional<chat::UserRights>> findStoredUserRole(const drogon::orm::DbClientPtr& db, int32_t user_id, int32_t room_id) const;
 
     /** @brief Updates or creates a user's role entry in the UserRoomRoles table within a transaction. */
     drogon::Task<ScopedTransactionResult> updateUserRoleInDb(const std::shared_ptr<drogon::orm::Transaction>& tx, int32_t userId, int32_t roomId, chat::UserRights newRole);
-
-    /** @brief Transfers room ownership within a transaction. */
-    drogon::Task<ScopedTransactionResult> transferRoomOwnershipInDb(const std::shared_ptr<drogon::orm::Transaction>& tx, int32_t roomId, int32_t newOwnerId, int32_t oldOwnerId);
 
     /// @brief The shared database client for all ORM operations.
     drogon::orm::DbClientPtr m_dbClient;
