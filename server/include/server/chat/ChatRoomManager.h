@@ -114,13 +114,14 @@ public:
     drogon::Task<void> onRoomDeleted(int32_t room_id);
     
     /**
-     * @brief Updates the in-memory room rights for a specific user.
+     * @brief Updates the in-memory room rights for a specific user and send message to clients.
      * @param userId The ID of the user whose rights are being updated.
      * @param roomId The ID of the room where the rights changed.
      * @param newRights The new rights for the user in that room.
+     * @param locked_data A reference to the calling connection's locked `WsData`.
      * @return A drogon::Task<void> to be awaited.
      */
-    drogon::Task<void> updateUserRoomRights(int32_t userId, int32_t roomId, chat::UserRights newRights);
+    drogon::Task<void> updateUserRoomRights(int32_t userId, int32_t roomId, chat::UserRights newRights, WsData& locked_data);
     
 private:
     ChatRoomManager() = default;
