@@ -114,7 +114,7 @@ public:
     drogon::Task<void> onRoomDeleted(int32_t room_id);
     
     /**
-     * @brief Updates the in-memory room rights for a specific user and send message to clients.
+     * @brief Updates the in-memory room rights for a specific user and sends message to clients.
      * @param userId The ID of the user whose rights are being updated.
      * @param roomId The ID of the room where the rights changed.
      * @param newRights The new rights for the user in that room.

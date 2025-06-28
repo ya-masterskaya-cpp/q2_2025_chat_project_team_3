@@ -611,11 +611,7 @@ drogon::Task<chat::AssignRoleResponse> MessageHandlers::handleAssignRole(const W
     chat::AssignRoleResponse resp;
 
     //unfortunately, we need unique lock here
-    //`ADMIN` can "demote" themselves from owning a room
-    //yes, i know they will still remain `ADMIN` afterwards, but accointing for this
-    //will complicate code inside `ChatRoomManager::updateUserRoomRights`
-    //it's better to have one unified codepath
-    //besides, this lock is granual
+    //user can "demote" themselves from owning a room
     auto wsData = co_await wsDataGuarded->lock_unique(); 
 
     if(wsData->status != USER_STATUS::Authenticated) {
