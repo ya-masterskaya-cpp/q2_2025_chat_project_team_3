@@ -94,6 +94,11 @@ void UserListPanel::OnUserRightClick(wxMouseEvent& event) {
         return;
     }
     const User& targetUser = clickedWidget->GetUser();
+
+    if(targetUser.role >= chat::UserRights::OWNER) {
+        return;
+    }
+
     if (m_currentUser.id == targetUser.id) {
         return;
     }
