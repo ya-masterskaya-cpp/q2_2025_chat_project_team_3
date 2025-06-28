@@ -8,6 +8,7 @@ namespace client {
 wxDECLARE_EVENT(wxEVT_SNAP_STATE_CHANGED, wxCommandEvent);
 wxDECLARE_EVENT(wxEVT_ASSIGN_MODERATOR, wxCommandEvent);
 wxDECLARE_EVENT(wxEVT_UNASSIGN_MODERATOR, wxCommandEvent);
+wxDECLARE_EVENT(wxEVT_TRANSFER_OWNERSHIP, wxCommandEvent);
 
 class MainWidget;
 class UserListPanel;
@@ -62,6 +63,7 @@ private:
     void OnRoomClose(wxCommandEvent& event);
     void OnAssignModerator(wxCommandEvent& event);
     void OnUnassignModerator(wxCommandEvent& event);
+    void OnTransferOwnership(wxCommandEvent& event);
     wxDECLARE_EVENT_TABLE();
 };
 

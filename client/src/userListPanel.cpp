@@ -87,40 +87,55 @@ void UserListPanel::Clear() {
 }
 
 void UserListPanel::OnUserRightClick(wxMouseEvent& event) {
-    if (m_currentUser.role != chat::UserRights::OWNER) {
-        event.Skip();
-        return;
-    }
+    event.Skip();
+
     UserNameWidget* clickedWidget = dynamic_cast<UserNameWidget*>(event.GetEventObject());
     if (!clickedWidget) {
-        event.Skip();
         return;
     }
     const User& targetUser = clickedWidget->GetUser();
     if (m_currentUser.id == targetUser.id) {
-        event.Skip();
         return;
     }
+    if(m_currentUser.role <= targetUser.role) {
+        return;
+    }
+
     wxMenu menu;
+
+    // MODERATOR role assing\unassign
     if (targetUser.role == chat::UserRights::REGULAR) {
-        menu.Append(wxID_ANY, "Assign Moderator");
+        auto item = menu.Append(wxID_ANY, "Assign Moderator");
         menu.Bind(wxEVT_MENU, [this, targetUser](wxCommandEvent&) {
             wxCommandEvent newEvent(wxEVT_ASSIGN_MODERATOR, GetId());
             newEvent.SetEventObject(this);
             newEvent.SetInt(targetUser.id);
             ProcessEvent(newEvent);
-        });
+        }, item->GetId());
     } else if (targetUser.role == chat::UserRights::MODERATOR) {
-        menu.Append(wxID_ANY, "Unassign Moderator");
+        auto item = menu.Append(wxID_ANY, "Unassign Moderator");
         menu.Bind(wxEVT_MENU, [this, targetUser](wxCommandEvent&) {
             wxCommandEvent newEvent(wxEVT_UNASSIGN_MODERATOR, GetId());
             newEvent.SetEventObject(this);
             newEvent.SetInt(targetUser.id);
             ProcessEvent(newEvent);
-        });
+        }, item->GetId());
     }
-    PopupMenu(&menu);
-    event.Skip();
+
+    // OWNER transfer
+    if(m_currentUser.role >= chat::UserRights::OWNER) {
+        auto item = menu.Append(wxID_ANY, "Transfer Ownership");
+        menu.Bind(wxEVT_MENU, [this, targetUser](wxCommandEvent&) {
+            wxCommandEvent newEvent(wxEVT_TRANSFER_OWNERSHIP, GetId());
+            newEvent.SetEventObject(this);
+            newEvent.SetInt(targetUser.id);
+            ProcessEvent(newEvent);
+        }, item->GetId());
+    }
+
+    if (menu.GetMenuItemCount() > 0) {
+        PopupMenu(&menu);
+    }
 }
 
 } // namespace client

@@ -632,7 +632,9 @@ drogon::Task<chat::AssignRoleResponse> MessageHandlers::handleAssignRole(const W
             auto targetUserRightsOpt = co_await this->getUserRights(tx, req.user_id(), req.room_id());
             auto targetUserRights = targetUserRightsOpt.value_or(chat::UserRights::REGULAR);
 
-            if(req.new_role() >= wsData->room->rights) { //first, check that target role is below ours
+            // first, check that target role is below ours. special case: room ownership transfer
+            if (req.new_role() >= wsData->room->rights &&
+                !(wsData->room->rights >= chat::UserRights::OWNER && req.new_role() == chat::UserRights::OWNER)) {
                 co_return "Insufficient rights to change this user's role.";
             }
 

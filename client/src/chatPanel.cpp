@@ -23,6 +23,7 @@ enum { ID_SEND = wxID_HIGHEST+30,
 wxDEFINE_EVENT(wxEVT_SNAP_STATE_CHANGED, wxCommandEvent);
 wxDEFINE_EVENT(wxEVT_ASSIGN_MODERATOR, wxCommandEvent);
 wxDEFINE_EVENT(wxEVT_UNASSIGN_MODERATOR, wxCommandEvent);
+wxDEFINE_EVENT(wxEVT_TRANSFER_OWNERSHIP, wxCommandEvent);
 
 wxBEGIN_EVENT_TABLE(ChatPanel, wxPanel)
     EVT_BUTTON(ID_SEND, ChatPanel::OnSend)
@@ -100,6 +101,7 @@ ChatPanel::ChatPanel(MainWidget* parent)
     Bind(wxEVT_ROOM_CLOSE, &ChatPanel::OnRoomClose, this);
     Bind(wxEVT_ASSIGN_MODERATOR, &ChatPanel::OnAssignModerator, this);
     Bind(wxEVT_UNASSIGN_MODERATOR, &ChatPanel::OnUnassignModerator, this);
+    Bind(wxEVT_TRANSFER_OWNERSHIP, &ChatPanel::OnTransferOwnership, this);
 }
 
 // Event handler for when the message container (wxScrolledWindow) changes size.
@@ -253,6 +255,14 @@ void ChatPanel::OnUnassignModerator(wxCommandEvent& event) {
     int32_t roomId = GetRoomId();
     int32_t userId = event.GetInt();
     m_parent->wsClient->assignRole(roomId, userId, chat::UserRights::REGULAR);
+}
+
+void ChatPanel::OnTransferOwnership(wxCommandEvent& event) {
+    if (!m_parent || !m_parent->wsClient) return;
+
+    int32_t roomId = GetRoomId();
+    int32_t userId = event.GetInt();
+    m_parent->wsClient->assignRole(roomId, userId, chat::UserRights::OWNER);
 }
 
 void ChatPanel::OnInputKeyDown(wxKeyEvent& event) {
