@@ -36,7 +36,7 @@ public:
     void assignRole(int32_t roomId, int32_t userId, chat::UserRights role);
     void deleteMessage(int32_t messageId);
 
-    static std::string formatMessageTimestamp(uint64_t timestamp);
+    static std::string formatMessageTimestamp(int64_t timestamp);
 
 private:
     void sendEnvelope(const chat::Envelope& env);

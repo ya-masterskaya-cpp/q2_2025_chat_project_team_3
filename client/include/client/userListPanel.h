@@ -2,9 +2,9 @@
 
 #include <wx/wx.h>
 
-#include <client/user.h>
-
 namespace client {
+
+struct User;
 
 class UserListPanel : public wxPanel {
 public:
@@ -14,7 +14,6 @@ public:
     void AddUser(const User& user);
     void RemoveUser(int32_t userId);
     void Clear();
-    void SetCurrentUser(const User& user);
     void UpdateUserRole(int32_t userId, chat::UserRights newRole);
 
 private:
@@ -22,7 +21,6 @@ private:
 
     wxScrolledWindow* m_userContainer;
     wxBoxSizer* m_userSizer;
-    User m_currentUser;
     std::vector<User> m_users;
 };
 

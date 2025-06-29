@@ -72,6 +72,7 @@ public:
     void JumpToPresent();
     void DeleteMessageById(int32_t messageId);
 
+    void InvalidateCaches();
 
 protected:
 

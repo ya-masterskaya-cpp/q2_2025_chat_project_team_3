@@ -109,8 +109,6 @@ drogon::Task<chat::AuthResponse> MessageHandlers::handleAuth(const WsDataPtr& ws
         }
 
         auto user = users.front();
-        auto pas = req.password();
-        auto salt = req.salt();
         if (req.has_password() && req.has_salt()) {
             if (user.getValueOfSalt().empty()) {
                 if (user.getValueOfHashPassword() != req.password()) {
@@ -118,7 +116,7 @@ drogon::Task<chat::AuthResponse> MessageHandlers::handleAuth(const WsDataPtr& ws
                     co_return resp;
                 }
                 auto err = co_await WithTransaction(
-                    [&](auto tx) -> drogon::Task<std::optional<std::string>> {
+                    [&](const auto& tx) -> drogon::Task<ScopedTransactionResult> {
                         try {
                             user.setHashPassword(req.hash());
                             user.setSalt(req.salt());
@@ -186,7 +184,7 @@ drogon::Task<chat::RegisterResponse> MessageHandlers::handleRegister(const WsDat
     try {
         // Use a transaction to guarantee atomicity and handle duplicate usernames gracefully
         auto err = co_await WithTransaction(
-            [&](auto tx) -> drogon::Task<ScopedTransactionResult> {
+            [&](const auto& tx) -> drogon::Task<ScopedTransactionResult> {
                 try {
                     models::Users u;
                     u.setUsername(wsData->user->name);
@@ -246,7 +244,7 @@ drogon::Task<chat::SendMessageResponse> MessageHandlers::handleSendMessage(const
 
     try {
         auto err = co_await WithTransaction(
-            [&](auto tx) -> drogon::Task<ScopedTransactionResult> {
+            [&](const auto& tx) -> drogon::Task<ScopedTransactionResult> {
                 try {
                     models::Messages m;
                     m.setMessageText(req.message());
@@ -311,7 +309,7 @@ drogon::Task<chat::JoinRoomResponse> MessageHandlers::handleJoinRoom(const WsDat
         std::optional<chat::UserRights> role = co_await getUserRights(m_dbClient, wsData->user->id, req.room_id(), rooms.front());
         if (!role.has_value()) {
             auto err = co_await WithTransaction(
-                [&](auto tx) -> drogon::Task<ScopedTransactionResult> {
+                [&](const auto& tx) -> drogon::Task<ScopedTransactionResult> {
                 try {
                     models::UserRoomRoles role;
                     role.setUserId(wsData->user->id);
@@ -390,10 +388,10 @@ drogon::Task<chat::CreateRoomResponse> MessageHandlers::handleCreateRoom(const W
         common::setStatus(resp, chat::STATUS_FAILURE, *error);
         co_return resp;
     }
-    uint32_t room_id;
+    int32_t room_id;
     try {
         auto err = co_await WithTransaction(
-            [&](auto tx) -> drogon::Task<ScopedTransactionResult> {
+            [&](const auto& tx) -> drogon::Task<ScopedTransactionResult> {
                 try {
                     models::Rooms r;
                     r.setRoomName(req.room_name());
@@ -521,7 +519,7 @@ drogon::Task<chat::RenameRoomResponse> MessageHandlers::handleRenameRoom(const W
     }
     try {
         auto err = co_await WithTransaction(
-            [&](auto tx) -> drogon::Task<ScopedTransactionResult> {
+            [&](const auto& tx) -> drogon::Task<ScopedTransactionResult> {
                 try {
                     auto room = co_await switch_to_io_loop(CoroMapper<models::Rooms>(tx)
                         .findOne(Criteria(models::Rooms::Cols::_room_id, CompareOperator::EQ, req.room_id())));
@@ -577,7 +575,7 @@ drogon::Task<chat::DeleteRoomResponse> MessageHandlers::handleDeleteRoom(const W
     const auto room_id = req.room_id();
     try {
         auto err = co_await WithTransaction(
-            [&](auto tx) -> drogon::Task<ScopedTransactionResult> {
+            [&](const auto& tx) -> drogon::Task<ScopedTransactionResult> {
             try {
                 co_await switch_to_io_loop(CoroMapper<models::Messages>(tx)
                     .deleteBy(Criteria(models::Messages::Cols::_room_id, CompareOperator::EQ, room_id)));
@@ -631,7 +629,7 @@ drogon::Task<chat::AssignRoleResponse> MessageHandlers::handleAssignRole(const W
 
     try {
         //do ALL db operations first, inside SINGLE transaction
-        auto err = co_await WithTransaction([&](auto tx) -> drogon::Task<ScopedTransactionResult> {
+        auto err = co_await WithTransaction([&](const auto& tx) -> drogon::Task<ScopedTransactionResult> {
             auto targetUserRightsOpt = co_await this->getUserRights(tx, req.user_id(), req.room_id());
             auto targetUserRights = targetUserRightsOpt.value_or(chat::UserRights::REGULAR);
 
@@ -672,7 +670,7 @@ drogon::Task<chat::AssignRoleResponse> MessageHandlers::handleAssignRole(const W
                         oldOwnerNewRole_optional = chat::UserRights::MODERATOR;
                         auto inner_err = co_await updateUserRoleInDb(tx, oldOwnerId, req.room_id(), *oldOwnerNewRole_optional);
                         if(inner_err) {
-                            co_return *inner_err;
+                            co_return inner_err;
                         }
                     }
 
@@ -682,7 +680,7 @@ drogon::Task<chat::AssignRoleResponse> MessageHandlers::handleAssignRole(const W
             } else { //much simpler regular case :з
                 auto inner_err = co_await updateUserRoleInDb(tx, req.user_id(), req.room_id(), req.new_role());
                 if(inner_err) {
-                    co_return *inner_err;
+                    co_return inner_err;
                 }
             }
 
@@ -775,7 +773,7 @@ drogon::Task<chat::DeleteMessageResponse> MessageHandlers::handleDeleteMessage(c
     const int32_t messageId = req.message_id();
     const int32_t roomId = wsData->room->id;
     try {
-        auto err = co_await WithTransaction([&](auto tx) -> drogon::Task<ScopedTransactionResult> {
+        auto err = co_await WithTransaction([&](const auto& tx) -> drogon::Task<ScopedTransactionResult> {
             try {
                 auto messages = co_await switch_to_io_loop(CoroMapper<models::Messages>(tx)
                     .findBy(Criteria(models::Messages::Cols::_message_id, CompareOperator::EQ, messageId) &&

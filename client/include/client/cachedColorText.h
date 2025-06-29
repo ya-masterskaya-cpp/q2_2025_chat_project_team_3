@@ -17,10 +17,10 @@ public:
     virtual void SetLabel(const wxString& label) override;
     virtual wxString GetLabel() const override;
     virtual bool SetFont(const wxFont& font) override;
+
     void InvalidateCache();
     void InvalidateCacheAndRefresh();
     void InvalidateLayoutCaches();
-
 protected:
     virtual wxSize DoGetBestSize() const override;
 

@@ -12,7 +12,7 @@ public:
     void AddServer() override;
     void RemoveConnection() override;
     std::vector<std::string> GetServers() override;
-    void SendToClients(const chat::Envelope env) const override;
+    void SendToClients(const chat::Envelope& env) const override;
 
 private:
     const drogon::WebSocketConnectionPtr& m_conn;

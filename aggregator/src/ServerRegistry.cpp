@@ -23,7 +23,7 @@ std::vector<std::string> ServerRegistry::GetServers() {
     return DrogonServerRegistry::instance().GetServers();
 }
 
-void ServerRegistry::SendToClients(const chat::Envelope env) const {
+void ServerRegistry::SendToClients(const chat::Envelope& env) const {
     DrogonServerRegistry::instance().SendToClients(env);
 }
 

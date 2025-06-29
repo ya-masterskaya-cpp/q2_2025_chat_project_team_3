@@ -9,6 +9,7 @@
 #include <common/utils/limits.h>
 #include <client/roomHeaderPanel.h>
 #include <client/roomSettingsPanel.h>
+#include <client/user.h>
 
 namespace client {
 
@@ -40,6 +41,8 @@ ChatPanel::ChatPanel(MainWidget* parent)
       m_parent(parent)//,
       //m_resizeTimer(this, ID_RESIZE_TIMER) // Initialize the timer with 'this' as the owner
 {
+    m_currentUser = std::make_unique<User>();
+
     // Main sizer for the ChatPanel itself (horizontal layout: chat area | user list)
     m_mainSizer = new wxBoxSizer(wxHORIZONTAL);
     SetSizer(m_mainSizer);
@@ -104,6 +107,10 @@ ChatPanel::ChatPanel(MainWidget* parent)
     Bind(wxEVT_UNASSIGN_MODERATOR, &ChatPanel::OnUnassignModerator, this);
     Bind(wxEVT_TRANSFER_OWNERSHIP, &ChatPanel::OnTransferOwnership, this);
     Bind(wxEVT_DELETE_MESSAGE, &ChatPanel::OnDeleteMessage, this);
+}
+
+void ChatPanel::InvalidateCaches() {
+    m_messageView->InvalidateCaches();
 }
 
 // Event handler for when the message container (wxScrolledWindow) changes size.
@@ -221,9 +228,11 @@ void ChatPanel::ResetState() {
 }
 
 void ChatPanel::SetCurrentUser(const User& user) {
-    if (m_userListPanel) {
-        m_userListPanel->SetCurrentUser(user);
-    }
+    *m_currentUser = user;
+}
+
+const User& ChatPanel::GetCurrentUser() const {
+    return *m_currentUser;
 }
 
 void ChatPanel::OnRoomRename(wxCommandEvent &event) {

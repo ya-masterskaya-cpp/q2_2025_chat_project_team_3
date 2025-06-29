@@ -2,9 +2,6 @@
 #include <common/utils/utils.h>
 #include <server/chat/WsData.h>
 
-#include <server/chat/ChatRoomManager.h>
-#include <common/utils/utils.h>
-
 namespace server {
 
 ChatRoomManager& ChatRoomManager::instance() {
@@ -116,18 +113,20 @@ drogon::Task<void> ChatRoomManager::updateUserRoomRights(int32_t userId, int32_t
     auto lock = co_await m_manager_mutex.lock_shared();
 
     auto it = m_user_id_to_conns.find(userId);
-    if (it == m_user_id_to_conns.end()) {
+    if(it == m_user_id_to_conns.end()) {
         co_return;
     }
 
-    for (const auto& conn : it->second) {
+    for(const auto& conn : it->second) {
         auto peer_guarded = conn->getContext<WsDataGuarded>();
 
         if(peer_guarded->isHolding(locked_data)) {
-            locked_data.room->rights = newRights;
+            if(locked_data.room && locked_data.room->id == roomId) {
+                locked_data.room->rights = newRights;
+            }
         } else {
             auto peer_proxy = co_await peer_guarded->lock_unique();
-            if (peer_proxy->room && peer_proxy->room->id == roomId) {
+            if(peer_proxy->room && peer_proxy->room->id == roomId) {
                 peer_proxy->room->rights = newRights;
             }
         }

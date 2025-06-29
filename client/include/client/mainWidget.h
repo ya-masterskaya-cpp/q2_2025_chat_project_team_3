@@ -1,7 +1,6 @@
 #pragma once
 
 #include <wx/wx.h>
-#include <client/user.h>
 
 namespace client {
 
@@ -11,14 +10,12 @@ class AuthPanel;
 class RoomsPanel;
 class ChatPanel;
 class WebSocketClient;
+struct User;
 
 class MainWidget : public wxFrame {
 public:
     MainWidget();
     void ShowPopup(const wxString& msg, long icon = wxICON_INFORMATION);
-
-    void SetCurrentUser(const User& user);
-    const User& GetCurrentUser() const;
 
     void ShowInitial();
     void ShowServers();
@@ -34,7 +31,7 @@ public:
     WebSocketClient* wsClient;
 
 private:
-    User m_currentUser;
+    void OnActivate(wxActivateEvent& event);
 };
 
 } // namespace client
