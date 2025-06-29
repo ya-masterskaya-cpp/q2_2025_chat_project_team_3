@@ -7,6 +7,7 @@
 #include <client/serversPanel.h>
 #include <client/message.h>
 #include <client/messageView.h>
+#include <client/user.h>
 #include <common/utils/utils.h>
 #include <common/version.h>
 #include <drogon/HttpRequest.h>
@@ -29,7 +30,7 @@ void WebSocketClient::stop() {
 void WebSocketClient::start(const std::string& address) {
     stop();
 
-    drogon::app().getLoop()->runInLoop([this, address = address]{
+    drogon::app().getLoop()->runInLoop([this, address]{
 
         LOG_INFO << "WebSocketClient::start()";
 
@@ -126,7 +127,7 @@ void WebSocketClient::sendMessage(const std::string& message) {
 }
 
 void WebSocketClient::sendEnvelope(const chat::Envelope& env) {
-    drogon::app().getLoop()->runInLoop([this, env = env]{
+    drogon::app().getLoop()->runInLoop([this, env]{ // TODO: this copies whole envolope
         if(conn && conn->connected()) {
             std::string out;
             if(env.SerializeToString(&out)) {
@@ -267,9 +268,12 @@ void WebSocketClient::handleMessage(const std::string& msg) {
         }
         case chat::Envelope::kInitialAuthResponse: {
             if (statusOk(env.initial_auth_response().status())){
-                wxTheApp->CallAfter([this, response = env.initial_auth_response()] {
-                    std::string salt = "";
-                    if (response.has_salt()) salt = response.salt();
+                wxTheApp->CallAfter([this, env = std::move(env)] {
+                    const auto& response = env.initial_auth_response();
+                    std::string salt;
+                    if(response.has_salt()) {
+                        salt = response.salt();
+                    }
                     ui->authPanel->HandleAuthContinue(salt);
                 });
             } else {
@@ -297,7 +301,7 @@ void WebSocketClient::handleMessage(const std::string& msg) {
                 user.username = wxString::FromUTF8(env.auth_response().authenticated_user().user_name());
                 user.role = chat::UserRights::REGULAR;
                 wxTheApp->CallAfter([this, user]() {
-                    ui->SetCurrentUser(user);
+                    ui->chatPanel->SetCurrentUser(user);
                 });
                 updateRoomsPanel(rooms);
                 showRooms();
@@ -351,7 +355,8 @@ void WebSocketClient::handleMessage(const std::string& msg) {
             break;
         }
         case chat::Envelope::kNewRoomCreated: {
-            wxTheApp->CallAfter([this, response = env.new_room_created().room()] {
+            wxTheApp->CallAfter([this, env = std::move(env)] {
+                auto& response = env.new_room_created().room();
                 ui->roomsPanel->AddRoom(new Room{response.room_id(), wxString::FromUTF8(response.room_name())});
             });
             break;
@@ -363,11 +368,12 @@ void WebSocketClient::handleMessage(const std::string& msg) {
             break;
         }
         case chat::Envelope::kNewRoomName: {
-            wxTheApp->CallAfter([this, response = env.new_room_name()] {
-            if (ui->chatPanel->IsShown() && ui->chatPanel->GetRoomId() == response.room_id()) {
-                ui->chatPanel->SetRoomName(wxString::FromUTF8(response.name()));
-            }
-            ui->roomsPanel->RenameRoom(response.room_id(), wxString::FromUTF8(response.name()));
+            wxTheApp->CallAfter([this, env = std::move(env)] {
+                const auto& response = env.new_room_name();
+                if (ui->chatPanel->IsShown() && ui->chatPanel->GetRoomId() == response.room_id()) {
+                    ui->chatPanel->SetRoomName(wxString::FromUTF8(response.name()));
+                }
+                ui->roomsPanel->RenameRoom(response.room_id(), wxString::FromUTF8(response.name()));
             });
             break;
         }
@@ -380,7 +386,8 @@ void WebSocketClient::handleMessage(const std::string& msg) {
             break;
         }
         case chat::Envelope::kRoomDeleted: {
-            wxTheApp->CallAfter([this, roomId = env.room_deleted().room_id()] {
+            wxTheApp->CallAfter([this, env = std::move(env)] {
+                auto roomId = env.room_deleted().room_id();
                 if (ui->chatPanel->IsShown() && ui->chatPanel->GetRoomId() == roomId) {
                 ui->ShowRooms();
             }
@@ -430,7 +437,7 @@ void WebSocketClient::updateRoomsPanel(const std::vector<Room*> &rooms)
 }
 
 void WebSocketClient::showChat(std::vector<User> users) {
-    wxTheApp->CallAfter([this, users = std::move(users)] { ui->ShowChat(std::move(users)); });
+    wxTheApp->CallAfter([this, users = std::move(users)]() mutable { ui->ShowChat(std::move(users)); });
 }
 
 void WebSocketClient::showRooms() {
@@ -450,7 +457,7 @@ void WebSocketClient::showServers() {
 }
 
 void WebSocketClient::addUser(User user) {
-    wxTheApp->CallAfter([this, user = std::move(user)] { ui->chatPanel->m_userListPanel->AddUser(std::move(user)); });
+    wxTheApp->CallAfter([this, user = std::move(user)] { ui->chatPanel->m_userListPanel->AddUser(user); });
 }
 
 void WebSocketClient::removeUser(User user) {
@@ -486,11 +493,6 @@ void WebSocketClient::SetServers(const std::vector<std::string> &servers) {
 void WebSocketClient::updateUserRole(int32_t userId, chat::UserRights newRole) {
     wxTheApp->CallAfter([this, userId, newRole] {
         ui->chatPanel->m_userListPanel->UpdateUserRole(userId, newRole);
-        if (ui->GetCurrentUser().id == userId) {
-            User updatedCurrentUser = ui->GetCurrentUser();
-            updatedCurrentUser.role = newRole;
-            ui->SetCurrentUser(updatedCurrentUser);
-        }
     });
 }
 
@@ -502,12 +504,12 @@ void WebSocketClient::removeMessageFromView(int32_t messageId) {
     });
 }
 
-std::string WebSocketClient::formatMessageTimestamp(uint64_t timestamp)
+std::string WebSocketClient::formatMessageTimestamp(int64_t timestamp)
 {
     trantor::Date msgDate(timestamp);
     auto now = trantor::Date::now();
     auto zeroTime = [](const trantor::Date& dt) {
-        time_t t = dt.microSecondsSinceEpoch() / 1000000ULL;
+        time_t t = dt.microSecondsSinceEpoch() / 1000000LL;
         struct tm local_tm;
         // Cross-platform local time conversion
 #if defined(_WIN32)
@@ -519,7 +521,7 @@ std::string WebSocketClient::formatMessageTimestamp(uint64_t timestamp)
         local_tm.tm_min = 0;
         local_tm.tm_sec = 0;
         time_t zero_t = mktime(&local_tm);
-        return trantor::Date(static_cast<uint64_t>(zero_t) * 1000000ULL);
+        return trantor::Date(static_cast<int64_t>(zero_t) * 1000000LL);
         };
     trantor::Date todayZero = zeroTime(now);
     trantor::Date msgZero = zeroTime(msgDate);

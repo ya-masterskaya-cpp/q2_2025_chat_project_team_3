@@ -1,6 +1,7 @@
 #include <client/userListPanel.h>
 #include <client/userNameWidget.h>
 #include <client/chatPanel.h>
+#include <client/user.h>
 
 namespace client {
 
@@ -25,26 +26,17 @@ UserListPanel::UserListPanel(wxWindow* parent)
     SetSizer(sizer);
 }
 
-void UserListPanel::SetCurrentUser(const User& user) {
-    m_currentUser = user;
-}
-
 void UserListPanel::UpdateUserRole(int32_t userId, chat::UserRights newRole) {
-    auto it = std::find_if(m_users.begin(), m_users.end(), [userId](const User& u) {
-        return u.id == userId; });
+    std::for_each(m_users.begin(), m_users.end(), [userId, newRole](User& u) {
+        if(u.id == userId) {
+            u.role = newRole;
+        }
+    });
 
-    if (it != m_users.end()) {
-        it->role = newRole;
-        SetUserList(m_users);
-    }
-    if (m_currentUser.id == userId) {
-        m_currentUser.role = newRole;
-    }
+    SetUserList(std::move(m_users));
 }
 
 void UserListPanel::SetUserList(std::vector<User> users) {
-    m_users = users;
-
     m_userContainer->Freeze();
     m_userSizer->Clear(true); // Destroy existing widgets
 
@@ -53,7 +45,15 @@ void UserListPanel::SetUserList(std::vector<User> users) {
         return !(lhs < rhs);
     });
 
-    for (const auto& user : users) {
+    m_users = std::move(users);
+
+    auto currUser = static_cast<ChatPanel*>(GetParent())->GetCurrentUser();
+
+    for (const auto& user : m_users) {
+        if (currUser.id == user.id) {
+            static_cast<ChatPanel*>(GetParent())->SetCurrentUser(user);
+        }
+
         auto* userWidget = new UserNameWidget(m_userContainer, user);
         userWidget->Bind(wxEVT_RIGHT_DOWN, &UserListPanel::OnUserRightClick, this);
         m_userSizer->Add(userWidget, 0, wxEXPAND | wxALL, FromDIP(2));
@@ -66,21 +66,17 @@ void UserListPanel::SetUserList(std::vector<User> users) {
 }
 
 void UserListPanel::AddUser(const User& user) {
-    auto it = std::find_if(m_users.begin(), m_users.end(),[&](const User& u) {
-        return u.id == user.id; });
-    if (it == m_users.end()) {
-        m_users.push_back(user);
-        SetUserList(m_users);
-    }
+    m_users.push_back(user);
+    SetUserList(std::move(m_users));
 }
 
 void UserListPanel::RemoveUser(int userId) {
-    auto it = std::remove_if(m_users.begin(), m_users.end(), [userId](const User& u) {
+    auto it = std::find_if(m_users.begin(), m_users.end(), [userId](const User& u) {
         return u.id == userId; });
 
     if (it != m_users.end()) {
-        m_users.erase(it, m_users.end());
-        SetUserList(m_users);
+        m_users.erase(it);
+        SetUserList(std::move(m_users));
     }
 }
 
@@ -92,8 +88,8 @@ void UserListPanel::Clear() {
 void UserListPanel::OnUserRightClick(wxMouseEvent& event) {
     event.Skip();
 
-    UserNameWidget* clickedWidget = dynamic_cast<UserNameWidget*>(event.GetEventObject());
-    if (!clickedWidget) {
+    auto* clickedWidget = dynamic_cast<UserNameWidget*>(event.GetEventObject());
+    if(!clickedWidget) {
         return;
     }
     const User& targetUser = clickedWidget->GetUser();
@@ -102,37 +98,41 @@ void UserListPanel::OnUserRightClick(wxMouseEvent& event) {
         return;
     }
 
-    if (m_currentUser.id == targetUser.id) {
+    auto currentUser = static_cast<ChatPanel*>(GetParent())->GetCurrentUser();
+
+    if(currentUser.id == targetUser.id) {
         return;
     }
-    if(m_currentUser.role <= targetUser.role) {
+    if(currentUser.role <= targetUser.role) {
         return;
     }
 
     wxMenu menu;
 
-    // MODERATOR role assing\unassign
-    if (targetUser.role == chat::UserRights::REGULAR) {
-        auto item = menu.Append(wxID_ANY, "Assign Moderator");
-        menu.Bind(wxEVT_MENU, [this, targetUser](wxCommandEvent&) {
-            wxCommandEvent newEvent(wxEVT_ASSIGN_MODERATOR, GetId());
-            newEvent.SetEventObject(this);
-            newEvent.SetInt(targetUser.id);
-            ProcessEvent(newEvent);
-        }, item->GetId());
-    } else if (targetUser.role == chat::UserRights::MODERATOR) {
-        auto item = menu.Append(wxID_ANY, "Unassign Moderator");
-        menu.Bind(wxEVT_MENU, [this, targetUser](wxCommandEvent&) {
-            wxCommandEvent newEvent(wxEVT_UNASSIGN_MODERATOR, GetId());
-            newEvent.SetEventObject(this);
-            newEvent.SetInt(targetUser.id);
-            ProcessEvent(newEvent);
-        }, item->GetId());
+    if(currentUser.role > chat::UserRights::MODERATOR) {
+        // MODERATOR role assing\unassign
+        if(targetUser.role == chat::UserRights::REGULAR) {
+            auto* item = menu.Append(wxID_ANY, "Assign Moderator");
+            menu.Bind(wxEVT_MENU, [this, targetUser](wxCommandEvent&) {
+                wxCommandEvent newEvent(wxEVT_ASSIGN_MODERATOR, GetId());
+                newEvent.SetEventObject(this);
+                newEvent.SetInt(targetUser.id);
+                ProcessEvent(newEvent);
+            }, item->GetId());
+        } else if(targetUser.role == chat::UserRights::MODERATOR) {
+            auto* item = menu.Append(wxID_ANY, "Unassign Moderator");
+            menu.Bind(wxEVT_MENU, [this, targetUser](wxCommandEvent&) {
+                wxCommandEvent newEvent(wxEVT_UNASSIGN_MODERATOR, GetId());
+                newEvent.SetEventObject(this);
+                newEvent.SetInt(targetUser.id);
+                ProcessEvent(newEvent);
+            }, item->GetId());
+        }
     }
 
     // OWNER transfer
-    if(m_currentUser.role >= chat::UserRights::OWNER) {
-        auto item = menu.Append(wxID_ANY, "Transfer Ownership");
+    if(currentUser.role >= chat::UserRights::OWNER) {
+        auto* item = menu.Append(wxID_ANY, "Transfer Ownership");
         menu.Bind(wxEVT_MENU, [this, targetUser](wxCommandEvent&) {
             wxCommandEvent newEvent(wxEVT_TRANSFER_OWNERSHIP, GetId());
             newEvent.SetEventObject(this);
@@ -141,7 +141,7 @@ void UserListPanel::OnUserRightClick(wxMouseEvent& event) {
         }, item->GetId());
     }
 
-    if (menu.GetMenuItemCount() > 0) {
+    if(menu.GetMenuItemCount() > 0) {
         PopupMenu(&menu);
     }
 }

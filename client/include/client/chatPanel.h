@@ -1,7 +1,6 @@
 #pragma once
 
 #include <wx/wx.h>
-#include <client/user.h>
 
 namespace client {
 
@@ -18,6 +17,7 @@ class MessageView;
 class RoomHeaderPanel;
 struct Room;
 class RoomSettingsPanel;
+struct User;
 
 class ChatPanel : public wxPanel {
 public:
@@ -31,10 +31,13 @@ public:
     int32_t GetRoomId();
     void ResetState();
     void SetCurrentUser(const User& user);
+    const User& GetCurrentUser() const;
 
     UserListPanel* m_userListPanel = nullptr;
     MessageView* m_messageView = nullptr;
     RoomHeaderPanel* m_roomHeaderPanel = nullptr;
+
+    void InvalidateCaches();
 
 private:
     MainWidget* m_parent = nullptr;
@@ -43,6 +46,7 @@ private:
     wxBoxSizer* m_chatSizer = nullptr;         // Vertical sizer for messages and input area
     wxButton*   m_jumpToPresentButton = nullptr;
     RoomSettingsPanel* m_roomSettingsPanel = nullptr;
+    std::unique_ptr<User> m_currentUser;
 
     void OnSend(wxCommandEvent& event);
     void OnLeave(wxCommandEvent& event);

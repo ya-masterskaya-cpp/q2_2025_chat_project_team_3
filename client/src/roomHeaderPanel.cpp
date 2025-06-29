@@ -34,6 +34,8 @@ RoomHeaderPanel::RoomHeaderPanel(wxWindow* parent)
 
     Bind(wxEVT_LEAVE_WINDOW, &RoomHeaderPanel::OnLeaveWindow, this);
     m_roomName->Bind(wxEVT_LEAVE_WINDOW, &RoomHeaderPanel::OnLeaveWindow, this);
+
+    m_roomId = 0;
 }
     
 void RoomHeaderPanel::SetRoom(const Room& room) {

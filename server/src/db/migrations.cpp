@@ -55,7 +55,7 @@ std::optional<std::vector<MigrationFile>> scanMigrationFiles(const std::filesyst
         LOG_FATAL << "Migrations dir missing: "sv << dir;
         return std::nullopt;
     }
-    for(auto &e: std::filesystem::directory_iterator(dir)) {
+    for(const auto &e: std::filesystem::directory_iterator(dir)) {
         LOG_INFO << "Trying migration "sv << e.path();
         if(!e.is_regular_file()) {
             LOG_FATAL << "Had to skip this migration, not a regular file"sv;
@@ -92,7 +92,7 @@ drogon::Task<bool> applyMigration([[maybe_unused]] drogon::orm::DbClientPtr db, 
     auto sql_commands = split_and_trim(content);
 
     auto err = co_await WithTransaction(
-        [&](auto tx) -> drogon::Task<ScopedTransactionResult> {
+        [&](const auto& tx) -> drogon::Task<ScopedTransactionResult> {
 
             for(const auto& command : sql_commands) {
                 co_await tx->execSqlCoro(command);

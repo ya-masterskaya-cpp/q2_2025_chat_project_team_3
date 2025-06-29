@@ -33,6 +33,14 @@ void MessageView::Start() {
     LoadOlderMessages();
 }
 
+void MessageView::InvalidateCaches() {
+    for(auto* widget : m_messageWidgets) {
+        if(widget->IsShown()) {
+            widget->InvalidateCaches();
+        }
+    }
+}
+
 void MessageView::OnSize(wxSizeEvent& event) {
     event.Skip();
     ReWrapAllMessages(GetClientSize().x);
@@ -132,9 +140,13 @@ void MessageView::UpdateWidgetPositions() {
     wxCoord currentY = 0;
     for (auto* widget : m_messageWidgets) {
         wxCoord h = widget->GetBestSize().y;
+        auto wasHidden = !widget->IsShown();
         if ((currentY + h) > (scrollY - padding) && (currentY < scrollY + clientHeight + padding)) {
             wxCoord physicalY = currentY - scrollY;
             widget->SetSize(0, physicalY, containerWidth, h);
+            if(wasHidden) {
+                widget->InvalidateCaches();
+            }
             widget->Show();
         } else {
             widget->Hide();

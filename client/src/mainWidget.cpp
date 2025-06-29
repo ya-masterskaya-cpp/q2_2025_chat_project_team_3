@@ -8,6 +8,7 @@
 #include <client/initialPanel.h>
 #include <client/serversPanel.h>
 #include <client/roomHeaderPanel.h>
+#include <client/user.h>
 
 namespace client {
 
@@ -26,18 +27,18 @@ MainWidget::MainWidget() : wxFrame(NULL, wxID_ANY, "Slightly Pretty Chat", wxDef
     sizer->Add(roomsPanel, 1, wxEXPAND);
     sizer->Add(chatPanel, 1, wxEXPAND);
     SetSizer(sizer);
+
+    this->Bind(wxEVT_ACTIVATE, &MainWidget::OnActivate, this);
+}
+
+void MainWidget::OnActivate([[maybe_unused]] wxActivateEvent& event) {
+    if(chatPanel->IsShown()) {
+        chatPanel->InvalidateCaches();
+    }
 }
 
 void MainWidget::ShowPopup(const wxString& msg, long icon) {
     wxMessageBox(msg, "Info", wxOK | icon, this);
-}
-
-void MainWidget::SetCurrentUser(const User& user) {
-    m_currentUser = user; 
-}
-
-const User& MainWidget::GetCurrentUser() const {
-    return m_currentUser;
 }
 
 void MainWidget::ShowInitial() {
@@ -96,11 +97,6 @@ void MainWidget::ShowChat(std::vector<User> users) {
     roomsPanel->Hide();
     chatPanel->Show();
     chatPanel->m_roomHeaderPanel->SetRoom(roomsPanel->GetSelectedRoom().value());
-    auto it = std::find_if(users.begin(), users.end(), [&](const User& u){ return u.id == m_currentUser.id; });
-    if (it != users.end()) {
-        chatPanel->SetCurrentUser(*it);
-        m_currentUser = *it;
-    }
     chatPanel->m_userListPanel->SetUserList(std::move(users));
     chatPanel->m_messageView->Start();
     Layout();

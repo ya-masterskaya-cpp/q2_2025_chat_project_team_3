@@ -3,8 +3,6 @@
 #include <wx/wx.h>
 #include <wx/popupwin.h>
 
-wxDECLARE_EVENT(wxEVT_DELETE_MESSAGE, wxCommandEvent);
-
 namespace client {
 
 struct Message;
@@ -29,6 +27,7 @@ public:
 
     void Update(wxWindow* parent, const Message& msg, int lastKnownWrapWidth);
 
+    void InvalidateCaches();
 private:
     wxString m_originalMessage;        // Stores the original, unwrapped message.
     CachedColorText* m_messageStaticText; // Pointer to the actual text control.

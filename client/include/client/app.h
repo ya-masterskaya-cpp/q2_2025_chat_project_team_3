@@ -22,7 +22,7 @@ public:
 private:
     std::thread drogonThread;
     std::unique_ptr<AppConfig> m_config;
-    MainWidget* mw;
+    MainWidget* mw = nullptr;
 };
 
 } // namespace client

@@ -46,12 +46,12 @@ std::vector<std::string> DrogonServerRegistry::GetServers() {
     return resp;
 }
 
-void DrogonServerRegistry::SendToClients(const chat::Envelope env) const {
+void DrogonServerRegistry::SendToClients(const chat::Envelope& env) const {
     std::shared_lock lock(m_mutex);
     SendToClients_unsafe(env);
 }
 
-void DrogonServerRegistry::SendToClients_unsafe(const chat::Envelope env) const {
+void DrogonServerRegistry::SendToClients_unsafe(const chat::Envelope& env) const {
     for(const auto& conn : m_conns) {
         auto& ws_data = conn->getContextRef<WsData>();
         if(ws_data.serverHost) {

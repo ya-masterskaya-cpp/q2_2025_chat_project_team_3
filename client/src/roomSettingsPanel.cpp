@@ -52,7 +52,7 @@ RoomSettingsPanel::RoomSettingsPanel(wxWindow* parent, const wxString& roomName,
 
 void RoomSettingsPanel::OnRename([[maybe_unused]] wxCommandEvent& event) {
     auto newName = TextUtil::SanitizeInput(m_roomNameCtrl->GetValue());
-    if (!newName.length()) {
+    if (newName.empty()) {
         wxMessageBox("Room name must consist of at least 1 non special character",
             "Rename room error",
             wxOK | wxICON_ERROR, this

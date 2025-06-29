@@ -7,6 +7,7 @@
 #include <client/cachedColorText.h>
 #include <client/chatPanel.h>
 #include <client/mainWidget.h>
+#include <client/user.h>
 
 namespace client {
 
@@ -79,6 +80,11 @@ MessageWidget::MessageWidget(wxWindow* parent,
     m_messageStaticText->Bind(wxEVT_LEAVE_WINDOW, &MessageWidget::OnMouseLeave, this);
 }
 
+void MessageWidget::InvalidateCaches() {
+    m_messageStaticText->InvalidateCache();
+    m_userText->InvalidateCache();
+}
+
 void MessageWidget::Update([[maybe_unused]] wxWindow* parent, const Message& msg, int lastKnownWrapWidth) {
     m_originalMessage = msg.msg;
     m_timestamp_val = msg.timestamp;
@@ -115,8 +121,8 @@ wxFont MessageWidget::GetMessageTextFont() const {
 }
 
 void MessageWidget::OnRightClick(wxMouseEvent& event) {
-    auto* chatPanel = static_cast<ChatPanel*>(GetParent()->GetParent());
-    const User& currentUser = chatPanel->GetMainWidget()->GetCurrentUser();
+    auto* chatPanel = dynamic_cast<ChatPanel*>(GetParent()->GetParent());
+    const User& currentUser = chatPanel->GetCurrentUser();
     bool canDelete = (currentUser.role > chat::UserRights::REGULAR);
 
     wxMenu menu;
@@ -128,7 +134,7 @@ void MessageWidget::OnRightClick(wxMouseEvent& event) {
     }
 
     menu.Bind(wxEVT_MENU, [this](wxCommandEvent&) {
-        wxTheApp->CallAfter([msg = m_originalMessage]() {
+        wxTheApp->CallAfter([msg = m_originalMessage]() mutable {
             wxClipboardLocker locker;
             if (!locker) {
                 return;
@@ -160,8 +166,7 @@ void MessageWidget::OnRightClick(wxMouseEvent& event) {
 
 void MessageWidget::OnMouseEnter(wxMouseEvent& event) {
     SetBackgroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_BTNFACE));
-    m_messageStaticText->InvalidateCache();
-    m_userText->InvalidateCache();
+    InvalidateCaches();
     Refresh();
     event.Skip();
 }
@@ -172,8 +177,7 @@ void MessageWidget::OnMouseLeave(wxMouseEvent& event) {
     wxPoint clientPos = ScreenToClient(screenPos);
     if (!GetClientRect().Contains(clientPos)) {
         SetBackgroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW));
-        m_messageStaticText->InvalidateCache();
-        m_userText->InvalidateCache();
+        InvalidateCaches();
         Refresh();
     }
     event.Skip();

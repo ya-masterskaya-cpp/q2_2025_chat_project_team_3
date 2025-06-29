@@ -14,7 +14,7 @@ int main() {
                                                    //prevents jsoncpp from turning utf into escaped codepoints
 
     // Setup and run migrations before the app starts serving
-    drogon::app().registerBeginningAdvice([&]() {
+    drogon::app().registerBeginningAdvice([&aggregator_client]() {
         LOG_INFO << "Preparing to apply migrations...";
 
         auto dbClient = drogon::app().getDbClient();

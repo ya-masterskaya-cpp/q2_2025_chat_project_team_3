@@ -43,7 +43,7 @@ void WsController::handleNewMessage(const drogon::WebSocketConnectionPtr& conn, 
         return;
     }
 
-    drogon::async_run(std::bind(&WsRequestProcessor::handleIncomingMessage, m_requestProcessor.get(), std::move(conn), std::move(msg_str)));
+    drogon::async_run(std::bind(&WsRequestProcessor::handleIncomingMessage, m_requestProcessor.get(), conn, std::move(msg_str)));
 }
 
 void WsController::handleConnectionClosed(const drogon::WebSocketConnectionPtr& conn) {
