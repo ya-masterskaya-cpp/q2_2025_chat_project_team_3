@@ -184,6 +184,13 @@ void WebSocketClient::assignRole(int32_t roomId, int32_t userId, chat::UserRight
     sendEnvelope(env);
 }
 
+void WebSocketClient::deleteMessage(int32_t messageId) {
+    chat::Envelope env;
+    auto* request = env.mutable_delete_message_request();
+    request->set_message_id(messageId);
+    sendEnvelope(env);
+}
+
 void WebSocketClient::handleMessage(const std::string& msg) {
     chat::Envelope env;
     if(!env.ParseFromString(msg)) {
@@ -337,7 +344,8 @@ void WebSocketClient::handleMessage(const std::string& msg) {
             for(const auto& proto_message : env.get_messages_response().message()) {
                 messages.emplace_back(Message{wxString::FromUTF8(proto_message.from().user_name())
                     , wxString::FromUTF8(proto_message.message())
-                    , proto_message.timestamp()});
+                    , proto_message.timestamp()
+                    , proto_message.message_id()});
             }
             showMessageHistory(messages);
             break;
@@ -389,6 +397,16 @@ void WebSocketClient::handleMessage(const std::string& msg) {
         case chat::Envelope::kUserRoleChanged: {
             const auto& roleChange = env.user_role_changed();
             updateUserRole(roleChange.user_id(), roleChange.new_role());
+            break;
+        }
+        case chat::Envelope::kDeleteMessageResponse: {
+            if (!statusOk(env.delete_message_response().status())) {
+                showError("Failed to delete message: " + wxString(env.delete_message_response().status().message()));
+            }
+            break;
+        }
+        case chat::Envelope::kMessageDeleted: {
+            removeMessageFromView(env.message_deleted().message_id());
             break;
         }
         default: {
@@ -443,7 +461,8 @@ void WebSocketClient::showRoomMessage(const chat::MessageInfo& mi) {
     std::vector<Message> messages;
     messages.emplace_back(Message{wxString::FromUTF8(mi.from().user_name())
         , wxString::FromUTF8(mi.message())
-        , mi.timestamp()});
+        , mi.timestamp()
+        , mi.message_id()});
 
     wxTheApp->CallAfter([this, messages] {
         LOG_DEBUG << "Stared singular add";
@@ -471,6 +490,14 @@ void WebSocketClient::updateUserRole(int32_t userId, chat::UserRights newRole) {
             User updatedCurrentUser = ui->GetCurrentUser();
             updatedCurrentUser.role = newRole;
             ui->SetCurrentUser(updatedCurrentUser);
+        }
+    });
+}
+
+void WebSocketClient::removeMessageFromView(int32_t messageId) {
+    wxTheApp->CallAfter([this, messageId] {
+        if (ui->chatPanel->IsShown()) {
+            ui->chatPanel->m_messageView->DeleteMessageById(messageId);
         }
     });
 }

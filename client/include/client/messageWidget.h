@@ -3,6 +3,8 @@
 #include <wx/wx.h>
 #include <wx/popupwin.h>
 
+wxDECLARE_EVENT(wxEVT_DELETE_MESSAGE, wxCommandEvent);
+
 namespace client {
 
 struct Message;
@@ -22,6 +24,7 @@ public:
     wxFont GetMessageTextFont() const;
 
     int64_t GetTimestampValue() const { return m_timestamp_val; }
+    int32_t GetMessageId() const { return m_messageId; }
     bool m_hasBeenPositionedCorrectly = false;
 
     void Update(wxWindow* parent, const Message& msg, int lastKnownWrapWidth);
@@ -30,6 +33,7 @@ private:
     wxString m_originalMessage;        // Stores the original, unwrapped message.
     CachedColorText* m_messageStaticText; // Pointer to the actual text control.
     int64_t m_timestamp_val;           // Stores the raw timestamp for sorting/querying
+    int32_t m_messageId;
     wxStaticText* m_timeText;
     CachedColorText* m_userText;
 
