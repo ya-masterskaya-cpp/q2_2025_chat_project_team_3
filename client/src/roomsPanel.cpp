@@ -12,6 +12,7 @@ wxBEGIN_EVENT_TABLE(RoomsPanel, wxPanel)
     EVT_BUTTON(ID_JOIN, RoomsPanel::OnJoin)
     EVT_BUTTON(ID_CREATE, RoomsPanel::OnCreate)
     EVT_BUTTON(ID_LOGOUT, RoomsPanel::OnLogout)
+    EVT_LISTBOX_DCLICK(wxID_ANY, RoomsPanel::OnJoin)
 wxEND_EVENT_TABLE()
 
 RoomsPanel::RoomsPanel(MainWidget* parent) : wxPanel(parent), mainWin(parent) {
