@@ -5,17 +5,20 @@
 #include <client/message.h>
 #include <client/wsClient.h>
 #include <client/cachedColorText.h>
+#include <client/chatPanel.h>
+#include <client/mainWidget.h>
 
 namespace client {
 
 enum {
-    ID_COPY = wxID_HIGHEST + 40
+    ID_COPY = wxID_HIGHEST + 40,
+    ID_DELETE_MESSAGE
 };
 
 MessageWidget::MessageWidget(wxWindow* parent,
                              const Message& msg,
                              int lastKnownWrapWidth)
-    : wxPanel(parent, wxID_ANY), m_originalMessage{msg.msg}, m_timestamp_val{msg.timestamp} {
+    : wxPanel(parent, wxID_ANY), m_originalMessage{msg.msg}, m_timestamp_val{msg.timestamp}, m_messageId{msg.messageId} {
     SetBackgroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW));
     SetDoubleBuffered(true);
 
@@ -79,6 +82,7 @@ MessageWidget::MessageWidget(wxWindow* parent,
 void MessageWidget::Update([[maybe_unused]] wxWindow* parent, const Message& msg, int lastKnownWrapWidth) {
     m_originalMessage = msg.msg;
     m_timestamp_val = msg.timestamp;
+    m_messageId = msg.messageId;
     m_messageStaticText->SetLabelText(TextUtil::WrapText(this, m_originalMessage, lastKnownWrapWidth - FromDIP(9), this->GetFont()));
     m_userText->SetLabelText(msg.user);
     m_timeText->SetLabelText(wxString::FromUTF8(WebSocketClient::formatMessageTimestamp(msg.timestamp)));
@@ -111,8 +115,17 @@ wxFont MessageWidget::GetMessageTextFont() const {
 }
 
 void MessageWidget::OnRightClick(wxMouseEvent& event) {
+    auto* chatPanel = static_cast<ChatPanel*>(GetParent()->GetParent());
+    const User& currentUser = chatPanel->GetMainWidget()->GetCurrentUser();
+    bool canDelete = (currentUser.role > chat::UserRights::REGULAR);
+
     wxMenu menu;
     menu.Append(ID_COPY, "Copy Message");
+
+    if (canDelete) {
+        menu.AppendSeparator();
+        menu.Append(ID_DELETE_MESSAGE, "Delete Message");
+    }
 
     menu.Bind(wxEVT_MENU, [this](wxCommandEvent&) {
         wxTheApp->CallAfter([msg = m_originalMessage]() {
@@ -123,6 +136,23 @@ void MessageWidget::OnRightClick(wxMouseEvent& event) {
             wxTheClipboard->SetData(new wxTextDataObject(msg));
         });
     }, ID_COPY);
+
+    if (canDelete) {
+        menu.Bind(wxEVT_MENU, [this](wxCommandEvent&) {
+            int response = wxMessageBox(
+                "Are you sure you want to permanently delete this message?",
+                "Confirm Deletion",
+                wxYES_NO | wxNO_DEFAULT | wxICON_WARNING,
+                this
+            );
+            if (response == wxYES) {
+                wxCommandEvent deleteEvent(wxEVT_DELETE_MESSAGE, GetId());
+                deleteEvent.SetEventObject(this);
+                deleteEvent.SetInt(m_messageId);
+                wxPostEvent(GetParent()->GetParent(), deleteEvent);
+            }
+        }, ID_DELETE_MESSAGE);
+    }
 
     PopupMenu(&menu);
     event.Skip();

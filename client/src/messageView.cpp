@@ -259,4 +259,19 @@ void MessageView::JumpToPresent() {
     Start();
 }
 
+void MessageView::DeleteMessageById(int32_t messageId) {
+    auto it = std::find_if(m_messageWidgets.begin(), m_messageWidgets.end(),
+        [messageId](const MessageWidget* widget) {
+            return widget->GetMessageId() == messageId;
+        });
+
+    if (it != m_messageWidgets.end()) {
+        MessageWidget* widgetToRemove = *it;
+        m_widgetsPool.return_instance(std::move(widgetToRemove));
+        m_messageWidgets.erase(it);
+        SetUnitCount(CalculateTotalHeight());
+        UpdateWidgetPositions();
+    }
+}
+
 } // namespace client

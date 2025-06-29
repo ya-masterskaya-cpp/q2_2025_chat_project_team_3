@@ -37,6 +37,9 @@ void UserListPanel::UpdateUserRole(int32_t userId, chat::UserRights newRole) {
         it->role = newRole;
         SetUserList(m_users);
     }
+    if (m_currentUser.id == userId) {
+        m_currentUser.role = newRole;
+    }
 }
 
 void UserListPanel::SetUserList(std::vector<User> users) {

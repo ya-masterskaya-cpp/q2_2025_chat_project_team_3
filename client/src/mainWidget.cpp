@@ -99,6 +99,7 @@ void MainWidget::ShowChat(std::vector<User> users) {
     auto it = std::find_if(users.begin(), users.end(), [&](const User& u){ return u.id == m_currentUser.id; });
     if (it != users.end()) {
         chatPanel->SetCurrentUser(*it);
+        m_currentUser = *it;
     }
     chatPanel->m_userListPanel->SetUserList(std::move(users));
     chatPanel->m_messageView->Start();

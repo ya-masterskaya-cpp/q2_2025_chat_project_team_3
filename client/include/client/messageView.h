@@ -70,7 +70,7 @@ public:
     void ReWrapAllMessages(int wrapWidth);
     void Clear();
     void JumpToPresent();
-
+    void DeleteMessageById(int32_t messageId);
 
 
 protected:

@@ -279,6 +279,7 @@ drogon::Task<chat::SendMessageResponse> MessageHandlers::handleSendMessage(const
 
     message_info->set_message(req.message());
     message_info->set_timestamp(inserted_message.getValueOfCreatedAt());
+    message_info->set_message_id(inserted_message.getValueOfMessageId());
 
     user_info->set_user_id(wsData->user->id);
     user_info->set_user_name(wsData->user->name);
@@ -464,6 +465,8 @@ drogon::Task<chat::GetMessagesResponse> MessageHandlers::handleGetMessages(const
             LOG_TRACE << std::string("Message text \"") + message.getValueOfMessageText() + "\"";
             message_info->set_timestamp(message.getValueOfCreatedAt());
             LOG_TRACE << std::string("Message timestamp \"") + std::to_string(message.getValueOfCreatedAt()) + "\"";
+            message_info->set_message_id(message.getValueOfMessageId());
+            LOG_TRACE << std::string("Message id \"") + std::to_string(message.getValueOfMessageId()) + "\"";
             auto* user_info = message_info->mutable_from();
             auto user = message.getUser(m_dbClient); //TODO this is blocking
 
@@ -749,6 +752,66 @@ drogon::Task<std::optional<chat::UserRights>> MessageHandlers::findStoredUserRol
         co_return rights;
     }
     co_return chat::UserRights::REGULAR;
+}
+
+drogon::Task<chat::DeleteMessageResponse> MessageHandlers::handleDeleteMessage(const WsDataPtr& wsDataGuarded, const chat::DeleteMessageRequest& req, IChatRoomService& room_service) {
+    chat::DeleteMessageResponse resp;
+
+    auto wsData = co_await wsDataGuarded->lock_shared();
+
+    if (wsData->status != USER_STATUS::Authenticated) {
+        common::setStatus(resp, chat::STATUS_UNAUTHORIZED, "Not authenticated.");
+        co_return resp;
+    }
+    if (!wsData->room) {
+        common::setStatus(resp, chat::STATUS_FAILURE, "User is not in any room.");
+        co_return resp;
+    }
+    if (wsData->room->rights < chat::UserRights::MODERATOR) {
+        common::setStatus(resp, chat::STATUS_UNAUTHORIZED, "Insufficient rights to delete messages.");
+        co_return resp;
+    }
+
+    const int32_t messageId = req.message_id();
+    const int32_t roomId = wsData->room->id;
+    try {
+        auto err = co_await WithTransaction([&](auto tx) -> drogon::Task<ScopedTransactionResult> {
+            try {
+                auto messages = co_await switch_to_io_loop(CoroMapper<models::Messages>(tx)
+                    .findBy(Criteria(models::Messages::Cols::_message_id, CompareOperator::EQ, messageId) &&
+                            Criteria(models::Messages::Cols::_room_id, CompareOperator::EQ, roomId)));
+                if (messages.empty()) {
+                    co_return "Message not found or does not belong to this room.";
+                }
+                size_t deletedCount = co_await switch_to_io_loop(CoroMapper<models::Messages>(tx)
+                    .deleteBy(Criteria(models::Messages::Cols::_message_id, CompareOperator::EQ, messageId)));
+
+                if (deletedCount == 0) {
+                    co_return "Message could not be deleted.";
+                }
+                co_return std::nullopt;
+            } catch (const DrogonDbException& e) {
+                LOG_ERROR << "Message deletion transaction failed: " << e.base().what();
+                co_return "Database error during message deletion.";
+            }
+        });
+        if (err) {
+            common::setStatus(resp, chat::STATUS_FAILURE, *err);
+            co_return resp;
+        }
+    } catch (const std::exception& e) {
+        LOG_ERROR << "Delete message error: " << e.what();
+        common::setStatus(resp, chat::STATUS_FAILURE, std::string("Delete message failed: ") + e.what());
+        co_return resp;
+    }
+    
+    chat::Envelope deletedNoticeEnv;
+    auto* messageDeleted = deletedNoticeEnv.mutable_message_deleted();
+    messageDeleted->set_message_id(messageId);
+    co_await room_service.sendToRoom(roomId, deletedNoticeEnv);
+    
+    common::setStatus(resp, chat::STATUS_SUCCESS);
+    co_return resp;
 }
 
 std::optional<std::string> MessageHandlers::validateUtf8String(
