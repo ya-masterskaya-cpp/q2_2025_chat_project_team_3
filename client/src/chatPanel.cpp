@@ -10,6 +10,7 @@
 #include <client/roomHeaderPanel.h>
 #include <client/roomSettingsPanel.h>
 #include <client/user.h>
+#include <client/typingIndicatorPanel.h>
 
 namespace client {
 
@@ -18,7 +19,8 @@ enum { ID_SEND = wxID_HIGHEST+30,
     ID_JUMP_TO_PRESENT,
     ID_RENAME_ROOM,
     ID_DELETE_ROOM,
-    ID_BACK_FROM_SETTINGS
+    ID_BACK_FROM_SETTINGS,
+    ID_TYPING_TIMER
 };
 
 wxDEFINE_EVENT(wxEVT_SNAP_STATE_CHANGED, wxCommandEvent);
@@ -38,8 +40,8 @@ wxEND_EVENT_TABLE()
 
 ChatPanel::ChatPanel(MainWidget* parent)
     : wxPanel(parent, wxID_ANY),
-      m_parent(parent)//,
-      //m_resizeTimer(this, ID_RESIZE_TIMER) // Initialize the timer with 'this' as the owner
+      m_parent(parent),//m_resizeTimer(this, ID_RESIZE_TIMER) // Initialize the timer with 'this' as the owner
+      m_typingTimer(this, ID_TYPING_TIMER)
 {
     m_currentUser = std::make_unique<User>();
 
@@ -60,6 +62,10 @@ ChatPanel::ChatPanel(MainWidget* parent)
     m_messageView = new MessageView(this);
     // Add the new message view directly to the chat sizer. It will fill the available space.
     m_chatSizer->Add(m_messageView, 1, wxEXPAND | wxALL, FromDIP(5));
+
+    // --- Typing Indicator ---
+    m_typingIndicator = new TypingIndicatorPanel(this);
+    m_chatSizer->Add(m_typingIndicator, 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(5));
 
     // --- Input area (text control + send/leave buttons) ---
     auto* inputSizer = new wxBoxSizer(wxHORIZONTAL);
@@ -107,6 +113,7 @@ ChatPanel::ChatPanel(MainWidget* parent)
     Bind(wxEVT_UNASSIGN_MODERATOR, &ChatPanel::OnUnassignModerator, this);
     Bind(wxEVT_TRANSFER_OWNERSHIP, &ChatPanel::OnTransferOwnership, this);
     Bind(wxEVT_DELETE_MESSAGE, &ChatPanel::OnDeleteMessage, this);
+    Bind(wxEVT_TIMER, &ChatPanel::OnTypingTimer, this, ID_TYPING_TIMER);
 }
 
 void ChatPanel::InvalidateCaches() {
@@ -152,6 +159,11 @@ void ChatPanel::OnResizeTimerTick([[maybe_unused]] wxTimerEvent& event) {
 
 void ChatPanel::OnSend(wxCommandEvent&) {
     if (!m_input_ctrl->IsEmpty()) {
+        if (m_isTyping) {
+            m_typingTimer.Stop();
+            m_isTyping = false;
+            m_parent->wsClient->sendTypingStop();
+        }
         m_parent->wsClient->sendMessage(m_input_ctrl->GetValue().utf8_string());
         m_input_ctrl->Clear();
     }
@@ -183,6 +195,14 @@ void ChatPanel::OnSnapStateChanged(wxCommandEvent& event) {
 }
 
 void ChatPanel::OnInputText(wxCommandEvent& event) {
+	// Check if the input control is not empty and the user is not already typing.
+    if (!m_input_ctrl->IsEmpty() && !m_isTyping) {
+        m_isTyping = true;
+        m_parent->wsClient->sendTypingStart();
+    }
+	// Restart the typing timer to reset the typing state after 2 seconds of inactivity.
+    m_typingTimer.StartOnce(2000);
+
     event.Skip();
     TextUtil::LimitTextLength(m_input_ctrl, common::limits::MAX_MESSAGE_LENGTH);
 }
@@ -224,6 +244,9 @@ void ChatPanel::ResetState() {
     m_messageView->Clear();
     m_userListPanel->Clear();
     m_jumpToPresentButton->Hide();
+    m_typingTimer.Stop();
+    m_isTyping = false;
+    m_typingIndicator->Clear();
     Layout();
 }
 
@@ -233,6 +256,29 @@ void ChatPanel::SetCurrentUser(const User& user) {
 
 const User& ChatPanel::GetCurrentUser() const {
     return *m_currentUser;
+}
+
+void ChatPanel::UserStartedTyping(const User& user) {
+    if (m_currentUser->id == user.id) {
+        return;
+	}
+    m_typingIndicator->AddTypingUser(user.username);
+}
+
+void ChatPanel::UserStoppedTyping(const User& user) {
+    if (m_currentUser->id == user.id) {
+        return;
+    }
+	m_typingIndicator->RemoveTypingUser(user.username);
+}
+
+void ChatPanel::UserJoin(const User& user) {
+    m_userListPanel->AddUser(user);
+}
+
+void ChatPanel::UserLeft(const User& user) {
+    m_userListPanel->RemoveUser(user.id);
+    UserStoppedTyping(user);
 }
 
 void ChatPanel::OnRoomRename(wxCommandEvent &event) {
@@ -304,6 +350,11 @@ void ChatPanel::OnInputKeyDown(wxKeyEvent& event) {
         // Let the default handler process the event as usual (e.g., typing a character).
         event.Skip();
     }
+}
+
+void ChatPanel::OnTypingTimer([[maybe_unused]] wxTimerEvent& event) {
+    m_isTyping = false;
+    m_parent->wsClient->sendTypingStop();
 }
 
 } // namespace client

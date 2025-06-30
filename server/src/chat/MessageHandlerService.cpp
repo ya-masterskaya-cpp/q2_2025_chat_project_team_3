@@ -46,7 +46,7 @@ drogon::Task<chat::Envelope> MessageHandlerService::processMessage(const WsDataP
         }
         case chat::Envelope::kGetMessagesRequest: {
             *respEnv.mutable_get_messages_response() = co_await m_handlers->handleGetMessages(wsData, env.get_messages_request());
-               break;
+            break;
         }
         case chat::Envelope::kLogoutRequest: {
             *respEnv.mutable_logout_response() = co_await m_handlers->handleLogoutUser(wsData, room_service);
@@ -68,6 +68,14 @@ drogon::Task<chat::Envelope> MessageHandlerService::processMessage(const WsDataP
             *respEnv.mutable_delete_message_response() = co_await m_handlers->handleDeleteMessage(wsData, env.delete_message_request(), room_service);
             break;
         }
+        case chat::Envelope::kUserTypingStartRequest: {
+            *respEnv.mutable_user_typing_start_response() = co_await m_handlers->handleUserTypingStart(wsData, room_service);
+            break;
+        }
+        case chat::Envelope::kUserTypingStopRequest: {
+            *respEnv.mutable_user_typing_stop_response() = co_await m_handlers->handleUserTypingStop(wsData, room_service);
+            break;
+		}
         default: {
             respEnv = common::makeGenericErrorEnvelope("Unknown or empty payload");
             break;

@@ -23,7 +23,7 @@ add_executable(client_app
     src/serversPanel.cpp
     src/roomHeaderPanel.cpp
     src/roomSettingsPanel.cpp
-)
+    src/typingIndicatorPanel.cpp)
 
 target_include_directories(client_app PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include

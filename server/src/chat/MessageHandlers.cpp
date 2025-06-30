@@ -812,6 +812,62 @@ drogon::Task<chat::DeleteMessageResponse> MessageHandlers::handleDeleteMessage(c
     co_return resp;
 }
 
+drogon::Task<chat::UserTypingStartResponse> MessageHandlers::handleUserTypingStart(const WsDataPtr& wsDataGuarded, IChatRoomService& room_service) const {
+    chat::UserTypingStartResponse resp;
+
+    auto wsData = co_await wsDataGuarded->lock_shared();
+
+    if (wsData->status != USER_STATUS::Authenticated) {
+        common::setStatus(resp, chat::STATUS_UNAUTHORIZED, "Not authenticated.");
+        co_return resp;
+    }
+    if (!wsData->room) {
+        common::setStatus(resp, chat::STATUS_FAILURE, "User is not in any room.");
+        co_return resp;
+    }
+
+    chat::Envelope broadcastEnv;
+    auto* startedTypingMsg = broadcastEnv.mutable_user_started_typing();
+
+    auto* userInfo = startedTypingMsg->mutable_user();
+    userInfo->set_user_id(wsData->user->id);
+    userInfo->set_user_name(wsData->user->name);
+    userInfo->set_user_room_rights(wsData->room->rights);
+    
+	co_await room_service.sendToRoom(wsData->room->id, broadcastEnv);
+
+    common::setStatus(resp, chat::STATUS_SUCCESS);
+    co_return resp;
+}
+
+drogon::Task<chat::UserTypingStopResponse> MessageHandlers::handleUserTypingStop(const WsDataPtr& wsDataGuarded, IChatRoomService& room_service) const {
+    chat::UserTypingStopResponse resp;
+
+    auto wsData = co_await wsDataGuarded->lock_shared();
+
+    if (wsData->status != USER_STATUS::Authenticated) {
+        common::setStatus(resp, chat::STATUS_UNAUTHORIZED, "Not authenticated.");
+        co_return resp;
+    }
+    if (!wsData->room) {
+        common::setStatus(resp, chat::STATUS_FAILURE, "User is not in any room.");
+        co_return resp;
+    }
+
+    chat::Envelope broadcastEnv;
+    auto* stoppedTypingMsg = broadcastEnv.mutable_user_stopped_typing();
+
+    auto* userInfo = stoppedTypingMsg->mutable_user();
+    userInfo->set_user_id(wsData->user->id);
+    userInfo->set_user_name(wsData->user->name);
+    userInfo->set_user_room_rights(wsData->room->rights);
+
+    co_await room_service.sendToRoom(wsData->room->id, broadcastEnv);
+
+    common::setStatus(resp, chat::STATUS_SUCCESS);
+    co_return resp;
+}
+
 std::optional<std::string> MessageHandlers::validateUtf8String(
     const std::string_view& textToValidate,
     size_t maxLength,

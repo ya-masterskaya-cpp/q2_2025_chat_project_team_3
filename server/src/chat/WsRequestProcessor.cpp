@@ -22,7 +22,7 @@ drogon::Task<> WsRequestProcessor::handleIncomingMessage(drogon::WebSocketConnec
         }
         DrogonRoomService room_service{conn};
         common::sendEnvelope(conn, co_await m_dispatcher->processMessage(conn->getContext<WsDataGuarded>(), env, room_service));
-
+        
         if(initialThreadIdx != drogon::app().getCurrentThreadIndex()) {
             throw std::runtime_error("thread idx mismatch! did you forget switch_to_io_loop?");
         }

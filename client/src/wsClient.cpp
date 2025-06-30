@@ -192,6 +192,18 @@ void WebSocketClient::deleteMessage(int32_t messageId) {
     sendEnvelope(env);
 }
 
+void WebSocketClient::sendTypingStart() {
+    chat::Envelope env;
+    env.mutable_user_typing_start_request();
+    sendEnvelope(env);
+}
+
+void WebSocketClient::sendTypingStop() {
+    chat::Envelope env;
+    env.mutable_user_typing_stop_request();
+    sendEnvelope(env);
+}
+
 void WebSocketClient::handleMessage(const std::string& msg) {
     chat::Envelope env;
     if(!env.ParseFromString(msg)) {
@@ -416,6 +428,38 @@ void WebSocketClient::handleMessage(const std::string& msg) {
             removeMessageFromView(env.message_deleted().message_id());
             break;
         }
+        case chat::Envelope::kUserTypingStartResponse: {
+            if (!statusOk(env.user_typing_start_response().status())) {
+                showError("Error when requesting \"User typing start\": " + wxString(env.user_typing_start_response().status().message()));
+            }
+            break;
+        }
+        case chat::Envelope::kUserTypingStopResponse: {
+            if (!statusOk(env.user_typing_stop_response().status())) {
+                showError("Error when requesting \"User typing stop\": " + wxString(env.user_typing_stop_response().status().message()));
+            }
+            break;
+        }
+        case chat::Envelope::kUserStartedTyping: {
+            const auto& user_info = env.user_started_typing().user();
+			User user{ user_info.user_id(), wxString::FromUTF8(user_info.user_name()), user_info.user_room_rights() };
+            wxTheApp->CallAfter([this, user] {
+                if (ui->chatPanel->IsShown()) {
+                    ui->chatPanel->UserStartedTyping(user);
+                }
+                });
+            break;
+        }
+        case chat::Envelope::kUserStoppedTyping: {
+            const auto& user_info = env.user_stopped_typing().user();
+            User user{ user_info.user_id(), wxString::FromUTF8(user_info.user_name()), user_info.user_room_rights() };
+            wxTheApp->CallAfter([this, user] {
+                if (ui->chatPanel->IsShown()) {
+                    ui->chatPanel->UserStoppedTyping(user);
+                }
+                });
+            break;
+        }
         default: {
             showError("Unknown message received from server!");
             break;
@@ -457,11 +501,15 @@ void WebSocketClient::showServers() {
 }
 
 void WebSocketClient::addUser(User user) {
-    wxTheApp->CallAfter([this, user = std::move(user)] { ui->chatPanel->m_userListPanel->AddUser(user); });
+    wxTheApp->CallAfter([this, user = std::move(user)] {
+        ui->chatPanel->UserJoin(user);
+    });
 }
 
 void WebSocketClient::removeUser(User user) {
-    wxTheApp->CallAfter([this, user = std::move(user)] { ui->chatPanel->m_userListPanel->RemoveUser(user.id); });
+    wxTheApp->CallAfter([this, user = std::move(user)] {
+        ui->chatPanel->UserLeft(user);
+    });
 }
 
 void WebSocketClient::showRoomMessage(const chat::MessageInfo& mi) {
