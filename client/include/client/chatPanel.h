@@ -35,6 +35,8 @@ public:
     const User& GetCurrentUser() const;
     void UserStartedTyping(const User& user);
     void UserStoppedTyping(const User& user);
+    void UserJoin(const User& user);
+    void UserLeft(const User& user);
 
     UserListPanel* m_userListPanel = nullptr;
     MessageView* m_messageView = nullptr;

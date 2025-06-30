@@ -489,11 +489,15 @@ void WebSocketClient::showServers() {
 }
 
 void WebSocketClient::addUser(User user) {
-    wxTheApp->CallAfter([this, user = std::move(user)] { ui->chatPanel->m_userListPanel->AddUser(user); });
+    wxTheApp->CallAfter([this, user = std::move(user)] {
+        ui->chatPanel->UserJoin(user);
+    });
 }
 
 void WebSocketClient::removeUser(User user) {
-    wxTheApp->CallAfter([this, user = std::move(user)] { ui->chatPanel->m_userListPanel->RemoveUser(user.id); });
+    wxTheApp->CallAfter([this, user = std::move(user)] {
+        ui->chatPanel->UserLeft(user);
+    });
 }
 
 void WebSocketClient::showRoomMessage(const chat::MessageInfo& mi) {

@@ -272,6 +272,15 @@ void ChatPanel::UserStoppedTyping(const User& user) {
 	m_typingIndicator->RemoveTypingUser(user.username);
 }
 
+void ChatPanel::UserJoin(const User& user) {
+    m_userListPanel->AddUser(user);
+}
+
+void ChatPanel::UserLeft(const User& user) {
+    m_userListPanel->RemoveUser(user.id);
+    UserStoppedTyping(user);
+}
+
 void ChatPanel::OnRoomRename(wxCommandEvent &event) {
     if (!m_parent || !m_parent->wsClient) return;
     wxString newName = event.GetString();
