@@ -35,6 +35,8 @@ public:
     void deleteRoom(int32_t roomId);
     void assignRole(int32_t roomId, int32_t userId, chat::UserRights role);
     void deleteMessage(int32_t messageId);
+    void sendTypingStart();
+    void sendTypingStop();
 
     static std::string formatMessageTimestamp(int64_t timestamp);
 

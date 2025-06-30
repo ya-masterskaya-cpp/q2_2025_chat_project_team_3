@@ -192,6 +192,18 @@ void WebSocketClient::deleteMessage(int32_t messageId) {
     sendEnvelope(env);
 }
 
+void WebSocketClient::sendTypingStart() {
+    chat::Envelope env;
+    env.mutable_user_typing_start();
+    sendEnvelope(env);
+}
+
+void WebSocketClient::sendTypingStop() {
+    chat::Envelope env;
+    env.mutable_user_typing_stop();
+    sendEnvelope(env);
+}
+
 void WebSocketClient::handleMessage(const std::string& msg) {
     chat::Envelope env;
     if(!env.ParseFromString(msg)) {
@@ -414,6 +426,26 @@ void WebSocketClient::handleMessage(const std::string& msg) {
         }
         case chat::Envelope::kMessageDeleted: {
             removeMessageFromView(env.message_deleted().message_id());
+            break;
+        }
+        case chat::Envelope::kUserStartedTyping: {
+            const auto& user_info = env.user_started_typing().user();
+			User user{ user_info.user_id(), wxString::FromUTF8(user_info.user_name()), user_info.user_room_rights() };
+            wxTheApp->CallAfter([this, user] {
+                if (ui->chatPanel->IsShown()) {
+                    ui->chatPanel->UserStartedTyping(user);
+                }
+                });
+            break;
+        }
+        case chat::Envelope::kUserStoppedTyping: {
+            const auto& user_info = env.user_stopped_typing().user();
+            User user{ user_info.user_id(), wxString::FromUTF8(user_info.user_name()), user_info.user_room_rights() };
+            wxTheApp->CallAfter([this, user] {
+                if (ui->chatPanel->IsShown()) {
+                    ui->chatPanel->UserStoppedTyping(user);
+                }
+                });
             break;
         }
         default: {

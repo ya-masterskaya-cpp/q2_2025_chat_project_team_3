@@ -219,6 +219,18 @@ message MessageDeleted {
     int32 message_id = 1;
 }
 
+message UserTypingStart {
+}
+message UserTypingStop {
+}
+
+message UserStartedTyping {
+    UserInfo user = 1;
+}
+message UserStoppedTyping {
+    UserInfo user = 1;
+}
+
 message Envelope {
     oneof payload {
         ServerHello server_hello = 1;
@@ -265,5 +277,9 @@ message Envelope {
         DeleteMessageRequest delete_message_request = 42;
         DeleteMessageResponse delete_message_response = 43;
         MessageDeleted message_deleted = 44;
+        UserTypingStart user_typing_start = 45;
+        UserTypingStop user_typing_stop = 46;
+        UserStartedTyping user_started_typing = 47;
+        UserStoppedTyping user_stopped_typing = 48;
     }
 }

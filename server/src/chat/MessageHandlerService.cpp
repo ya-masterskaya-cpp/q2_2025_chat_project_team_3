@@ -9,7 +9,7 @@ MessageHandlerService::MessageHandlerService(std::unique_ptr<MessageHandlers> ha
 
 MessageHandlerService::~MessageHandlerService() = default;
 
-drogon::Task<chat::Envelope> MessageHandlerService::processMessage(const WsDataPtr& wsData, const chat::Envelope& env, IChatRoomService& room_service) const {
+drogon::Task<std::optional<chat::Envelope>> MessageHandlerService::processMessage(const WsDataPtr& wsData, const chat::Envelope& env, IChatRoomService& room_service) const {
     chat::Envelope respEnv;
     switch(env.payload_case()) {
         case chat::Envelope::kInitialAuthRequest: {
@@ -46,7 +46,7 @@ drogon::Task<chat::Envelope> MessageHandlerService::processMessage(const WsDataP
         }
         case chat::Envelope::kGetMessagesRequest: {
             *respEnv.mutable_get_messages_response() = co_await m_handlers->handleGetMessages(wsData, env.get_messages_request());
-               break;
+            break;
         }
         case chat::Envelope::kLogoutRequest: {
             *respEnv.mutable_logout_response() = co_await m_handlers->handleLogoutUser(wsData, room_service);
@@ -68,6 +68,14 @@ drogon::Task<chat::Envelope> MessageHandlerService::processMessage(const WsDataP
             *respEnv.mutable_delete_message_response() = co_await m_handlers->handleDeleteMessage(wsData, env.delete_message_request(), room_service);
             break;
         }
+        case chat::Envelope::kUserTypingStart: {
+			co_await m_handlers->handleUserTypingStart(wsData, env.user_typing_start(), room_service);
+            co_return std::nullopt;
+        }
+        case chat::Envelope::kUserTypingStop: {
+            co_await m_handlers->handleUserTypingStop(wsData, env.user_typing_stop(), room_service);
+            co_return std::nullopt;
+		}
         default: {
             respEnv = common::makeGenericErrorEnvelope("Unknown or empty payload");
             break;

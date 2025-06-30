@@ -18,6 +18,7 @@ class RoomHeaderPanel;
 struct Room;
 class RoomSettingsPanel;
 struct User;
+class TypingIndicatorPanel;
 
 class ChatPanel : public wxPanel {
 public:
@@ -32,6 +33,8 @@ public:
     void ResetState();
     void SetCurrentUser(const User& user);
     const User& GetCurrentUser() const;
+    void UserStartedTyping(const User& user);
+    void UserStoppedTyping(const User& user);
 
     UserListPanel* m_userListPanel = nullptr;
     MessageView* m_messageView = nullptr;
@@ -58,6 +61,10 @@ private:
                                    // Initialized to -1 to indicate no width calculated yet.
     wxTimer m_resizeTimer;         // Timer for debouncing resize events for performance.
 
+    wxTimer m_typingTimer;
+    bool m_isTyping = false;
+    TypingIndicatorPanel* m_typingIndicator = nullptr;
+
     // Event handlers for the message container's size and the debouncing timer.
     void OnChatPanelSize(wxSizeEvent& event);
     void OnResizeTimerTick(wxTimerEvent& event);
@@ -70,6 +77,7 @@ private:
     void OnUnassignModerator(wxCommandEvent& event);
     void OnTransferOwnership(wxCommandEvent& event);
     void OnDeleteMessage(wxCommandEvent& event);
+    void OnTypingTimer(wxTimerEvent& event);
     wxDECLARE_EVENT_TABLE();
 };
 

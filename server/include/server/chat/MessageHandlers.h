@@ -87,6 +87,12 @@ public:
 
     /** @brief Handles a request to delete message from current room. */
     drogon::Task<chat::DeleteMessageResponse> handleDeleteMessage(const WsDataPtr&, const chat::DeleteMessageRequest&, IChatRoomService&);
+
+	/** @brief Handles a request to start typing in the current room. */
+	drogon::Task<> handleUserTypingStart(const WsDataPtr& wsDataGuarded, const chat::UserTypingStart& req, IChatRoomService& room_service) const;
+
+	/** @brief Handles a request to stop typing in the current room. */
+	drogon::Task<> handleUserTypingStop(const WsDataPtr& wsDataGuarded, const chat::UserTypingStop& req, IChatRoomService& room_service) const;
 private:
     /**
      * @brief Validates a string for valid UTF-8 encoding and maximum length.

@@ -812,6 +812,41 @@ drogon::Task<chat::DeleteMessageResponse> MessageHandlers::handleDeleteMessage(c
     co_return resp;
 }
 
+drogon::Task<> MessageHandlers::handleUserTypingStart(const WsDataPtr& wsDataGuarded, const chat::UserTypingStart&, IChatRoomService& room_service) const {
+    auto wsData = co_await wsDataGuarded->lock_shared();
+    if (wsData->status != USER_STATUS::Authenticated || !wsData->room) {
+        co_return;
+    }
+
+    chat::Envelope broadcastEnv;
+    auto* startedTypingMsg = broadcastEnv.mutable_user_started_typing();
+
+    auto* userInfo = startedTypingMsg->mutable_user();
+    userInfo->set_user_id(wsData->user->id);
+    userInfo->set_user_name(wsData->user->name);
+    userInfo->set_user_room_rights(wsData->room->rights);
+    
+	co_await room_service.sendToRoom(wsData->room->id, broadcastEnv);
+}
+
+drogon::Task<> MessageHandlers::handleUserTypingStop(const WsDataPtr& wsDataGuarded, const chat::UserTypingStop&, IChatRoomService& room_service) const {
+    auto wsData = co_await wsDataGuarded->lock_shared();
+
+    if (wsData->status != USER_STATUS::Authenticated || !wsData->room) {
+        co_return;
+    }
+
+    chat::Envelope broadcastEnv;
+    auto* stoppedTypingMsg = broadcastEnv.mutable_user_stopped_typing();
+
+    auto* userInfo = stoppedTypingMsg->mutable_user();
+    userInfo->set_user_id(wsData->user->id);
+    userInfo->set_user_name(wsData->user->name);
+    userInfo->set_user_room_rights(wsData->room->rights);
+
+    co_await room_service.sendToRoom(wsData->room->id, broadcastEnv);
+}
+
 std::optional<std::string> MessageHandlers::validateUtf8String(
     const std::string_view& textToValidate,
     size_t maxLength,
