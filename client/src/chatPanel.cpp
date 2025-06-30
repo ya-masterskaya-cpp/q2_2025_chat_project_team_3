@@ -197,6 +197,7 @@ void ChatPanel::ShowSettingsPanel() {
     m_chatSizer->Replace(m_roomHeaderPanel, m_roomSettingsPanel);
     m_roomSettingsPanel->Show();
     Layout();
+    m_messageView->RefreshAll();
 }
 
 void ChatPanel::ShowChatPanel() {
@@ -208,6 +209,7 @@ void ChatPanel::ShowChatPanel() {
     m_roomSettingsPanel->Destroy();
     m_roomSettingsPanel = nullptr;
     Layout();
+    m_messageView->RefreshAll();
 }
 
 void ChatPanel::SetRoomName(wxString name) {

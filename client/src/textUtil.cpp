@@ -892,18 +892,18 @@ namespace TextUtil {
         wxDouble currentLineWidth = 0.0; // Tracks accumulated width of characters on the current line.
 
         // Use wxMemoryDC for text measurement. It works independently of a visible window.
-        wxMemoryDC dc;
+        static wxMemoryDC dc;
 
         // A wxMemoryDC must have a valid bitmap selected for a wxGraphicsContext
         // to be created from it with some backends (e.g., Direct2D).
         // A minimal 1x1 bitmap is sufficient for measurement purposes.
-        wxBitmap tempBitmap(1, 1);
+        static wxBitmap tempBitmap(1, 1);
         dc.SelectObject(tempBitmap);
 
         dc.SetFont(font);
 
         // Use the GraphicsContextManager to get the best available context from the DC.
-        GraphicsContextManager ctx(dc);
+        static GraphicsContextManager ctx(dc);
         if (wxGraphicsContext* gc = ctx.GetContext()) {
             gc->SetFont(font, *wxBLACK); // Color is irrelevant for measurement.
         }

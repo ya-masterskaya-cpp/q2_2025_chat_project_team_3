@@ -73,9 +73,9 @@ public:
     void DeleteMessageById(int32_t messageId);
 
     void InvalidateCaches();
-
+    void UpdateWidgetPositions();
 protected:
-
+    virtual void DoSetSize(int x, int y, int width, int height, int sizeFlags = wxSIZE_AUTO) override;
 
     virtual wxCoord OnGetRowHeight(size_t row) const override;
 
@@ -90,7 +90,7 @@ private:
     void OnMouseWheel(wxMouseEvent& event);
     void OnScrolled();
     void UpdateLayoutAndScroll(const std::vector<Message>& messages, bool isHistoryResponse);
-    void UpdateWidgetPositions();
+    
     void AddMessageWidget(const Message& msg, bool prepend);
     int TrimWidgets(bool fromTop);
     void LoadOlderMessages();
