@@ -162,7 +162,7 @@ void MessageView::UpdateWidgetPositions() {
     wxCoord scrollY = GetVisibleRowsBegin();
     wxCoord clientHeight = GetClientSize().y;
     wxCoord containerWidth = GetClientSize().x;
-    const wxCoord padding = 0; 
+    const wxCoord padding = FromDIP(100); 
     wxCoord currentY = 0;
     for (auto* widget : m_messageWidgets) {
         wxCoord h = widget->GetBestSize().y;
@@ -172,10 +172,12 @@ void MessageView::UpdateWidgetPositions() {
             widget->SetSize(0, physicalY, containerWidth, h);
             if(wasHidden) {
                 widget->InvalidateCaches();
+                widget->Show();
             }
-            widget->Show();
         } else {
-            widget->Hide();
+            if(!wasHidden) {
+                widget->Hide();
+            }
         }
         currentY += h;
     }
