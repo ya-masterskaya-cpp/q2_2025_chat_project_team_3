@@ -812,10 +812,18 @@ drogon::Task<chat::DeleteMessageResponse> MessageHandlers::handleDeleteMessage(c
     co_return resp;
 }
 
-drogon::Task<> MessageHandlers::handleUserTypingStart(const WsDataPtr& wsDataGuarded, const chat::UserTypingStart&, IChatRoomService& room_service) const {
+drogon::Task<chat::UserTypingStartResponse> MessageHandlers::handleUserTypingStart(const WsDataPtr& wsDataGuarded, IChatRoomService& room_service) const {
+    chat::UserTypingStartResponse resp;
+
     auto wsData = co_await wsDataGuarded->lock_shared();
-    if (wsData->status != USER_STATUS::Authenticated || !wsData->room) {
-        co_return;
+
+    if (wsData->status != USER_STATUS::Authenticated) {
+        common::setStatus(resp, chat::STATUS_UNAUTHORIZED, "Not authenticated.");
+        co_return resp;
+    }
+    if (!wsData->room) {
+        common::setStatus(resp, chat::STATUS_FAILURE, "User is not in any room.");
+        co_return resp;
     }
 
     chat::Envelope broadcastEnv;
@@ -827,13 +835,23 @@ drogon::Task<> MessageHandlers::handleUserTypingStart(const WsDataPtr& wsDataGua
     userInfo->set_user_room_rights(wsData->room->rights);
     
 	co_await room_service.sendToRoom(wsData->room->id, broadcastEnv);
+
+    common::setStatus(resp, chat::STATUS_SUCCESS);
+    co_return resp;
 }
 
-drogon::Task<> MessageHandlers::handleUserTypingStop(const WsDataPtr& wsDataGuarded, const chat::UserTypingStop&, IChatRoomService& room_service) const {
+drogon::Task<chat::UserTypingStopResponse> MessageHandlers::handleUserTypingStop(const WsDataPtr& wsDataGuarded, IChatRoomService& room_service) const {
+    chat::UserTypingStopResponse resp;
+
     auto wsData = co_await wsDataGuarded->lock_shared();
 
-    if (wsData->status != USER_STATUS::Authenticated || !wsData->room) {
-        co_return;
+    if (wsData->status != USER_STATUS::Authenticated) {
+        common::setStatus(resp, chat::STATUS_UNAUTHORIZED, "Not authenticated.");
+        co_return resp;
+    }
+    if (!wsData->room) {
+        common::setStatus(resp, chat::STATUS_FAILURE, "User is not in any room.");
+        co_return resp;
     }
 
     chat::Envelope broadcastEnv;
@@ -845,6 +863,9 @@ drogon::Task<> MessageHandlers::handleUserTypingStop(const WsDataPtr& wsDataGuar
     userInfo->set_user_room_rights(wsData->room->rights);
 
     co_await room_service.sendToRoom(wsData->room->id, broadcastEnv);
+
+    common::setStatus(resp, chat::STATUS_SUCCESS);
+    co_return resp;
 }
 
 std::optional<std::string> MessageHandlers::validateUtf8String(

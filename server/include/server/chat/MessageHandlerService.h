@@ -50,7 +50,7 @@ public:
      * @return A drogon::Task that resolves to a response `Envelope`, ready to
      *         be sent back to the client.
      */
-    drogon::Task<std::optional<chat::Envelope>> processMessage(const WsDataPtr& wsData, const chat::Envelope& env, IChatRoomService& room_service) const;
+    drogon::Task<chat::Envelope> processMessage(const WsDataPtr& wsData, const chat::Envelope& env, IChatRoomService& room_service) const;
 
 private:
     /// @brief The owned instance containing the business logic implementations for each message type.

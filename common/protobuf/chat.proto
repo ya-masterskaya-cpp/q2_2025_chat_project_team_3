@@ -219,9 +219,16 @@ message MessageDeleted {
     int32 message_id = 1;
 }
 
-message UserTypingStart {
+message UserTypingStartRequest {
 }
-message UserTypingStop {
+message UserTypingStartResponse {
+    Status status = 1;
+}
+
+message UserTypingStopRequest {
+}
+message UserTypingStopResponse {
+    Status status = 1;
 }
 
 message UserStartedTyping {
@@ -277,9 +284,11 @@ message Envelope {
         DeleteMessageRequest delete_message_request = 42;
         DeleteMessageResponse delete_message_response = 43;
         MessageDeleted message_deleted = 44;
-        UserTypingStart user_typing_start = 45;
-        UserTypingStop user_typing_stop = 46;
-        UserStartedTyping user_started_typing = 47;
-        UserStoppedTyping user_stopped_typing = 48;
+        UserTypingStartRequest user_typing_start_request = 45;
+        UserTypingStartResponse user_typing_start_response = 46;
+        UserTypingStopRequest user_typing_stop_request = 47;
+        UserTypingStopResponse user_typing_stop_response = 48;
+        UserStartedTyping user_started_typing = 49;
+        UserStoppedTyping user_stopped_typing = 50;
     }
 }

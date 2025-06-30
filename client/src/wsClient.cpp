@@ -194,13 +194,13 @@ void WebSocketClient::deleteMessage(int32_t messageId) {
 
 void WebSocketClient::sendTypingStart() {
     chat::Envelope env;
-    env.mutable_user_typing_start();
+    env.mutable_user_typing_start_request();
     sendEnvelope(env);
 }
 
 void WebSocketClient::sendTypingStop() {
     chat::Envelope env;
-    env.mutable_user_typing_stop();
+    env.mutable_user_typing_stop_request();
     sendEnvelope(env);
 }
 
@@ -426,6 +426,18 @@ void WebSocketClient::handleMessage(const std::string& msg) {
         }
         case chat::Envelope::kMessageDeleted: {
             removeMessageFromView(env.message_deleted().message_id());
+            break;
+        }
+        case chat::Envelope::kUserTypingStartResponse: {
+            if (!statusOk(env.user_typing_start_response().status())) {
+                showError("Error when requesting \"User typing start\": " + wxString(env.user_typing_start_response().status().message()));
+            }
+            break;
+        }
+        case chat::Envelope::kUserTypingStopResponse: {
+            if (!statusOk(env.user_typing_stop_response().status())) {
+                showError("Error when requesting \"User typing stop\": " + wxString(env.user_typing_stop_response().status().message()));
+            }
             break;
         }
         case chat::Envelope::kUserStartedTyping: {
