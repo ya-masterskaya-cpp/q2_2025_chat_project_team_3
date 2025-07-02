@@ -298,8 +298,14 @@ drogon::Task<chat::JoinRoomResponse> MessageHandlers::handleJoinRoom(const WsDat
         common::setStatus(resp, chat::STATUS_UNAUTHORIZED, "User not authenticated.");
         co_return resp;
     }
+
     try {
         
+        if(wsData->room) {
+            co_await room_service.leaveCurrentRoom(*wsData);
+            wsData->room.reset();
+        }
+
         auto rooms = co_await switch_to_io_loop(CoroMapper<models::Rooms>(m_dbClient)
             .findBy(Criteria(models::Rooms::Cols::_room_id, CompareOperator::EQ, req.room_id())));
         if(rooms.empty()) {
