@@ -24,7 +24,6 @@ public:
     std::optional<Room> GetSelectedRoom();
 
     wxListBox* roomList;
-    wxButton* joinButton;
     wxButton* createButton;
     wxButton* logoutButton;
 private:

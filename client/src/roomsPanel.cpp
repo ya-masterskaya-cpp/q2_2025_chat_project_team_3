@@ -9,7 +9,7 @@ namespace client {
 enum { ID_JOIN = wxID_HIGHEST+20, ID_CREATE, ID_LOGOUT };
 
 wxBEGIN_EVENT_TABLE(RoomsPanel, wxPanel)
-    EVT_BUTTON(ID_JOIN, RoomsPanel::OnJoin)
+    //EVT_BUTTON(ID_JOIN, RoomsPanel::OnJoin)
     EVT_BUTTON(ID_CREATE, RoomsPanel::OnCreate)
     EVT_BUTTON(ID_LOGOUT, RoomsPanel::OnLogout)
     EVT_LISTBOX_DCLICK(wxID_ANY, RoomsPanel::OnJoin)
@@ -22,9 +22,7 @@ RoomsPanel::RoomsPanel(wxWindow* parent) : wxPanel(parent), mainWin(static_cast<
     sizer->Add(roomList, 1, wxALL | wxEXPAND, 5);
     // Join and Create sizer
     auto* btnSizer = new wxBoxSizer(wxHORIZONTAL);
-    joinButton = new wxButton(this, ID_JOIN, "Join");
     createButton = new wxButton(this, ID_CREATE, "Create");
-    btnSizer->Add(joinButton, 1, wxALL, 5);
     btnSizer->Add(createButton, 1, wxALL, 5);
     sizer->Add(btnSizer, 0, wxALIGN_CENTER);
     // Logout button

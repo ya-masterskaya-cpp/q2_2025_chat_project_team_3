@@ -64,11 +64,11 @@ void MessageView::DoSetSize(int x, int y, int width, int height, int sizeFlags) 
     // ALWAYS apply the height adjustment. This is the final, authoritative scroll.
     int heightDifference = oldSize.y - newSize.y;
     ScrollToRow(oldScrollY + heightDifference);
+    UpdateWidgetPositions();
 }
 
 void MessageView::OnSize(wxSizeEvent& event) {
     event.Skip();
-    // DoSetSize has handled all logic. This just ensures a final position update.
     UpdateWidgetPositions();
 }
 
