@@ -5,10 +5,11 @@
 namespace client {
 
 struct User;
+class ChatPanel;
 
 class UserListPanel : public wxPanel {
 public:
-    UserListPanel(wxWindow* parent);
+    UserListPanel(wxWindow* parent, ChatPanel* chatPanel);
 
     void SetUserList(std::vector<User> users);
     void AddUser(const User& user);
@@ -22,6 +23,7 @@ private:
     wxScrolledWindow* m_userContainer;
     wxBoxSizer* m_userSizer;
     std::vector<User> m_users;
+    ChatPanel* m_chatPanel;
 };
 
 } // namespace client

@@ -47,9 +47,9 @@ private:
     // UI helpers
     void showError(const wxString& msg);
     void showInfo(const wxString& msg);
-    void updateRoomsPanel(const std::vector<Room*>& rooms);
-    void showChat(std::vector<User> users);
-    void showRooms();
+    //void updateRoomsPanel(const std::vector<Room*>& rooms);
+    //void showChat(std::vector<User> users);
+    //void showRooms();
     void showRoomMessage(const chat::MessageInfo& mi);
     void showMessageHistory(const std::vector<Message>& messages);
     void addUser(User user);
@@ -60,6 +60,10 @@ private:
     void SetServers(const std::vector<std::string> &servers);
     void updateUserRole(int32_t userId, chat::UserRights newRole);
     void removeMessageFromView(int32_t messageId);
+    void showMainChatView(const std::vector<Room*>& rooms, const User& user);
+    void onJoinRoomSuccess(std::vector<User> users);
+    void onJoinRoomFailure();
+    void onLeaveRoomResponse(bool success);
     
     MainWidget* ui;
     std::shared_ptr<drogon::WebSocketConnection> conn;

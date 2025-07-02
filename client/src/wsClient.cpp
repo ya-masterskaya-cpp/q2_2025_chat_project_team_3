@@ -7,6 +7,7 @@
 #include <client/serversPanel.h>
 #include <client/message.h>
 #include <client/messageView.h>
+#include <client/roomHeaderPanel.h>
 #include <client/user.h>
 #include <common/utils/utils.h>
 #include <common/version.h>
@@ -235,14 +236,21 @@ void WebSocketClient::handleMessage(const std::string& msg) {
             break;
         }
         case chat::Envelope::kJoinRoomResponse: {
-            if(statusOk(env.join_room_response().status())) {
+            const auto& response = env.join_room_response();
+            if (statusOk(response.status())) {
                 std::vector<User> users;
-                for(const auto& user : env.join_room_response().users()) {
-                    users.emplace_back(user.user_id(), wxString::FromUTF8(user.user_name()), user.user_room_rights());
+                for (const auto& user_info : response.users()) {
+                    users.emplace_back(user_info.user_id(), wxString::FromUTF8(user_info.user_name()), user_info.user_room_rights());
                 }
-                showChat(std::move(users));
-            } else {
-                showError("Failed to join room.");
+                onJoinRoomSuccess(std::move(users));
+            }
+            else {
+                wxString errorMsg = "Failed to join room.";
+                if (response.status().has_message()) {
+                    errorMsg += " Reason: " + wxString::FromUTF8(response.status().message());
+                }
+                showError(errorMsg);
+                onJoinRoomFailure();
             }
             break;
         }
@@ -255,11 +263,7 @@ void WebSocketClient::handleMessage(const std::string& msg) {
             break;
         }
         case chat::Envelope::kLeaveRoomResponse: {
-            if(statusOk(env.leave_room_response().status())) {
-                showRooms();
-            } else {
-                showError("Failed to leave room.");
-            }
+            onLeaveRoomResponse(statusOk(env.leave_room_response().status()));
             break;
         }
         case chat::Envelope::kCreateRoomResponse: {
@@ -302,22 +306,20 @@ void WebSocketClient::handleMessage(const std::string& msg) {
             break;
         }
         case chat::Envelope::kAuthResponse: {
-            if(statusOk(env.auth_response().status())) {
+            if (statusOk(env.auth_response().status())) {
                 showInfo("Login successful!");
                 std::vector<Room*> rooms;
-                for (const auto& proto_room : env.auth_response().rooms()){
-                    rooms.emplace_back(new Room{proto_room.room_id(), wxString::FromUTF8(proto_room.room_name())});
+                for (const auto& proto_room : env.auth_response().rooms()) {
+                    rooms.emplace_back(new Room{ proto_room.room_id(), wxString::FromUTF8(proto_room.room_name()) });
                 }
                 client::User user;
-                user.id = env.auth_response().authenticated_user().user_id();
-                user.username = wxString::FromUTF8(env.auth_response().authenticated_user().user_name());
-                user.role = chat::UserRights::REGULAR;
-                wxTheApp->CallAfter([this, user]() {
-                    ui->chatPanel->SetCurrentUser(user);
-                });
-                updateRoomsPanel(rooms);
-                showRooms();
-            } else {
+                if (env.auth_response().has_authenticated_user()) {
+                    user.id = env.auth_response().authenticated_user().user_id();
+                    user.username = wxString::FromUTF8(env.auth_response().authenticated_user().user_name());
+                }
+                showMainChatView(rooms, user);
+            }
+            else {
                 showError("Login failed! " + wxString(env.auth_response().status().message()));
             }
             break;
@@ -369,8 +371,8 @@ void WebSocketClient::handleMessage(const std::string& msg) {
         case chat::Envelope::kNewRoomCreated: {
             wxTheApp->CallAfter([this, env = std::move(env)] {
                 auto& response = env.new_room_created().room();
-                ui->roomsPanel->AddRoom(new Room{response.room_id(), wxString::FromUTF8(response.room_name())});
-            });
+                ui->chatPanel->AddRoomToList(new Room{ response.room_id(), wxString::FromUTF8(response.room_name()) });
+                });
             break;
         }
         case chat::Envelope::kRenameRoomResponse: {
@@ -382,16 +384,17 @@ void WebSocketClient::handleMessage(const std::string& msg) {
         case chat::Envelope::kNewRoomName: {
             wxTheApp->CallAfter([this, env = std::move(env)] {
                 const auto& response = env.new_room_name();
-                if (ui->chatPanel->IsShown() && ui->chatPanel->GetRoomId() == response.room_id()) {
-                    ui->chatPanel->SetRoomName(wxString::FromUTF8(response.name()));
+                ui->chatPanel->RenameRoomInList(response.room_id(), wxString::FromUTF8(response.name()));
+
+                if (ui->chatPanel->IsShown() && ui->chatPanel->m_roomHeaderPanel->IsShown() && ui->chatPanel->m_roomHeaderPanel->GetRoomId() == response.room_id()) {
+                    ui->chatPanel->m_roomHeaderPanel->SetRoom({ response.room_id(), wxString::FromUTF8(response.name()) });
                 }
-                ui->roomsPanel->RenameRoom(response.room_id(), wxString::FromUTF8(response.name()));
-            });
+                });
             break;
         }
         case chat::Envelope::kDeleteRoomResponse: {
             if (statusOk(env.delete_room_response().status())) {
-                wxTheApp->CallAfter([this] { ui->ShowRooms(); });
+                wxTheApp->CallAfter([this] { ui->chatPanel->ShowPlaceholder(); });
             } else {
                 showError("Failed to delete room: " + wxString(env.delete_room_response().status().message()));
             }
@@ -400,11 +403,11 @@ void WebSocketClient::handleMessage(const std::string& msg) {
         case chat::Envelope::kRoomDeleted: {
             wxTheApp->CallAfter([this, env = std::move(env)] {
                 auto roomId = env.room_deleted().room_id();
-                if (ui->chatPanel->IsShown() && ui->chatPanel->GetRoomId() == roomId) {
-                ui->ShowRooms();
-            }
-            ui->roomsPanel->RemoveRoom(roomId);
-            });
+                if (ui->chatPanel->IsShown() && ui->chatPanel->m_roomHeaderPanel->IsShown() && ui->chatPanel->m_roomHeaderPanel->GetRoomId() == roomId) {
+                    ui->chatPanel->ShowPlaceholder();
+                }
+                ui->chatPanel->RemoveRoomFromList(roomId);
+                });
             break;
         }
         case chat::Envelope::kAssignRoleResponse: {
@@ -475,19 +478,6 @@ void WebSocketClient::showInfo(const wxString& msg) {
     wxTheApp->CallAfter([this, msg] { ui->ShowPopup(msg, wxICON_INFORMATION); });
 }
 
-void WebSocketClient::updateRoomsPanel(const std::vector<Room*> &rooms)
-{
-    wxTheApp->CallAfter([this, rooms] { ui->roomsPanel->UpdateRoomList(rooms); });
-}
-
-void WebSocketClient::showChat(std::vector<User> users) {
-    wxTheApp->CallAfter([this, users = std::move(users)]() mutable { ui->ShowChat(std::move(users)); });
-}
-
-void WebSocketClient::showRooms() {
-    wxTheApp->CallAfter([this] { ui->ShowRooms(); });
-}
-
 void WebSocketClient::showInitial() {
     wxTheApp->CallAfter([this] { ui->ShowInitial(); });
 }
@@ -549,6 +539,30 @@ void WebSocketClient::removeMessageFromView(int32_t messageId) {
         if (ui->chatPanel->IsShown()) {
             ui->chatPanel->m_messageView->DeleteMessageById(messageId);
         }
+    });
+}
+
+void WebSocketClient::showMainChatView(const std::vector<Room*>& rooms, const User& user) {
+    wxTheApp->CallAfter([this, rooms, user] {
+        ui->ShowMainChatView(rooms, user);
+    });
+}
+
+void WebSocketClient::onJoinRoomSuccess(std::vector<User> users) {
+    wxTheApp->CallAfter([this, users = std::move(users)]() mutable {
+        ui->chatPanel->OnJoinRoomSuccess(std::move(users));
+    });
+}
+
+void WebSocketClient::onJoinRoomFailure() {
+    wxTheApp->CallAfter([this] {
+        ui->chatPanel->OnJoinRoomFailure();
+    });
+}
+
+void WebSocketClient::onLeaveRoomResponse(bool success) {
+    wxTheApp->CallAfter([this, success] {
+        ui->chatPanel->OnLeaveRoomResponse(success);
     });
 }
 

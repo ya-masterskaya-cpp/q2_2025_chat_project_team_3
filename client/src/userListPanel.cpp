@@ -5,8 +5,9 @@
 
 namespace client {
 
-UserListPanel::UserListPanel(wxWindow* parent)
-    : wxPanel(parent, wxID_ANY) {
+    UserListPanel::UserListPanel(wxWindow* parent, ChatPanel* chatPanel)
+    : wxPanel(parent, wxID_ANY),
+      m_chatPanel(chatPanel) {
     SetBackgroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW));
     
     auto* sizer = new wxBoxSizer(wxVERTICAL);
@@ -47,11 +48,11 @@ void UserListPanel::SetUserList(std::vector<User> users) {
 
     m_users = std::move(users);
 
-    auto currUser = static_cast<ChatPanel*>(GetParent())->GetCurrentUser();
+    auto currUser = m_chatPanel->GetCurrentUser();
 
     for (const auto& user : m_users) {
         if (currUser.id == user.id) {
-            static_cast<ChatPanel*>(GetParent())->SetCurrentUser(user);
+            m_chatPanel->SetCurrentUser(user);
         }
 
         auto* userWidget = new UserNameWidget(m_userContainer, user);
@@ -66,8 +67,13 @@ void UserListPanel::SetUserList(std::vector<User> users) {
 }
 
 void UserListPanel::AddUser(const User& user) {
-    m_users.push_back(user);
-    SetUserList(std::move(m_users));
+    auto it = std::find_if(m_users.begin(), m_users.end(), [user](const User& u) {
+        return u.id == user.id; });
+
+    if (it == m_users.end()) {
+        m_users.push_back(user);
+        SetUserList(std::move(m_users));
+    }
 }
 
 void UserListPanel::RemoveUser(int userId) {
@@ -98,7 +104,7 @@ void UserListPanel::OnUserRightClick(wxMouseEvent& event) {
         return;
     }
 
-    auto currentUser = static_cast<ChatPanel*>(GetParent())->GetCurrentUser();
+    auto currentUser = m_chatPanel->GetCurrentUser();
 
     if(currentUser.id == targetUser.id) {
         return;

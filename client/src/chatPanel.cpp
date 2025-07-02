@@ -11,6 +11,7 @@
 #include <client/roomSettingsPanel.h>
 #include <client/user.h>
 #include <client/typingIndicatorPanel.h>
+#include <client/roomsPanel.h>
 
 namespace client {
 
@@ -30,90 +31,107 @@ wxDEFINE_EVENT(wxEVT_TRANSFER_OWNERSHIP, wxCommandEvent);
 wxDEFINE_EVENT(wxEVT_DELETE_MESSAGE, wxCommandEvent);
 
 wxBEGIN_EVENT_TABLE(ChatPanel, wxPanel)
-    EVT_BUTTON(ID_SEND, ChatPanel::OnSend)
-    EVT_BUTTON(ID_LEAVE, ChatPanel::OnLeave)
-    EVT_BUTTON(ID_JUMP_TO_PRESENT, ChatPanel::JumpToPresent)
+    EVT_BUTTON(ID_SEND, ChatPanel::OnSendClicked)
+    EVT_BUTTON(ID_LEAVE, ChatPanel::OnLeaveClicked)
+    EVT_BUTTON(ID_JUMP_TO_PRESENT, ChatPanel::OnJumpToPresentClicked)
     //EVT_TIMER(ID_RESIZE_TIMER, ChatPanel::OnResizeTimerTick)
     //EVT_SIZE(ChatPanel::OnChatPanelSize)
     //EVT_LEFT_DOWN(ChatPanel::OnRoomHeaderClicked)
+    EVT_COMMAND(wxID_ANY, wxEVT_ROOM_JOIN_REQUESTED, ChatPanel::OnRoomJoinRequested)
+    EVT_COMMAND(wxID_ANY, wxEVT_ROOM_CREATE_REQUESTED, ChatPanel::OnRoomCreateRequested)
+    EVT_COMMAND(wxID_ANY, wxEVT_LOGOUT_REQUESTED, ChatPanel::OnLogoutRequested)
 wxEND_EVENT_TABLE()
 
 ChatPanel::ChatPanel(MainWidget* parent)
     : wxPanel(parent, wxID_ANY),
       m_parent(parent),//m_resizeTimer(this, ID_RESIZE_TIMER) // Initialize the timer with 'this' as the owner
-      m_typingTimer(this, ID_TYPING_TIMER)
+      m_typingTimer(this, ID_TYPING_TIMER),
+      m_pendingJoinRoomId(std::nullopt),
+      m_pendingLeaveRoomId(std::nullopt)
 {
     m_currentUser = std::make_unique<User>();
 
-    // Main sizer for the ChatPanel itself (horizontal layout: chat area | user list)
+    // 1. Главный горизонтальный сайзер для всей панели
     m_mainSizer = new wxBoxSizer(wxHORIZONTAL);
     SetSizer(m_mainSizer);
 
-    // --- Left side: Chat area (header + messages + input) ---
-    m_chatSizer = new wxBoxSizer(wxVERTICAL);
-    // Add the chat area to the main sizer, expanding horizontally and taking all available vertical space.
-    m_mainSizer->Add(m_chatSizer, 1, wxEXPAND | wxALL, FromDIP(5));
+    // 2. Левая колонка: RoomsPanel
+    m_roomsPanel = new RoomsPanel(this);
+    m_mainSizer->Add(m_roomsPanel, 0, wxEXPAND | wxALL, FromDIP(5));
 
-    // Add Room Header Panel
-    m_roomHeaderPanel = new RoomHeaderPanel(this);
+    // 3. Правая колонка: Панель-заглушка "Выберите комнату"
+    m_placeholderPanel = new wxPanel(this, wxID_ANY);
+    auto* placeholderSizer = new wxBoxSizer(wxVERTICAL);
+    placeholderSizer->Add(new wxStaticText(m_placeholderPanel, wxID_ANY, "Select a room to start."), 0, wxALIGN_CENTER | wxALL, 20);
+    m_placeholderPanel->SetSizer(placeholderSizer);
+    m_mainSizer->Add(m_placeholderPanel, 1, wxEXPAND | wxALL, FromDIP(5));
 
-    m_chatSizer->Add(m_roomHeaderPanel, 0, wxEXPAND | wxALL, FromDIP(5));
+    // 4. Правая колонка: Панель для области чата (изначально скрыта)
+    m_chatAreaPanel = new wxPanel(this, wxID_ANY);
 
-    m_messageView = new MessageView(this);
-    // Add the new message view directly to the chat sizer. It will fill the available space.
-    m_chatSizer->Add(m_messageView, 1, wxEXPAND | wxALL, FromDIP(5));
+    // --- Заполняем m_chatAreaPanel виджетами ---
+    auto* chatAreaMainSizer = new wxBoxSizer(wxHORIZONTAL);
+    m_chatAreaPanel->SetSizer(chatAreaMainSizer);
 
-    // --- Typing Indicator ---
-    m_typingIndicator = new TypingIndicatorPanel(this);
-    m_chatSizer->Add(m_typingIndicator, 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(5));
+    // Левая часть области чата (сообщения и ввод)
+    auto* chatContentSizer = new wxBoxSizer(wxVERTICAL);
+    chatAreaMainSizer->Add(chatContentSizer, 1, wxEXPAND | wxALL, FromDIP(5));
 
-    // --- Input area (text control + send/leave buttons) ---
+    m_roomHeaderPanel = new RoomHeaderPanel(m_chatAreaPanel);
+    chatContentSizer->Add(m_roomHeaderPanel, 0, wxEXPAND | wxALL, FromDIP(5));
+
+    m_messageView = new MessageView(m_chatAreaPanel, this);
+    chatContentSizer->Add(m_messageView, 1, wxEXPAND | wxALL, FromDIP(5));
+
+    m_typingIndicator = new TypingIndicatorPanel(m_chatAreaPanel);
+    chatContentSizer->Add(m_typingIndicator, 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(5));
+
     auto* inputSizer = new wxBoxSizer(wxHORIZONTAL);
-    m_input_ctrl = new wxTextCtrl(this, wxID_ANY, wxEmptyString,
-                                           wxDefaultPosition, wxDefaultSize,
-                                           wxTE_PROCESS_ENTER | wxTE_MULTILINE);
+    m_input_ctrl = new wxTextCtrl(m_chatAreaPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER | wxTE_MULTILINE);
     m_input_ctrl->Bind(wxEVT_TEXT, &ChatPanel::OnInputText, this);
     m_input_ctrl->Bind(wxEVT_KEY_DOWN, &ChatPanel::OnInputKeyDown, this);
     inputSizer->Add(m_input_ctrl, 1, wxEXPAND | wxRIGHT, FromDIP(5));
+    inputSizer->Add(new wxButton(m_chatAreaPanel, ID_SEND, "Send"), 0, wxALIGN_CENTER_VERTICAL);
+    inputSizer->Add(new wxButton(m_chatAreaPanel, ID_LEAVE, "Leave"), 0, wxALIGN_CENTER_VERTICAL);
+    chatContentSizer->Add(inputSizer, 0, wxEXPAND | wxBOTTOM | wxLEFT | wxRIGHT, FromDIP(5));
 
-    wxButton* sendButton = new wxButton(this, ID_SEND, "Send");
-    inputSizer->Add(sendButton, 0, wxALIGN_CENTER_VERTICAL);
-
-    wxButton* leaveButton = new wxButton(this, ID_LEAVE, "Leave");
-    inputSizer->Add(leaveButton, 0, wxALIGN_CENTER_VERTICAL);
-
-    m_chatSizer->Add(inputSizer, 0, wxEXPAND | wxBOTTOM | wxLEFT | wxRIGHT, FromDIP(5));
-
-    // --- Right side: User list and jump button ---
-    auto* rightSizer = new wxBoxSizer(wxVERTICAL);
-    
-    m_userListPanel = new UserListPanel(this);
-    rightSizer->Add(m_userListPanel, 1, wxEXPAND, 0);
-
-    m_jumpToPresentButton = new wxButton(this, ID_JUMP_TO_PRESENT, "Jump to present");
-    rightSizer->Add(m_jumpToPresentButton, 0, wxEXPAND | wxTOP | wxRESERVE_SPACE_EVEN_IF_HIDDEN, FromDIP(5));
-
-    m_mainSizer->Add(rightSizer, 0, wxEXPAND | wxTOP | wxBOTTOM | wxRIGHT, FromDIP(5));
-
-    // Final layout of the main sizer for the ChatPanel
-    m_mainSizer->Layout();
+    // Правая часть области чата (список пользователей)
+    auto* userListSizer = new wxBoxSizer(wxVERTICAL);
+    m_userListPanel = new UserListPanel(m_chatAreaPanel, this);
+    userListSizer->Add(m_userListPanel, 1, wxEXPAND, 0);
+    m_jumpToPresentButton = new wxButton(m_chatAreaPanel, ID_JUMP_TO_PRESENT, "Jump to present");
+    userListSizer->Add(m_jumpToPresentButton, 0, wxEXPAND | wxTOP | wxRESERVE_SPACE_EVEN_IF_HIDDEN, FromDIP(5));
+    chatAreaMainSizer->Add(userListSizer, 0, wxEXPAND | wxTOP | wxBOTTOM | wxRIGHT, FromDIP(5));
     m_jumpToPresentButton->Hide();
 
-    Bind(wxEVT_SNAP_STATE_CHANGED, &ChatPanel::OnSnapStateChanged, this);
-    
-    m_roomHeaderPanel->Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent& event) {
-        ShowSettingsPanel();
-        event.Skip();
-    });
+    // FromDIP(5). Добавляем панель чата в главный сайзер и скрываем ее
+    m_mainSizer->Add(m_chatAreaPanel, 1, wxEXPAND | wxALL, FromDIP(5));
+    m_mainSizer->Show(m_chatAreaPanel, false);
 
+    // Событие от MessageView
+    Bind(wxEVT_SNAP_STATE_CHANGED, &ChatPanel::OnSnapStateChanged, this);
+
+    // События от RoomSettingsPanel
     Bind(wxEVT_ROOM_RENAME, &ChatPanel::OnRoomRename, this);
     Bind(wxEVT_ROOM_DELETE, &ChatPanel::OnRoomDelete, this);
-    Bind(wxEVT_ROOM_CLOSE, &ChatPanel::OnRoomClose, this);
+    Bind(wxEVT_ROOM_CLOSE, &ChatPanel::OnRoomCloseSettings, this);
+
+    // События от UserListPanel
     Bind(wxEVT_ASSIGN_MODERATOR, &ChatPanel::OnAssignModerator, this);
     Bind(wxEVT_UNASSIGN_MODERATOR, &ChatPanel::OnUnassignModerator, this);
     Bind(wxEVT_TRANSFER_OWNERSHIP, &ChatPanel::OnTransferOwnership, this);
+
+    // Событие от MessageWidget (через MessageView)
     Bind(wxEVT_DELETE_MESSAGE, &ChatPanel::OnDeleteMessage, this);
+
+    // Таймер
     Bind(wxEVT_TIMER, &ChatPanel::OnTypingTimer, this, ID_TYPING_TIMER);
+
+    // Клик по заголовку
+    m_roomHeaderPanel->Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent& event) {
+        ShowSettingsPanel();
+        event.Skip();
+        });
 }
 
 void ChatPanel::InvalidateCaches() {
@@ -157,7 +175,7 @@ void ChatPanel::OnResizeTimerTick([[maybe_unused]] wxTimerEvent& event) {
     }
 }
 
-void ChatPanel::OnSend(wxCommandEvent&) {
+void ChatPanel::OnSendClicked(wxCommandEvent&) {
     if (!m_input_ctrl->IsEmpty()) {
         if (m_isTyping) {
             m_typingTimer.Stop();
@@ -169,15 +187,19 @@ void ChatPanel::OnSend(wxCommandEvent&) {
     }
 }
 
-void ChatPanel::OnLeave(wxCommandEvent&) {
+void ChatPanel::OnLeaveClicked(wxCommandEvent&) {
     if (m_roomSettingsPanel) {
         ShowChatPanel();
     }
-    m_messageView->Clear();
+    m_pendingLeaveRoomId = GetCurrentRoomId();
+    m_pendingJoinRoomId = std::nullopt;
+
+    m_roomsPanel->Enable(false);
     m_parent->wsClient->leaveRoom();
+    ShowPlaceholder();
 }
 
-void ChatPanel::JumpToPresent(wxCommandEvent&) {
+void ChatPanel::OnJumpToPresentClicked(wxCommandEvent&) {
     m_messageView->JumpToPresent();
 }
 
@@ -209,44 +231,46 @@ void ChatPanel::OnInputText(wxCommandEvent& event) {
 
 void ChatPanel::ShowSettingsPanel() {
     if (m_roomSettingsPanel) return;
-    m_roomSettingsPanel = new RoomSettingsPanel(this,
-                                              m_roomHeaderPanel->GetLabel(),
-                                              m_roomHeaderPanel->GetRoomId());
-    
-    m_roomHeaderPanel->Hide();
-    m_chatSizer->Replace(m_roomHeaderPanel, m_roomSettingsPanel);
-    m_roomSettingsPanel->Show();
-    Layout();
+
+    m_roomSettingsPanel = new RoomSettingsPanel(m_chatAreaPanel,
+        m_roomHeaderPanel->GetLabel(),
+        m_roomHeaderPanel->GetRoomId());
+
+    auto* chatContentSizer = dynamic_cast<wxBoxSizer*>(m_messageView->GetContainingSizer());
+    if (chatContentSizer) {
+        chatContentSizer->Replace(m_roomHeaderPanel, m_roomSettingsPanel);
+        m_roomHeaderPanel->Hide();
+        m_roomSettingsPanel->Show();
+        m_chatAreaPanel->Layout();
+    }
 }
 
 void ChatPanel::ShowChatPanel() {
     if (!m_roomSettingsPanel) return;
 
-    m_roomHeaderPanel->Show();
-    m_roomSettingsPanel->Hide();
-    m_chatSizer->Replace(m_roomSettingsPanel, m_roomHeaderPanel);
-    m_roomSettingsPanel->Destroy();
-    m_roomSettingsPanel = nullptr;
-    Layout();
+    auto* chatContentSizer = dynamic_cast<wxBoxSizer*>(m_messageView->GetContainingSizer());
+    if (chatContentSizer) {
+        chatContentSizer->Replace(m_roomSettingsPanel, m_roomHeaderPanel);
+        m_roomHeaderPanel->Show();
+        m_roomSettingsPanel->Destroy();
+        m_roomSettingsPanel = nullptr;
+        m_chatAreaPanel->Layout();
+    }
 }
 
-void ChatPanel::SetRoomName(wxString name) {
-    m_roomHeaderPanel->SetLabel(name);
-}
-
-int32_t ChatPanel::GetRoomId() {
-    return m_roomHeaderPanel->GetRoomId();
+int32_t ChatPanel::GetCurrentRoomId() {
+    if (m_roomHeaderPanel && m_roomHeaderPanel->IsShown()) {
+        return m_roomHeaderPanel->GetRoomId();
+    }
+    return -1;
 }
 
 void ChatPanel::ResetState() {
-    ShowChatPanel();
-    m_input_ctrl->Clear();
-    m_messageView->Clear();
-    m_userListPanel->Clear();
-    m_jumpToPresentButton->Hide();
+    ShowPlaceholder();
+    m_roomsPanel->UpdateRoomList({});
+    m_currentUser = std::make_unique<User>();
     m_typingTimer.Stop();
     m_isTyping = false;
-    m_typingIndicator->Clear();
     Layout();
 }
 
@@ -281,6 +305,53 @@ void ChatPanel::UserLeft(const User& user) {
     UserStoppedTyping(user);
 }
 
+void ChatPanel::PopulateInitialRoomList(const std::vector<Room*>& rooms) {
+    m_roomsPanel->UpdateRoomList(rooms);
+}
+
+void ChatPanel::DisplayChatForRoom(const Room& room, std::vector<User> users) {
+    if (!m_chatAreaPanel->IsShown()) {
+        m_mainSizer->Show(m_placeholderPanel, false);
+        m_placeholderPanel->Hide();
+
+        m_mainSizer->Show(m_chatAreaPanel, true);
+        m_chatAreaPanel->Show();
+    }
+    m_roomHeaderPanel->SetRoom(room);
+    m_userListPanel->SetUserList(std::move(users));
+    m_messageView->Start();
+    Layout();
+}
+
+void ChatPanel::ShowPlaceholder() {
+    if (m_placeholderPanel->IsShown()) {
+        return;
+    }
+    m_mainSizer->Show(m_chatAreaPanel, false);
+    m_chatAreaPanel->Hide();
+    m_mainSizer->Show(m_placeholderPanel, true);
+    m_placeholderPanel->Show();
+
+    m_messageView->Clear();
+    m_userListPanel->Clear();
+    m_typingIndicator->Clear();
+    m_input_ctrl->Clear();
+    m_roomHeaderPanel->Clear();
+    Layout();
+}
+
+void ChatPanel::AddRoomToList(Room* room) {
+    m_roomsPanel->AddRoom(room);
+}
+
+void ChatPanel::RemoveRoomFromList(int32_t room_id) {
+    m_roomsPanel->RemoveRoom(room_id);
+}
+
+void ChatPanel::RenameRoomInList(int32_t room_id, const wxString& name) {
+    m_roomsPanel->RenameRoom(room_id, name);
+}
+
 void ChatPanel::OnRoomRename(wxCommandEvent &event) {
     if (!m_parent || !m_parent->wsClient) return;
     wxString newName = event.GetString();
@@ -294,14 +365,14 @@ void ChatPanel::OnRoomDelete(wxCommandEvent& event) {
     m_parent->wsClient->deleteRoom(roomId);
 }
 
-void ChatPanel::OnRoomClose([[maybe_unused]] wxCommandEvent& event) {
+void ChatPanel::OnRoomCloseSettings([[maybe_unused]] wxCommandEvent& event) {
     ShowChatPanel();
 }
 
 void ChatPanel::OnAssignModerator(wxCommandEvent& event) {
     if (!m_parent || !m_parent->wsClient) return;
 
-    int32_t roomId = GetRoomId();
+    int32_t roomId = GetCurrentRoomId();
     int32_t userId = event.GetInt();
     m_parent->wsClient->assignRole(roomId, userId, chat::UserRights::MODERATOR);
 }
@@ -309,7 +380,7 @@ void ChatPanel::OnAssignModerator(wxCommandEvent& event) {
 void ChatPanel::OnUnassignModerator(wxCommandEvent& event) {
     if (!m_parent || !m_parent->wsClient) return;
 
-    int32_t roomId = GetRoomId();
+    int32_t roomId = GetCurrentRoomId();
     int32_t userId = event.GetInt();
     m_parent->wsClient->assignRole(roomId, userId, chat::UserRights::REGULAR);
 }
@@ -317,7 +388,7 @@ void ChatPanel::OnUnassignModerator(wxCommandEvent& event) {
 void ChatPanel::OnTransferOwnership(wxCommandEvent& event) {
     if (!m_parent || !m_parent->wsClient) return;
 
-    int32_t roomId = GetRoomId();
+    int32_t roomId = GetCurrentRoomId();
     int32_t userId = event.GetInt();
     m_parent->wsClient->assignRole(roomId, userId, chat::UserRights::OWNER);
 }
@@ -339,7 +410,7 @@ void ChatPanel::OnInputKeyDown(wxKeyEvent& event) {
         if (!event.ShiftDown() && !event.ControlDown() && !event.AltDown()) {
             // --- Case 1: Plain Enter was pressed ---
             wxCommandEvent sendEvent(wxEVT_BUTTON, ID_SEND);
-            OnSend(sendEvent);
+            OnSendClicked(sendEvent);
         } else {
             // --- Case 2: Enter was pressed with a modifier (e.g., Shift+Enter) ---
             // Allow the event to be processed by the default handler.
@@ -355,6 +426,81 @@ void ChatPanel::OnInputKeyDown(wxKeyEvent& event) {
 void ChatPanel::OnTypingTimer([[maybe_unused]] wxTimerEvent& event) {
     m_isTyping = false;
     m_parent->wsClient->sendTypingStop();
+}
+
+void ChatPanel::OnRoomJoinRequested(wxCommandEvent& event) {
+    if (m_pendingLeaveRoomId.has_value() || m_pendingJoinRoomId.has_value()) {
+        return;
+    }
+    int32_t targetRoomId = event.GetInt();
+    int32_t currentRoomId = GetCurrentRoomId();
+    if (m_chatAreaPanel->IsShown() && currentRoomId == targetRoomId) {
+        return;
+    }
+    m_pendingJoinRoomId = targetRoomId;
+
+    ShowPlaceholder();
+    m_roomsPanel->Enable(false);
+
+    if (m_chatAreaPanel->IsShown()) {
+        m_pendingLeaveRoomId = currentRoomId;
+        m_parent->wsClient->leaveRoom();
+    }
+    else {
+        m_parent->wsClient->joinRoom(*m_pendingJoinRoomId);
+    }
+}
+
+void ChatPanel::OnJoinRoomSuccess(std::vector<User> users) {
+    m_roomsPanel->Enable(true);
+
+    if (!m_pendingJoinRoomId.has_value()) {
+        return;
+    }
+
+    int32_t joinedRoomId = *m_pendingJoinRoomId;
+    m_pendingJoinRoomId = std::nullopt;
+
+    auto roomOpt = FindRoomById(joinedRoomId);
+    if (roomOpt) {
+        DisplayChatForRoom(roomOpt.value(), std::move(users));
+    }
+    else {
+        m_parent->ShowPopup(wxString::Format("Internal error: Could not find room data for ID %d", joinedRoomId), wxICON_ERROR);
+    }
+}
+
+void ChatPanel::OnJoinRoomFailure() {
+    m_roomsPanel->Enable(true);
+    m_pendingJoinRoomId = std::nullopt;
+}
+
+void ChatPanel::OnLeaveRoomResponse(bool success) {
+    if (!m_pendingLeaveRoomId.has_value()) {
+        return;
+    }
+    m_pendingLeaveRoomId = std::nullopt;
+
+    if (success && m_pendingJoinRoomId.has_value()) {
+        m_parent->wsClient->joinRoom(*m_pendingJoinRoomId);
+    }
+    else {
+        m_parent->ShowPopup("Failed to leave previous room.", wxICON_ERROR);
+        m_roomsPanel->Enable(true);
+        m_pendingJoinRoomId = std::nullopt;
+    }
+}
+
+std::optional<Room> ChatPanel::FindRoomById(int32_t room_id) {
+    return m_roomsPanel->FindRoomInListById(room_id);
+}
+
+void ChatPanel::OnRoomCreateRequested(wxCommandEvent& event) {
+    m_parent->wsClient->createRoom(event.GetString().utf8_string());
+}
+
+void ChatPanel::OnLogoutRequested(wxCommandEvent& event) {
+    m_parent->wsClient->logout();
 }
 
 } // namespace client

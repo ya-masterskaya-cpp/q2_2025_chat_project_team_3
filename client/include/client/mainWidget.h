@@ -7,10 +7,10 @@ namespace client {
 class InitialPanel;
 class ServersPanel;
 class AuthPanel;
-class RoomsPanel;
 class ChatPanel;
 class WebSocketClient;
 struct User;
+struct Room;
 
 class MainWidget : public wxFrame {
 public:
@@ -20,13 +20,11 @@ public:
     void ShowInitial();
     void ShowServers();
     void ShowAuth();
-    void ShowRooms();
-    void ShowChat(std::vector<User> users);
+    void ShowMainChatView(const std::vector<Room*>& rooms, const User& user);
 
     InitialPanel* initialPanel;
     ServersPanel* serversPanel;
     AuthPanel* authPanel;
-    RoomsPanel* roomsPanel;
     ChatPanel* chatPanel;
     WebSocketClient* wsClient;
 

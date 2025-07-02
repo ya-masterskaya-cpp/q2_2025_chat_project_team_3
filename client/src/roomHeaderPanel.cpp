@@ -44,6 +44,11 @@ void RoomHeaderPanel::SetRoom(const Room& room) {
     Layout();
 }
 
+void RoomHeaderPanel::Clear() {
+    m_roomName->SetLabel("");
+    m_roomId = -1;
+}
+
 void RoomHeaderPanel::OnEnterWindow(wxMouseEvent& event) {
     SetBackgroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_BTNFACE));
     Refresh();

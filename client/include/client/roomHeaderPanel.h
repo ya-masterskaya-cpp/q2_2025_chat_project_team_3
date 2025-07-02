@@ -14,6 +14,7 @@ public:
     int32_t GetRoomId() const { return m_roomId; }
     wxString GetLabel() const { return m_roomName->GetLabel(); }
     void SetLabel(wxString label) const {m_roomName->SetLabel(label); }
+    void Clear();
 
 private:
     wxStaticText* m_roomName = nullptr;

@@ -9,9 +9,9 @@
 
 namespace client {
 
-MessageView::MessageView(ChatPanel* parent)
+    MessageView::MessageView(wxWindow* parent, ChatPanel* chatPanel)
     : wxVScrolledWindow(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxBORDER_NONE),
-      m_chatPanelParent(parent),
+      m_chatPanelParent(chatPanel),
       m_loadingOlder(false),
       m_loadingNewer(false),
       m_lastKnownWrapWidth(-1),

@@ -62,7 +62,7 @@ class MessageWidget;
 class MessageView : public wxVScrolledWindow {
 public:
     // Constructor no longer takes initialWrapWidth, it's set later.
-    MessageView(ChatPanel* parent);
+    MessageView(wxWindow* parent, ChatPanel* chatPanel);
 
     // --- PUBLIC API ---
     void Start();
