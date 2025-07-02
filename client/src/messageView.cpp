@@ -41,9 +41,35 @@ void MessageView::InvalidateCaches() {
     }
 }
 
+void MessageView::DoSetSize(int x, int y, int width, int height, int sizeFlags) {
+    // Capture state BEFORE resize.
+    wxSize oldSize = GetClientSize();
+    wxCoord oldScrollY = GetVisibleRowsBegin();
+
+    // Let the base class perform the resize.
+    wxVScrolledWindow::DoSetSize(x, y, width, height, sizeFlags);
+
+    wxSize newSize = GetClientSize();
+
+    // Guard against calls that result in no actual change.
+    if (oldSize == newSize) {
+        return;
+    }
+
+    // If width changed, your existing code must run.
+    if (oldSize.x != newSize.x) {
+        ReWrapAllMessages(newSize.x);
+    }
+
+    // ALWAYS apply the height adjustment. This is the final, authoritative scroll.
+    int heightDifference = oldSize.y - newSize.y;
+    ScrollToRow(oldScrollY + heightDifference);
+}
+
 void MessageView::OnSize(wxSizeEvent& event) {
     event.Skip();
-    ReWrapAllMessages(GetClientSize().x);
+    // DoSetSize has handled all logic. This just ensures a final position update.
+    UpdateWidgetPositions();
 }
 
 void MessageView::OnScrolled() {
@@ -136,7 +162,7 @@ void MessageView::UpdateWidgetPositions() {
     wxCoord scrollY = GetVisibleRowsBegin();
     wxCoord clientHeight = GetClientSize().y;
     wxCoord containerWidth = GetClientSize().x;
-    const wxCoord padding = 0; 
+    const wxCoord padding = FromDIP(100); 
     wxCoord currentY = 0;
     for (auto* widget : m_messageWidgets) {
         wxCoord h = widget->GetBestSize().y;
@@ -146,10 +172,12 @@ void MessageView::UpdateWidgetPositions() {
             widget->SetSize(0, physicalY, containerWidth, h);
             if(wasHidden) {
                 widget->InvalidateCaches();
+                widget->Show();
             }
-            widget->Show();
         } else {
-            widget->Hide();
+            if(!wasHidden) {
+                widget->Hide();
+            }
         }
         currentY += h;
     }

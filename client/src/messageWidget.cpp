@@ -92,10 +92,10 @@ void MessageWidget::Update([[maybe_unused]] wxWindow* parent, const Message& msg
     m_messageStaticText->SetLabelText(TextUtil::WrapText(this, m_originalMessage, lastKnownWrapWidth - FromDIP(9), this->GetFont()));
     m_userText->SetLabelText(msg.user);
     m_timeText->SetLabelText(wxString::FromUTF8(WebSocketClient::formatMessageTimestamp(msg.timestamp)));
-    InvalidateBestSize();
+    //InvalidateBestSize();
     Layout();
-    Fit();
-    Refresh();
+    //Fit();
+    //Refresh();
 }
 
 // Method to set the wrapped message based on a given width
