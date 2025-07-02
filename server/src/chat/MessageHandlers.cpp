@@ -5,7 +5,8 @@
 #include <server/models/Users.h>
 #include <server/models/Rooms.h>
 #include <server/models/Messages.h>
-#include <server/models/UserRoomRoles.h>
+#include <server/models/RoomMembership.h>
+#include <server/models/UserRoomData.h>
 
 #include <server/utils/switch_to_io_loop.h>
 #include <common/utils/utils.h>
@@ -306,29 +307,21 @@ drogon::Task<chat::JoinRoomResponse> MessageHandlers::handleJoinRoom(const WsDat
             co_return resp;
         }
 
-        std::optional<chat::UserRights> role = co_await getUserRights(m_dbClient, wsData->user->id, req.room_id(), rooms.front());
-        if (!role.has_value()) {
-            auto err = co_await WithTransaction(
-                [&](const auto& tx) -> drogon::Task<ScopedTransactionResult> {
-                try {
-                    models::UserRoomRoles role;
-                    role.setUserId(wsData->user->id);
-                    role.setRoomId(req.room_id());
-                    role.setRoleType(chat::UserRights_Name(chat::UserRights::REGULAR));
-                    co_await switch_to_io_loop(CoroMapper<models::UserRoomRoles>(tx).insert(role));
-                    co_return std::nullopt;
-                }
-                catch (const DrogonDbException& e) {
-                    const std::string w = e.base().what();
-                    LOG_ERROR << "Failed to join room: " << w;
-                    co_return "Database error during user_room_rules creation.";
-                }
-            });
-            if (err) {
-                common::setStatus(resp, chat::STATUS_FAILURE, *err);
-                co_return resp;
-            }
+        auto room = rooms.front();
+
+        auto membership_status = co_await getUserMembershipStatus(m_dbClient, wsData->user->id, req.room_id());
+
+        if(room.getValueOfIsPrivate() && (!membership_status || *membership_status != chat::MembershipStatus::JOINED)) {
+            common::setStatus(resp, chat::STATUS_UNAUTHORIZED, "Cannot join private room.");
+            co_return resp;
         }
+
+        if(!room.getValueOfIsPrivate() && (!membership_status || *membership_status != chat::MembershipStatus::JOINED)) {
+            co_await setUserMembershipStatus(m_dbClient, wsData->user->id, req.room_id(), chat::MembershipStatus::JOINED);
+        }
+
+        std::optional<chat::UserRights> role = co_await getUserRights(m_dbClient, wsData->user->id, req.room_id(), room);
+
         wsData->room = CurrentRoom{req.room_id(), role.value_or(chat::UserRights::REGULAR)};
         
         co_await room_service.joinRoom(*wsData);
@@ -577,11 +570,7 @@ drogon::Task<chat::DeleteRoomResponse> MessageHandlers::handleDeleteRoom(const W
         auto err = co_await WithTransaction(
             [&](const auto& tx) -> drogon::Task<ScopedTransactionResult> {
             try {
-                co_await switch_to_io_loop(CoroMapper<models::Messages>(tx)
-                    .deleteBy(Criteria(models::Messages::Cols::_room_id, CompareOperator::EQ, room_id)));
-                co_await switch_to_io_loop(CoroMapper<models::UserRoomRoles>(tx)
-                    .deleteBy(Criteria(models::UserRoomRoles::Cols::_room_id, CompareOperator::EQ, room_id)));
-                size_t deleted_count = co_await switch_to_io_loop(CoroMapper<models::Rooms>(tx)
+                auto deleted_count = co_await switch_to_io_loop(CoroMapper<models::Rooms>(tx)
                     .deleteBy(Criteria(models::Rooms::Cols::_room_id, CompareOperator::EQ, room_id)));
                 if (deleted_count == 0) {
                     co_return "Room could not be deleted as it was not found.";
@@ -733,23 +722,24 @@ drogon::Task<std::optional<chat::UserRights>> MessageHandlers::getUserRights(con
         co_return chat::UserRights::OWNER;
     }
 
-    // Finally, look for a specific role entry in the user_room_roles table.
+    // Finally, look for a specific role entry in the user_room_data table.
     co_return co_await findStoredUserRole(db, user_id, room_id);
 }
 
 drogon::Task<std::optional<chat::UserRights>> MessageHandlers::findStoredUserRole(const drogon::orm::DbClientPtr& db, int32_t user_id, int32_t room_id) const {
-    auto role = co_await switch_to_io_loop(CoroMapper<models::UserRoomRoles>(db)
+    auto data = co_await switch_to_io_loop(CoroMapper<models::UserRoomData>(db)
         .findBy(
-            Criteria(models::UserRoomRoles::Cols::_user_id, CompareOperator::EQ, user_id) &&
-            Criteria(models::UserRoomRoles::Cols::_room_id, CompareOperator::EQ, room_id)));
-    if (role.empty()) {
+            Criteria(models::UserRoomData::Cols::_user_id, CompareOperator::EQ, user_id) &&
+            Criteria(models::UserRoomData::Cols::_room_id, CompareOperator::EQ, room_id)));
+    if(data.empty()) {
         co_return std::nullopt;
     }
-    chat::UserRights rights;
-    if (chat::UserRights_Parse(*role.front().getRoleType(), &rights)) {
-        co_return rights;
+
+    if(*data.front().getIsModerator()) {
+        co_return chat::UserRights::MODERATOR;
     }
-    co_return chat::UserRights::REGULAR;
+
+    co_return std::nullopt;
 }
 
 drogon::Task<chat::DeleteMessageResponse> MessageHandlers::handleDeleteMessage(const WsDataPtr& wsDataGuarded, const chat::DeleteMessageRequest& req, IChatRoomService& room_service) {
@@ -893,25 +883,74 @@ std::optional<std::string> MessageHandlers::validateUtf8String(
 
 drogon::Task<ScopedTransactionResult> MessageHandlers::updateUserRoleInDb(const std::shared_ptr<drogon::orm::Transaction>& tx, int32_t userId, int32_t roomId, chat::UserRights newRole) {
     try {
-        auto roles = co_await switch_to_io_loop(CoroMapper<models::UserRoomRoles>(tx)
-            .findBy(Criteria(models::UserRoomRoles::Cols::_user_id, CompareOperator::EQ, userId) &&
-                    Criteria(models::UserRoomRoles::Cols::_room_id, CompareOperator::EQ, roomId)));
 
-        if (roles.empty()) {
-            models::UserRoomRoles roleEntry;
-            roleEntry.setUserId(userId);
-            roleEntry.setRoomId(roomId);
-            roleEntry.setRoleType(chat::UserRights_Name(newRole));
-            co_await switch_to_io_loop(CoroMapper<models::UserRoomRoles>(tx).insert(roleEntry));
+        if(newRole != chat::UserRights::REGULAR && newRole != chat::UserRights::MODERATOR) {
+            co_return "For now this function can only toggle moderator status";
+        }
+
+        auto room_data = co_await switch_to_io_loop(CoroMapper<models::UserRoomData>(tx)
+            .findBy(Criteria(models::UserRoomData::Cols::_user_id, CompareOperator::EQ, userId) &&
+                    Criteria(models::UserRoomData::Cols::_room_id, CompareOperator::EQ, roomId)));
+
+        if (room_data.empty()) {
+            models::UserRoomData userRoomData;
+            userRoomData.setUserId(userId);
+            userRoomData.setRoomId(roomId);
+            userRoomData.setIsModerator(newRole == chat::UserRights::MODERATOR);
+            co_await switch_to_io_loop(CoroMapper<models::UserRoomData>(tx).insert(userRoomData));
         } else {
-            auto roleToUpdate = roles.front();
-            roleToUpdate.setRoleType(chat::UserRights_Name(newRole));
-            co_await switch_to_io_loop(CoroMapper<models::UserRoomRoles>(tx).update(roleToUpdate));
+            auto dataToUpdate = room_data.front();
+            dataToUpdate.setIsModerator(newRole == chat::UserRights::MODERATOR);
+            co_await switch_to_io_loop(CoroMapper<models::UserRoomData>(tx).update(dataToUpdate));
         }
         co_return std::nullopt;
     } catch (const DrogonDbException& e) {
         LOG_ERROR << "Role update/insert failed: " << e.base().what();
         co_return "Database error during role update.";
+    }
+}
+
+drogon::Task<std::optional<chat::MembershipStatus>> MessageHandlers::getUserMembershipStatus(const drogon::orm::DbClientPtr& db, int32_t user_id, int32_t room_id) {
+    auto room_membership = co_await switch_to_io_loop(CoroMapper<models::RoomMembership>(db)
+        .findBy(Criteria(models::RoomMembership::Cols::_user_id, CompareOperator::EQ, user_id) &&
+                Criteria(models::RoomMembership::Cols::_room_id, CompareOperator::EQ, room_id)));
+
+    if(room_membership.empty()) {
+        co_return std::nullopt;
+    }
+
+    chat::MembershipStatus status;
+
+    if(chat::MembershipStatus_Parse(*room_membership.front().getMembershipStatus(), &status)) {
+        co_return status;
+    }
+
+    co_return std::nullopt;
+}
+
+drogon::Task<ScopedTransactionResult> MessageHandlers::setUserMembershipStatus(const drogon::orm::DbClientPtr& db, int32_t user_id, int32_t room_id, chat::MembershipStatus status) {
+    try {
+        auto room_membership = co_await switch_to_io_loop(CoroMapper<models::RoomMembership>(db)
+            .findBy(Criteria(models::RoomMembership::Cols::_user_id, CompareOperator::EQ, user_id) &&
+                    Criteria(models::RoomMembership::Cols::_room_id, CompareOperator::EQ, room_id)));
+    
+        if(room_membership.empty()) {
+            models::RoomMembership membership;
+            membership.setUserId(user_id);
+            membership.setRoomId(room_id);
+            membership.setMembershipStatus(chat::MembershipStatus_Name(status));
+            co_await switch_to_io_loop(CoroMapper<models::RoomMembership>(db).insert(membership));
+            co_return std::nullopt;
+        } else {
+            auto membership = room_membership.front();
+            membership.setMembershipStatus(chat::MembershipStatus_Name(status));
+            co_await switch_to_io_loop(CoroMapper<models::RoomMembership>(db).update(membership));
+            co_return std::nullopt;
+        }
+    
+    } catch(const DrogonDbException& e) {
+        LOG_ERROR << "Membership status update/insert failed: " << e.base().what();
+        co_return "Database error during membership update.";
     }
 }
 

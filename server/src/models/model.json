@@ -40,22 +40,17 @@
         "enable_reverse": true
       },
       {
-        "type": "has many",
+        "type": "many to many",
         "original_table_name": "users",
-        "original_table_alias": "user",
+        "original_table_alias": "",
         "original_key": "user_id",
-        "target_table_name": "user_room_roles",
-        "target_table_alias": "roles",
-        "target_key": "user_id",
-        "enable_reverse": true
-      },
-      {
-        "type": "has many",
-        "original_table_name": "rooms",
-        "original_table_alias": "room",
-        "original_key": "room_id",
-        "target_table_name": "user_room_roles",
-        "target_table_alias": "roles",
+        "pivot_table": {
+          "table_name": "room_membership",
+          "original_key": "user_id",
+          "target_key": "room_id"
+        },
+        "target_table_name": "rooms",
+        "target_table_alias": "",
         "target_key": "room_id",
         "enable_reverse": true
       }

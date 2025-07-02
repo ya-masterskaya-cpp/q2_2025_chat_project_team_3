@@ -7,8 +7,8 @@
 
 #include <server/models/Users.h>
 #include <server/models/Messages.h>
+#include <server/models/RoomMembership.h>
 #include <server/models/Rooms.h>
-#include <server/models/UserRoomRoles.h>
 #include <drogon/utils/Utilities.h>
 #include <string>
 
@@ -1196,8 +1196,8 @@ void Users::getRoom(const DbClientPtr &clientPtr,
                }
                >> ecb;
 }
-std::vector<UserRoomRoles> Users::getRoles(const DbClientPtr &clientPtr) const {
-    static const std::string sql = "select * from user_room_roles where user_id = $1";
+std::vector<std::pair<Rooms,RoomMembership>> Users::getRooms(const DbClientPtr &clientPtr) const {
+    static const std::string sql = "select * from rooms,room_membership where room_membership.user_id = $1 and room_membership.room_id = rooms.room_id";
     Result r(nullptr);
     {
         auto binder = *clientPtr << sql;
@@ -1205,28 +1205,30 @@ std::vector<UserRoomRoles> Users::getRoles(const DbClientPtr &clientPtr) const {
             [&r](const Result &result) { r = result; };
         binder.exec();
     }
-    std::vector<UserRoomRoles> ret;
+    std::vector<std::pair<Rooms,RoomMembership>> ret;
     ret.reserve(r.size());
     for (auto const &row : r)
     {
-        ret.emplace_back(UserRoomRoles(row));
+        ret.emplace_back(std::pair<Rooms,RoomMembership>(
+            Rooms(row),RoomMembership(row,Rooms::getColumnNumber())));
     }
     return ret;
 }
 
-void Users::getRoles(const DbClientPtr &clientPtr,
-                     const std::function<void(std::vector<UserRoomRoles>)> &rcb,
+void Users::getRooms(const DbClientPtr &clientPtr,
+                     const std::function<void(std::vector<std::pair<Rooms,RoomMembership>>)> &rcb,
                      const ExceptionCallback &ecb) const
 {
-    static const std::string sql = "select * from user_room_roles where user_id = $1";
+    static const std::string sql = "select * from rooms,room_membership where room_membership.user_id = $1 and room_membership.room_id = rooms.room_id";
     *clientPtr << sql
                << *userId_
                >> [rcb = std::move(rcb)](const Result &r){
-                   std::vector<UserRoomRoles> ret;
+                   std::vector<std::pair<Rooms,RoomMembership>> ret;
                    ret.reserve(r.size());
                    for (auto const &row : r)
                    {
-                       ret.emplace_back(UserRoomRoles(row));
+                       ret.emplace_back(std::pair<Rooms,RoomMembership>(
+                           Rooms(row),RoomMembership(row,Rooms::getColumnNumber())));
                    }
                    rcb(ret);
                }
