@@ -274,7 +274,7 @@ void WebSocketClient::handleMessage(const std::string& msg) {
                     ui->authPanel->HandleRegisterContinue();
                 });
             } else {
-                showError("Failed to register user");
+                showError("Failed to register user: " + wxString(env.initial_register_response().status().message()));
             }
             break;
         }
