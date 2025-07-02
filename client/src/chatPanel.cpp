@@ -38,9 +38,9 @@ wxBEGIN_EVENT_TABLE(ChatPanel, wxPanel)
     //EVT_LEFT_DOWN(ChatPanel::OnRoomHeaderClicked)
 wxEND_EVENT_TABLE()
 
-ChatPanel::ChatPanel(MainWidget* parent)
+ChatPanel::ChatPanel(wxWindow* parent)
     : wxPanel(parent, wxID_ANY),
-      m_parent(parent),//m_resizeTimer(this, ID_RESIZE_TIMER) // Initialize the timer with 'this' as the owner
+      m_parent(static_cast<MainWidget*>(parent->GetParent())),//m_resizeTimer(this, ID_RESIZE_TIMER) // Initialize the timer with 'this' as the owner
       m_typingTimer(this, ID_TYPING_TIMER)
 {
     m_currentUser = std::make_unique<User>();

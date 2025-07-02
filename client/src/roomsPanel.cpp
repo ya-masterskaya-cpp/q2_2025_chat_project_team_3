@@ -15,7 +15,7 @@ wxBEGIN_EVENT_TABLE(RoomsPanel, wxPanel)
     EVT_LISTBOX_DCLICK(wxID_ANY, RoomsPanel::OnJoin)
 wxEND_EVENT_TABLE()
 
-RoomsPanel::RoomsPanel(MainWidget* parent) : wxPanel(parent), mainWin(parent) {
+RoomsPanel::RoomsPanel(wxWindow* parent) : wxPanel(parent), mainWin(static_cast<MainWidget*>(parent->GetParent())) {
     auto* sizer = new wxBoxSizer(wxVERTICAL);
     sizer->Add(new wxStaticText(this, wxID_ANY, "Rooms:"), 0, wxALL, 5);
     roomList = new wxListBox(this, wxID_ANY);

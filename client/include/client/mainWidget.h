@@ -7,8 +7,7 @@ namespace client {
 class InitialPanel;
 class ServersPanel;
 class AuthPanel;
-class RoomsPanel;
-class ChatPanel;
+class ChatInterface;
 class WebSocketClient;
 struct User;
 
@@ -26,8 +25,7 @@ public:
     InitialPanel* initialPanel;
     ServersPanel* serversPanel;
     AuthPanel* authPanel;
-    RoomsPanel* roomsPanel;
-    ChatPanel* chatPanel;
+    ChatInterface* chatInterface;
     WebSocketClient* wsClient;
 
 private:
