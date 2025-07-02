@@ -131,8 +131,12 @@ private:
      */
     drogon::Task<std::optional<chat::UserRights>> findStoredUserRole(const drogon::orm::DbClientPtr& db, int32_t user_id, int32_t room_id) const;
 
-    /** @brief Updates or creates a user's role entry in the UserRoomRoles table within a transaction. */
-    drogon::Task<ScopedTransactionResult> updateUserRoleInDb(const std::shared_ptr<drogon::orm::Transaction>& tx, int32_t userId, int32_t roomId, chat::UserRights newRole);
+    /** @brief Updates or creates a user's role entry in the UserRoomData table within a transaction. */
+    static drogon::Task<ScopedTransactionResult> updateUserRoleInDb(const std::shared_ptr<drogon::orm::Transaction>& tx, int32_t userId, int32_t roomId, chat::UserRights newRole);
+
+    static drogon::Task<std::optional<chat::MembershipStatus>> getUserMembershipStatus(const drogon::orm::DbClientPtr& db, int32_t user_id, int32_t room_id);
+    static drogon::Task<ScopedTransactionResult> setUserMembershipStatus(const drogon::orm::DbClientPtr& db, int32_t user_id, int32_t room_id, chat::MembershipStatus status);
+
 
     /// @brief The shared database client for all ORM operations.
     drogon::orm::DbClientPtr m_dbClient;

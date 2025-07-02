@@ -28,6 +28,11 @@ enum UserRights {
     ADMIN = 3;
 }
 
+enum MembershipStatus {
+    INVITED = 0;
+    JOINED = 1;
+}
+
 message UserInfo {
     int32 user_id = 1;
     string user_name = 2;
