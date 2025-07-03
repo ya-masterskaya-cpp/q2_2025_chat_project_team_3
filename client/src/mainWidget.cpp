@@ -13,7 +13,7 @@
 
 namespace client {
 
-MainWidget::MainWidget() : wxFrame(NULL, wxID_ANY, "Slightly Pretty Chat", wxDefaultPosition, wxSize(600, 900)) {
+MainWidget::MainWidget() : wxFrame(NULL, wxID_ANY, "Slightly Pretty Chat", wxDefaultPosition, wxSize(900, 600)) {
     wsClient = new WebSocketClient(this);
     initialPanel = new InitialPanel(this);
     serversPanel = new ServersPanel(this);
