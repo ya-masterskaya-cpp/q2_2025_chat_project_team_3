@@ -26,7 +26,7 @@ RoomsPanel::RoomsPanel(wxWindow* parent) : wxPanel(parent), mainWin(static_cast<
     btnSizer->Add(createButton, 1, wxALL, 5);
     sizer->Add(btnSizer, 0, wxALIGN_CENTER);
     // Logout button
-    sizer->AddStretchSpacer();
+    //sizer->AddStretchSpacer();
     logoutButton = new wxButton(this, ID_LOGOUT, "Logout");
     sizer->Add(logoutButton, 0, wxALL | wxALIGN_CENTER, 10);
     SetSizer(sizer);
