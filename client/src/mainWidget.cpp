@@ -49,6 +49,7 @@ void MainWidget::ShowInitial() {
     serversPanel->Hide();
     authPanel->Hide();
     chatInterface->Hide();
+    chatInterface->m_chatPanel->Hide();
     Layout();
 }
 
@@ -60,6 +61,7 @@ void MainWidget::ShowServers() {
     serversPanel->Show();
     authPanel->Hide();
     chatInterface->Hide();
+    chatInterface->m_chatPanel->Hide();
     Layout();
 }
 
@@ -71,6 +73,7 @@ void MainWidget::ShowAuth() {
     serversPanel->Hide();
     authPanel->Show();
     chatInterface->Hide();
+    chatInterface->m_chatPanel->Hide();
     Layout();
 }
 
@@ -88,6 +91,7 @@ void MainWidget::ShowChat(std::vector<User> users) {
     authPanel->Hide();
 
     chatInterface->m_chatPanel->ResetState();
+    chatInterface->m_chatPanel->Show();
     chatInterface->Show();
     chatInterface->m_chatPanel->m_roomHeaderPanel->SetRoom(chatInterface->m_roomsPanel->GetSelectedRoom().value());
     chatInterface->m_chatPanel->m_userListPanel->SetUserList(std::move(users));
