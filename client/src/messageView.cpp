@@ -64,12 +64,11 @@ void MessageView::DoSetSize(int x, int y, int width, int height, int sizeFlags) 
     // ALWAYS apply the height adjustment. This is the final, authoritative scroll.
     int heightDifference = oldSize.y - newSize.y;
     ScrollToRow(oldScrollY + heightDifference);
+    UpdateWidgetPositions();
 }
 
 void MessageView::OnSize(wxSizeEvent& event) {
     event.Skip();
-    // DoSetSize has handled all logic. This just ensures a final position update.
-    UpdateWidgetPositions();
 }
 
 void MessageView::OnScrolled() {
@@ -133,8 +132,10 @@ void MessageView::UpdateLayoutAndScroll(const std::vector<Message>& messages, bo
     } else {
         bool wasAtBottom = GetVisibleRowsBegin() + GetClientSize().y >= GetUnitCount() - 5;
         int removedHeight = 0;
-        std::size_t numToRemove = m_messageWidgets.size() + messages.size() - MAX_MESSAGES;
-        if(numToRemove > 0) {
+        
+        if(m_messageWidgets.size() + messages.size() > MAX_MESSAGES) {
+            auto numToRemove = m_messageWidgets.size() + messages.size() - MAX_MESSAGES;
+
             for(std::size_t i = 0; i < numToRemove; ++i) {
                 if(i == m_messageWidgets.size()) {
                     break;

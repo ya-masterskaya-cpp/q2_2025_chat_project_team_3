@@ -22,7 +22,7 @@ class TypingIndicatorPanel;
 
 class ChatPanel : public wxPanel {
 public:
-    ChatPanel(MainWidget* parent);
+    ChatPanel(wxWindow* parent);
 
     MainWidget* GetMainWidget() { return m_parent; }
 

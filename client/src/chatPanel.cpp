@@ -15,7 +15,7 @@
 namespace client {
 
 enum { ID_SEND = wxID_HIGHEST+30,
-    ID_LEAVE,
+//  ID_LEAVE,
     ID_JUMP_TO_PRESENT,
     ID_RENAME_ROOM,
     ID_DELETE_ROOM,
@@ -31,16 +31,16 @@ wxDEFINE_EVENT(wxEVT_DELETE_MESSAGE, wxCommandEvent);
 
 wxBEGIN_EVENT_TABLE(ChatPanel, wxPanel)
     EVT_BUTTON(ID_SEND, ChatPanel::OnSend)
-    EVT_BUTTON(ID_LEAVE, ChatPanel::OnLeave)
+    //EVT_BUTTON(ID_LEAVE, ChatPanel::OnLeave)
     EVT_BUTTON(ID_JUMP_TO_PRESENT, ChatPanel::JumpToPresent)
     //EVT_TIMER(ID_RESIZE_TIMER, ChatPanel::OnResizeTimerTick)
     //EVT_SIZE(ChatPanel::OnChatPanelSize)
     //EVT_LEFT_DOWN(ChatPanel::OnRoomHeaderClicked)
 wxEND_EVENT_TABLE()
 
-ChatPanel::ChatPanel(MainWidget* parent)
+ChatPanel::ChatPanel(wxWindow* parent)
     : wxPanel(parent, wxID_ANY),
-      m_parent(parent),//m_resizeTimer(this, ID_RESIZE_TIMER) // Initialize the timer with 'this' as the owner
+      m_parent(static_cast<MainWidget*>(parent->GetParent())),//m_resizeTimer(this, ID_RESIZE_TIMER) // Initialize the timer with 'this' as the owner
       m_typingTimer(this, ID_TYPING_TIMER)
 {
     m_currentUser = std::make_unique<User>();
@@ -79,8 +79,8 @@ ChatPanel::ChatPanel(MainWidget* parent)
     wxButton* sendButton = new wxButton(this, ID_SEND, "Send");
     inputSizer->Add(sendButton, 0, wxALIGN_CENTER_VERTICAL);
 
-    wxButton* leaveButton = new wxButton(this, ID_LEAVE, "Leave");
-    inputSizer->Add(leaveButton, 0, wxALIGN_CENTER_VERTICAL);
+    //wxButton* leaveButton = new wxButton(this, ID_LEAVE, "Leave");
+    //inputSizer->Add(leaveButton, 0, wxALIGN_CENTER_VERTICAL);
 
     m_chatSizer->Add(inputSizer, 0, wxEXPAND | wxBOTTOM | wxLEFT | wxRIGHT, FromDIP(5));
 

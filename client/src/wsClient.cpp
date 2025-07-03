@@ -8,6 +8,7 @@
 #include <client/message.h>
 #include <client/messageView.h>
 #include <client/user.h>
+#include <client/chatInterface.h>
 #include <common/utils/utils.h>
 #include <common/version.h>
 #include <drogon/HttpRequest.h>
@@ -313,7 +314,7 @@ void WebSocketClient::handleMessage(const std::string& msg) {
                 user.username = wxString::FromUTF8(env.auth_response().authenticated_user().user_name());
                 user.role = chat::UserRights::REGULAR;
                 wxTheApp->CallAfter([this, user]() {
-                    ui->chatPanel->SetCurrentUser(user);
+                    ui->chatInterface->m_chatPanel->SetCurrentUser(user);
                 });
                 updateRoomsPanel(rooms);
                 showRooms();
@@ -369,7 +370,7 @@ void WebSocketClient::handleMessage(const std::string& msg) {
         case chat::Envelope::kNewRoomCreated: {
             wxTheApp->CallAfter([this, env = std::move(env)] {
                 auto& response = env.new_room_created().room();
-                ui->roomsPanel->AddRoom(new Room{response.room_id(), wxString::FromUTF8(response.room_name())});
+                ui->chatInterface->m_roomsPanel->AddRoom(new Room{response.room_id(), wxString::FromUTF8(response.room_name())});
             });
             break;
         }
@@ -382,10 +383,10 @@ void WebSocketClient::handleMessage(const std::string& msg) {
         case chat::Envelope::kNewRoomName: {
             wxTheApp->CallAfter([this, env = std::move(env)] {
                 const auto& response = env.new_room_name();
-                if (ui->chatPanel->IsShown() && ui->chatPanel->GetRoomId() == response.room_id()) {
-                    ui->chatPanel->SetRoomName(wxString::FromUTF8(response.name()));
+                if (ui->chatInterface->m_chatPanel->IsShown() && ui->chatInterface->m_chatPanel->GetRoomId() == response.room_id()) {
+                    ui->chatInterface->m_chatPanel->SetRoomName(wxString::FromUTF8(response.name()));
                 }
-                ui->roomsPanel->RenameRoom(response.room_id(), wxString::FromUTF8(response.name()));
+                ui->chatInterface->m_roomsPanel->RenameRoom(response.room_id(), wxString::FromUTF8(response.name()));
             });
             break;
         }
@@ -400,10 +401,10 @@ void WebSocketClient::handleMessage(const std::string& msg) {
         case chat::Envelope::kRoomDeleted: {
             wxTheApp->CallAfter([this, env = std::move(env)] {
                 auto roomId = env.room_deleted().room_id();
-                if (ui->chatPanel->IsShown() && ui->chatPanel->GetRoomId() == roomId) {
+                if (ui->chatInterface->m_chatPanel->IsShown() && ui->chatInterface->m_chatPanel->GetRoomId() == roomId) {
                 ui->ShowRooms();
             }
-            ui->roomsPanel->RemoveRoom(roomId);
+            ui->chatInterface->m_roomsPanel->RemoveRoom(roomId);
             });
             break;
         }
@@ -444,8 +445,8 @@ void WebSocketClient::handleMessage(const std::string& msg) {
             const auto& user_info = env.user_started_typing().user();
 			User user{ user_info.user_id(), wxString::FromUTF8(user_info.user_name()), user_info.user_room_rights() };
             wxTheApp->CallAfter([this, user] {
-                if (ui->chatPanel->IsShown()) {
-                    ui->chatPanel->UserStartedTyping(user);
+                if (ui->chatInterface->m_chatPanel->IsShown()) {
+                    ui->chatInterface->m_chatPanel->UserStartedTyping(user);
                 }
                 });
             break;
@@ -454,8 +455,8 @@ void WebSocketClient::handleMessage(const std::string& msg) {
             const auto& user_info = env.user_stopped_typing().user();
             User user{ user_info.user_id(), wxString::FromUTF8(user_info.user_name()), user_info.user_room_rights() };
             wxTheApp->CallAfter([this, user] {
-                if (ui->chatPanel->IsShown()) {
-                    ui->chatPanel->UserStoppedTyping(user);
+                if (ui->chatInterface->m_chatPanel->IsShown()) {
+                    ui->chatInterface->m_chatPanel->UserStoppedTyping(user);
                 }
                 });
             break;
@@ -477,7 +478,7 @@ void WebSocketClient::showInfo(const wxString& msg) {
 
 void WebSocketClient::updateRoomsPanel(const std::vector<Room*> &rooms)
 {
-    wxTheApp->CallAfter([this, rooms] { ui->roomsPanel->UpdateRoomList(rooms); });
+    wxTheApp->CallAfter([this, rooms] { ui->chatInterface->m_roomsPanel->UpdateRoomList(rooms); });
 }
 
 void WebSocketClient::showChat(std::vector<User> users) {
@@ -502,13 +503,13 @@ void WebSocketClient::showServers() {
 
 void WebSocketClient::addUser(User user) {
     wxTheApp->CallAfter([this, user = std::move(user)] {
-        ui->chatPanel->UserJoin(user);
+        ui->chatInterface->m_chatPanel->UserJoin(user);
     });
 }
 
 void WebSocketClient::removeUser(User user) {
     wxTheApp->CallAfter([this, user = std::move(user)] {
-        ui->chatPanel->UserLeft(user);
+        ui->chatInterface->m_chatPanel->UserLeft(user);
     });
 }
 
@@ -521,7 +522,7 @@ void WebSocketClient::showRoomMessage(const chat::MessageInfo& mi) {
 
     wxTheApp->CallAfter([this, messages] {
         LOG_DEBUG << "Stared singular add";
-        ui->chatPanel->m_messageView->OnMessagesReceived(messages, false);
+        ui->chatInterface->m_chatPanel->m_messageView->OnMessagesReceived(messages, false);
         LOG_DEBUG << "Finished singular add";
     });
 }
@@ -529,7 +530,7 @@ void WebSocketClient::showRoomMessage(const chat::MessageInfo& mi) {
 void WebSocketClient::showMessageHistory(const std::vector<Message> &messages) {
     wxTheApp->CallAfter([this, messages] {
         LOG_DEBUG << "Stared bulk add";
-        ui->chatPanel->m_messageView->OnMessagesReceived(messages, true);
+        ui->chatInterface->m_chatPanel->m_messageView->OnMessagesReceived(messages, true);
         LOG_DEBUG << "Finished bulk add";
     });
 }
@@ -540,14 +541,14 @@ void WebSocketClient::SetServers(const std::vector<std::string> &servers) {
 
 void WebSocketClient::updateUserRole(int32_t userId, chat::UserRights newRole) {
     wxTheApp->CallAfter([this, userId, newRole] {
-        ui->chatPanel->m_userListPanel->UpdateUserRole(userId, newRole);
+        ui->chatInterface->m_chatPanel->m_userListPanel->UpdateUserRole(userId, newRole);
     });
 }
 
 void WebSocketClient::removeMessageFromView(int32_t messageId) {
     wxTheApp->CallAfter([this, messageId] {
-        if (ui->chatPanel->IsShown()) {
-            ui->chatPanel->m_messageView->DeleteMessageById(messageId);
+        if (ui->chatInterface->m_chatPanel->IsShown()) {
+            ui->chatInterface->m_chatPanel->m_messageView->DeleteMessageById(messageId);
         }
     });
 }
