@@ -81,6 +81,10 @@ void MainWidget::ShowRooms() {
     initialPanel->Hide();
     serversPanel->Hide();
     authPanel->Hide();
+    if (chatInterface->m_chatPanel->IsShown()) {
+        chatInterface->m_chatPanel->ResetState();
+        chatInterface->m_chatPanel->Hide();
+    }
     chatInterface->Show();
     Layout();
 }
