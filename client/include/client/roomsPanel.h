@@ -24,6 +24,7 @@ public:
     void RemoveRoom(int32_t room_id);
     void RenameRoom(int32_t room_id, const wxString& name);
     std::optional<Room> GetSelectedRoom();
+    void OnJoinRoom();
 
 private:
     void OnMyRoomSelected(wxCommandEvent&);

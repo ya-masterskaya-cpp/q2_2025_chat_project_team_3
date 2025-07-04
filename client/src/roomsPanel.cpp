@@ -15,10 +15,10 @@ enum {
 };
 
 wxBEGIN_EVENT_TABLE(RoomsPanel, wxPanel)
-    //EVT_BUTTON(ID_JOIN, RoomsPanel::OnJoin)
     EVT_BUTTON(ID_CREATE, RoomsPanel::OnCreate)
     EVT_BUTTON(ID_LOGOUT, RoomsPanel::OnLogout)
-    EVT_BUTTON(ID_JOIN, RoomsPanel::OnJoin) // Move impls
+    EVT_BUTTON(ID_JOIN, RoomsPanel::OnJoin)
+    EVT_LISTBOX(ID_LIST_MY_ROOMS, RoomsPanel::OnMyRoomSelected)
     EVT_LISTBOX_DCLICK(ID_LIST_MY_ROOMS, RoomsPanel::OnMyRoomSelected)
     EVT_LISTBOX(ID_LIST_PUBLIC_ROOMS, RoomsPanel::OnPublicRoomSelected)
 
@@ -51,11 +51,11 @@ RoomsPanel::RoomsPanel(wxWindow* parent) : wxPanel(parent), mainWin(static_cast<
     sizer->Add(m_notebook, 1, wxEXPAND | wxALL, 5);
 
     auto* btnSizer = new wxBoxSizer(wxHORIZONTAL);
-    m_createButton = new wxButton(this, ID_CREATE, "Создать");
+    m_createButton = new wxButton(this, ID_CREATE, "Create");
     btnSizer->Add(m_createButton, 1, wxALL, 5);
     sizer->Add(btnSizer, 0, wxALIGN_CENTER);
 
-    m_logoutButton = new wxButton(this, ID_LOGOUT, "Выход");
+    m_logoutButton = new wxButton(this, ID_LOGOUT, "Logout");
     sizer->Add(m_logoutButton, 0, wxALL | wxALIGN_CENTER, 10);
     SetSizer(sizer);
 }
@@ -75,13 +75,6 @@ void RoomsPanel::UpdateRoomList(const std::vector<Room*>& rooms) {
 
 void RoomsPanel::AddRoom(Room* room) {
     if (room->is_member) {
-        for (unsigned int i = 0; i < m_publicRoomsList->GetCount(); ++i) {
-            Room* publicRoomData = dynamic_cast<Room*>(m_publicRoomsList->GetClientObject(i));
-            if (publicRoomData && publicRoomData->room_id == room->room_id) {
-                m_publicRoomsList->Delete(i);
-                break;
-            }
-        }
         int newIndex = m_myRoomsList->Append(room->room_name, room);
         m_myRoomsList->SetSelection(newIndex);
         m_notebook->SetSelection(0);
@@ -144,6 +137,31 @@ std::optional<Room> RoomsPanel::GetSelectedRoom() {
         }
     }
     return std::nullopt;
+}
+
+void RoomsPanel::OnJoinRoom() {
+    auto selectedRoomOpt = GetSelectedRoom();
+    if (!selectedRoomOpt.has_value()) {
+        return;
+    }
+
+    Room selectedRoom = *selectedRoomOpt;
+    if (selectedRoom.is_member) {
+        return;
+    }
+
+    for (unsigned int i = 0; i < m_publicRoomsList->GetCount(); ++i) {
+        Room* publicRoomData = dynamic_cast<Room*>(m_publicRoomsList->GetClientObject(i));
+        Room* myNewRoom = new Room(*publicRoomData);
+        if (myNewRoom && myNewRoom->room_id == selectedRoom.room_id) {
+            m_publicRoomsList->Delete(i);
+
+            myNewRoom->is_member = true;
+            AddRoom(myNewRoom);
+
+            break;
+        }
+    }
 }
 
 void RoomsPanel::OnMyRoomSelected(wxCommandEvent&) {
