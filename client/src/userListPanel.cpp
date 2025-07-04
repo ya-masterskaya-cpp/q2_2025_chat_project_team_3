@@ -27,62 +27,68 @@ UserListPanel::UserListPanel(wxWindow* parent)
 }
 
 void UserListPanel::UpdateUserRole(int32_t userId, chat::UserRights newRole) {
-    std::for_each(m_users.begin(), m_users.end(), [userId, newRole](User& u) {
-        if(u.id == userId) {
-            u.role = newRole;
-        }
-    });
+    auto it = m_userWidgets.find(userId);
+    if (it != m_userWidgets.end()) {
+        User user = it->second->GetUser();
+        user.role = newRole;
+        it->second->UpdateDisplay(user);
 
-    SetUserList(std::move(m_users));
+        SortUserWidgets();
+    }
 }
 
 void UserListPanel::SetUserList(std::vector<User> users) {
+    Clear();
     m_userContainer->Freeze();
-    m_userSizer->Clear(true); // Destroy existing widgets
 
-    // Sort the incoming user list by the User::operator<
-    std::sort(users.begin(), users.end(), [] (const User& lhs, const User& rhs) {
-        return !(lhs < rhs);
-    });
-
-    m_users = std::move(users);
-
-    auto currUser = static_cast<ChatPanel*>(GetParent())->GetCurrentUser();
-
-    for (const auto& user : m_users) {
-        if (currUser.id == user.id) {
-            static_cast<ChatPanel*>(GetParent())->SetCurrentUser(user);
-        }
-
+    for (const auto& user : users) {
+        auto currUser = static_cast<ChatPanel*>(GetParent())->GetCurrentUser();
+            if (currUser.id == user.id) {
+                static_cast<ChatPanel*>(GetParent())->SetCurrentUser(user);
+            }
         auto* userWidget = new UserNameWidget(m_userContainer, user);
         userWidget->Bind(wxEVT_RIGHT_DOWN, &UserListPanel::OnUserRightClick, this);
         m_userSizer->Add(userWidget, 0, wxEXPAND | wxALL, FromDIP(2));
+        m_userWidgets[user.id] = userWidget;
     }
-
-    m_userSizer->Layout();
-    m_userContainer->SetVirtualSize(m_userSizer->GetMinSize());
-    m_userContainer->Scroll(0, 0); // Scroll to top on full list update
+    SortUserWidgets();
     m_userContainer->Thaw();
 }
 
 void UserListPanel::AddUser(const User& user) {
-    m_users.push_back(user);
-    SetUserList(std::move(m_users));
+    if (m_userWidgets.count(user.id)) {
+        UpdateUserRole(user.id, user.role);
+        return;
+    }
+    m_userContainer->Freeze();
+
+    auto* userWidget = new UserNameWidget(m_userContainer, user);
+    userWidget->Bind(wxEVT_RIGHT_DOWN, &UserListPanel::OnUserRightClick, this);
+    m_userWidgets[user.id] = userWidget;
+    m_userSizer->Add(userWidget, 0, wxEXPAND | wxALL, FromDIP(2));
+
+    SortUserWidgets();
+    m_userContainer->Thaw();
 }
 
 void UserListPanel::RemoveUser(int userId) {
-    auto it = std::find_if(m_users.begin(), m_users.end(), [userId](const User& u) {
-        return u.id == userId; });
+    auto it = m_userWidgets.find(userId);
+    if (it != m_userWidgets.end()) {
+        m_userContainer->Freeze();
 
-    if (it != m_users.end()) {
-        m_users.erase(it);
-        SetUserList(std::move(m_users));
+        it->second->Destroy();
+        m_userWidgets.erase(it);
+
+        SortUserWidgets();
+        m_userContainer->Thaw();
     }
 }
 
 void UserListPanel::Clear() {
-    m_users.clear();
-    SetUserList({});
+    m_userContainer->Freeze();
+    m_userSizer->Clear(true);
+    m_userWidgets.clear();
+    m_userContainer->Thaw();
 }
 
 void UserListPanel::OnUserRightClick(wxMouseEvent& event) {
@@ -144,6 +150,38 @@ void UserListPanel::OnUserRightClick(wxMouseEvent& event) {
     if(menu.GetMenuItemCount() > 0) {
         PopupMenu(&menu);
     }
+}
+
+void UserListPanel::SortUserWidgets() {
+    m_userContainer->Freeze();
+
+    wxSizerItemList& items = m_userSizer->GetChildren();
+
+    std::vector<UserNameWidget*> widgetsToSort;
+    widgetsToSort.reserve(items.size());
+    for (wxSizerItem* item : items) {
+        if (auto* widget = dynamic_cast<UserNameWidget*>(item->GetWindow())) {
+            widgetsToSort.push_back(widget);
+        }
+    }
+
+    std::sort(widgetsToSort.begin(), widgetsToSort.end(),
+        [](const UserNameWidget* lhs, const UserNameWidget* rhs) {
+            return !(lhs->GetUser() < rhs->GetUser());
+        });
+
+    for (UserNameWidget* widget : widgetsToSort) {
+        m_userSizer->Detach(widget);
+    }
+
+    for (UserNameWidget* widget : widgetsToSort) {
+        m_userSizer->Add(widget, 0, wxEXPAND | wxALL, FromDIP(2));
+    }
+
+    m_userSizer->Layout();
+    m_userContainer->SetVirtualSize(m_userSizer->GetMinSize());
+    m_userContainer->Scroll(0, 0);
+    m_userContainer->Thaw();
 }
 
 } // namespace client

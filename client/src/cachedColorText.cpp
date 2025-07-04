@@ -45,6 +45,17 @@ bool CachedColorText::SetFont(const wxFont& font) {
     return ret;
 }
 
+bool CachedColorText::SetForegroundColour(const wxColour& colour) {
+    if (GetForegroundColour() == colour) {
+        return false;
+    }
+    bool ret = wxControl::SetForegroundColour(colour);
+    if (ret) {
+        InvalidateCache();
+    }
+    return ret;
+}
+
 void CachedColorText::InvalidateCache() {
     m_cache = wxBitmap();
 }

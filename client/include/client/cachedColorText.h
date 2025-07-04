@@ -17,6 +17,7 @@ public:
     virtual void SetLabel(const wxString& label) override;
     virtual wxString GetLabel() const override;
     virtual bool SetFont(const wxFont& font) override;
+    virtual bool SetForegroundColour(const wxColour& colour) override;
 
     void InvalidateCache();
     void InvalidateCacheAndRefresh();

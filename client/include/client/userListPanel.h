@@ -5,6 +5,7 @@
 namespace client {
 
 struct User;
+class UserNameWidget;
 
 class UserListPanel : public wxPanel {
 public:
@@ -19,9 +20,11 @@ public:
 private:
     void OnUserRightClick(wxMouseEvent& event);
 
+    void SortUserWidgets();
+
     wxScrolledWindow* m_userContainer;
     wxBoxSizer* m_userSizer;
-    std::vector<User> m_users;
+    std::unordered_map<int32_t, UserNameWidget*> m_userWidgets;
 };
 
 } // namespace client

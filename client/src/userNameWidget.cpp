@@ -11,33 +11,38 @@ UserNameWidget::UserNameWidget(wxWindow* parent, const User& user)
     m_usernameText = new CachedColorText(this, wxID_ANY, user.username, wxDefaultPosition, wxDefaultSize, 0, wxStaticTextNameStr, false);
     //m_usernameText->Wrap(-1);
     // Set color based on role
-    wxColour textColor;
-    switch (user.role) {
-        case chat::UserRights::OWNER:
-            textColor = *wxRED;
-            break;
-        case chat::UserRights::ADMIN:
-            textColor = *wxGREEN;
-            break;
-        case chat::UserRights::MODERATOR:
-            textColor = *wxBLUE;
-            break;
-        case chat::UserRights::REGULAR:
-        default:
-            textColor = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT);
-            break;
-    }
-    m_usernameText->SetForegroundColour(textColor);
+    m_usernameText->SetForegroundColour(GetColourByRole(user));
 
     sizer->Add(m_usernameText, 0, wxALIGN_CENTER_VERTICAL | wxALL, 5);
     SetSizer(sizer);
     m_usernameText->Bind(wxEVT_RIGHT_DOWN, &UserNameWidget::PropagateRightClick, this);
 }
 
+void UserNameWidget::UpdateDisplay(const User& user) {
+    m_user = user;
+    m_usernameText->SetLabel(user.username);
+    m_usernameText->SetForegroundColour(GetColourByRole(user));
+    m_usernameText->Refresh();
+}
+
 void UserNameWidget::PropagateRightClick(wxMouseEvent &event) {
     wxMouseEvent newEvent(event);
     newEvent.SetEventObject(this);
     ProcessWindowEvent(newEvent);
+}
+
+wxColour UserNameWidget::GetColourByRole(const User& user) {
+    switch (user.role) {
+    case chat::UserRights::OWNER:
+        return *wxRED;
+    case chat::UserRights::ADMIN:
+        return *wxGREEN;
+    case chat::UserRights::MODERATOR:
+        return *wxBLUE;
+    case chat::UserRights::REGULAR:
+    default:
+        return wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT);
+    }
 }
 
 } // namespace client
