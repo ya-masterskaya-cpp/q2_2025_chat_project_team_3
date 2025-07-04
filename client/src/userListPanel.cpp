@@ -38,7 +38,14 @@ void UserListPanel::UpdateUserRole(int32_t userId, chat::UserRights newRole) {
 
 void UserListPanel::SetUserList(std::vector<User> users) {
     m_userContainer->Freeze();
-    m_userSizer->Clear(true); // Destroy existing widgets
+
+    wxSizerItemList itemsToDestroy = m_userSizer->GetChildren();
+    for (wxSizerItem* item : itemsToDestroy) {
+        if (item->GetWindow()) {
+            item->GetWindow()->Destroy(); // Schedules deletion, modifies the original sizer's list
+        }
+    }
+    m_userSizer->Clear(false); // Detach anything remaining
 
     // Sort the incoming user list by the User::operator<
     std::sort(users.begin(), users.end(), [] (const User& lhs, const User& rhs) {
