@@ -27,37 +27,51 @@ wxEND_EVENT_TABLE()
 RoomsPanel::RoomsPanel(wxWindow* parent) : wxPanel(parent), mainWin(static_cast<MainWidget*>(parent->GetParent())) {
     auto* sizer = new wxBoxSizer(wxVERTICAL);
 
+    // --- Create ALL widgets ---
     m_notebook = new wxNotebook(this, wxID_ANY);
+    m_createButton = new wxButton(this, ID_CREATE, "Create");
+    m_logoutButton = new wxButton(this, ID_LOGOUT, "Logout");
 
+    // --- Create notebook pages and their sizers ---
     auto* myRoomsPage = new wxPanel(m_notebook);
     auto* myRoomsSizer = new wxBoxSizer(wxVERTICAL);
     m_myRoomsList = new wxListBox(myRoomsPage, ID_LIST_MY_ROOMS);
-    myRoomsSizer->Add(m_myRoomsList, 1, wxEXPAND | wxALL, 5);
+    myRoomsSizer->Add(m_myRoomsList, 1, wxEXPAND | wxALL, FromDIP(5));
     myRoomsPage->SetSizer(myRoomsSizer);
     m_notebook->AddPage(myRoomsPage, "My rooms");
 
     auto* publicRoomsPage = new wxPanel(m_notebook);
     auto* publicRoomsSizer = new wxBoxSizer(wxVERTICAL);
     m_publicRoomsList = new wxListBox(publicRoomsPage, ID_LIST_PUBLIC_ROOMS);
-    publicRoomsSizer->Add(m_publicRoomsList, 1, wxEXPAND | wxALL, 5);
+    publicRoomsSizer->Add(m_publicRoomsList, 1, wxEXPAND | wxALL, FromDIP(5));
 
     m_joinButton = new wxButton(publicRoomsPage, ID_JOIN, "Join");
     m_joinButton->Disable();
-    publicRoomsSizer->Add(m_joinButton, 0, wxALIGN_CENTER | wxALL, 5);
+    publicRoomsSizer->Add(m_joinButton, 0, wxALIGN_CENTER | wxALL, FromDIP(5));
 
     publicRoomsPage->SetSizer(publicRoomsSizer);
     m_notebook->AddPage(publicRoomsPage, "Public rooms");
 
-    sizer->Add(m_notebook, 1, wxEXPAND | wxALL, 5);
+    // --- Add items to the main sizer ---
+    sizer->Add(m_notebook, 1, wxEXPAND | wxALL, FromDIP(5));
+    sizer->Add(m_createButton, 0, wxALIGN_CENTER | wxALL, FromDIP(5));
+    sizer->Add(m_logoutButton, 0, wxALL | wxALIGN_CENTER, FromDIP(10));
 
-    auto* btnSizer = new wxBoxSizer(wxHORIZONTAL);
-    m_createButton = new wxButton(this, ID_CREATE, "Create");
-    btnSizer->Add(m_createButton, 1, wxALL, 5);
-    sizer->Add(btnSizer, 0, wxALIGN_CENTER);
-
-    m_logoutButton = new wxButton(this, ID_LOGOUT, "Logout");
-    sizer->Add(m_logoutButton, 0, wxALL | wxALIGN_CENTER, 10);
     SetSizer(sizer);
+
+    // Give the listbox temporary, logical content.
+    wxString placeholder("  My rooms  Public rooms  ");
+    m_myRoomsList->Append(placeholder);
+
+    // Now that the content has a size, ask the sizer to calculate the
+    // ideal size for the entire panel and apply it.
+    sizer->Fit(this);
+
+    // Lock in this calculated size as the panel's minimum size.
+    SetMinSize(GetSize());
+
+    // Remove the temporary content. The minimum size is now correctly set.
+    m_myRoomsList->Clear();
 }
 
 void RoomsPanel::UpdateRoomList(const std::vector<Room*>& rooms) {
