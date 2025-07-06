@@ -60,6 +60,7 @@ private:
     void SetServers(const std::vector<std::string> &servers);
     void updateUserRole(int32_t userId, chat::UserRights newRole);
     void removeMessageFromView(int32_t messageId);
+    void addRoom(Room* room);
     
     MainWidget* ui;
     std::shared_ptr<drogon::WebSocketConnection> conn;

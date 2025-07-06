@@ -1,6 +1,7 @@
 #pragma once
 
 #include <wx/wx.h>
+#include <wx/notebook.h>
 
 namespace client {
 
@@ -9,9 +10,10 @@ class MainWidget;
 struct Room : public wxClientData {
     int32_t room_id;
     wxString room_name;
+    bool is_member;
 
-    Room(int32_t id, const wxString& name)
-    : room_id(id), room_name(name) {}
+    Room(int32_t id, const wxString& name, bool member)
+        : room_id(id), room_name(name), is_member(member) {}
 };
 
 class RoomsPanel : public wxPanel {
@@ -22,15 +24,22 @@ public:
     void RemoveRoom(int32_t room_id);
     void RenameRoom(int32_t room_id, const wxString& name);
     std::optional<Room> GetSelectedRoom();
+    void OnJoinRoom();
 
-    wxListBox* roomList;
-    wxButton* createButton;
-    wxButton* logoutButton;
 private:
+    void OnMyRoomSelected(wxCommandEvent&);
+    void OnPublicRoomSelected(wxCommandEvent& event);
     void OnJoin(wxCommandEvent&);
     void OnCreate(wxCommandEvent&);
     void OnLogout(wxCommandEvent&);
+
     MainWidget* mainWin;
+    wxNotebook* m_notebook;
+    wxListBox* m_myRoomsList;
+    wxListBox* m_publicRoomsList;
+    wxButton* m_joinButton;
+    wxButton* m_createButton;
+    wxButton* m_logoutButton;
     wxDECLARE_EVENT_TABLE();
 };
 
