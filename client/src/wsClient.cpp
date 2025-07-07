@@ -374,7 +374,9 @@ void WebSocketClient::handleMessage(const std::string& msg) {
         case chat::Envelope::kNewRoomCreated: {
             wxTheApp->CallAfter([this, env = std::move(env)] {
                 auto& response = env.new_room_created().room();
-                ui->chatInterface->m_roomsPanel->AddRoom(new Room{response.room_id(), wxString::FromUTF8(response.room_name()), response.is_joined()});
+                const auto& curr_usr = ui->chatInterface->m_chatPanel->GetCurrentUser();
+                auto is_joined = response.owner().user_id() == curr_usr.id;
+                ui->chatInterface->m_roomsPanel->AddRoom(new Room{response.room_id(), wxString::FromUTF8(response.room_name()), is_joined});
             });
             break;
         }
