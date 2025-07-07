@@ -149,11 +149,19 @@ drogon::Task<chat::AuthResponse> MessageHandlers::handleAuth(const WsDataPtr& ws
                 co_return resp;
             }
         }
+
         auto rooms = co_await switch_to_io_loop(CoroMapper<models::Rooms>(m_dbClient).findAll());
         for(const auto& room : rooms) {
             chat::RoomInfo* room_info = resp.add_rooms();
             room_info->set_room_id(room.getValueOfRoomId());
             room_info->set_room_name(room.getValueOfRoomName());
+            auto membership = co_await switch_to_io_loop(CoroMapper<models::RoomMembership>(m_dbClient)
+                .findBy(Criteria(models::RoomMembership::Cols::_user_id, CompareOperator::EQ, user.getValueOfUserId())
+                     && Criteria(models::RoomMembership::Cols::_room_id, CompareOperator::EQ, room.getValueOfRoomId())));
+            if(membership.size()) {
+                room_info->set_is_joined(membership[0].getValueOfMembershipStatus() == "JOINED");
+            }
+
         }
         chat::UserInfo* user_info = resp.mutable_authenticated_user();
         user_info->set_user_id(*user.getUserId());
@@ -397,6 +405,12 @@ drogon::Task<chat::CreateRoomResponse> MessageHandlers::handleCreateRoom(const W
                     r.setOwnerId(wsData->user->id);
                     r = co_await switch_to_io_loop(CoroMapper<models::Rooms>(tx).insert(r));
                     room_id = *r.getRoomId();
+
+                    models::RoomMembership m;
+                    m.setRoomId(room_id);
+                    m.setUserId(wsData->user->id);
+                    co_await switch_to_io_loop(CoroMapper<models::RoomMembership>(tx).insert(m));
+
                     co_return std::nullopt;
                 } catch(const DrogonDbException& e) {
                     const std::string w = e.base().what();
@@ -414,6 +428,7 @@ drogon::Task<chat::CreateRoomResponse> MessageHandlers::handleCreateRoom(const W
         auto* new_room_resp = new_room_msg.mutable_new_room_created();
         new_room_resp->mutable_room()->set_room_id(room_id);
         new_room_resp->mutable_room()->set_room_name(req.room_name());
+        new_room_resp->mutable_room()->mutable_owner()->set_user_id(wsData->user->id);
 
         co_await room_service.sendToAll(new_room_msg);
         common::setStatus(resp, chat::STATUS_SUCCESS);
@@ -864,6 +879,37 @@ drogon::Task<chat::UserTypingStopResponse> MessageHandlers::handleUserTypingStop
     co_return resp;
 }
 
+drogon::Task<chat::BecomeMemberResponse> MessageHandlers::handleBecomeMember(const WsDataPtr& wsDataGuarded, const chat::BecomeMemberRequest& req) {
+    chat::BecomeMemberResponse resp;
+    
+    auto wsData = co_await wsDataGuarded->lock_shared();
+    if (wsData->status != USER_STATUS::Authenticated) {
+        common::setStatus(resp, chat::STATUS_UNAUTHORIZED, "Not authenticated.");
+        co_return resp;
+    }
+
+    try {
+        auto room = co_await switch_to_io_loop(CoroMapper<models::Rooms>(m_dbClient)
+            .findOne(Criteria(models::Rooms::Cols::_room_id, CompareOperator::EQ, req.room_id())));
+        auto curr_membership = co_await getUserMembershipStatus(m_dbClient, wsData->user->id, req.room_id());
+
+        if(room.getValueOfIsPrivate() && !curr_membership) {
+            common::setStatus(resp, chat::STATUS_UNAUTHORIZED, "Not authorized to join this private room.");
+            co_return resp;
+        }
+
+        co_await setUserMembershipStatus(m_dbClient, wsData->user->id, req.room_id(), chat::MembershipStatus::JOINED);
+
+    } catch (const std::exception& e) {
+        LOG_ERROR << "Become member error: " << e.what();
+        common::setStatus(resp, chat::STATUS_FAILURE, std::string("Failded to become member: ") + e.what());
+        co_return resp;
+    }
+
+    common::setStatus(resp, chat::STATUS_SUCCESS);
+    co_return resp;
+}
+
 std::optional<std::string> MessageHandlers::validateUtf8String(
     const std::string_view& textToValidate,
     size_t maxLength,
@@ -959,5 +1005,7 @@ drogon::Task<ScopedTransactionResult> MessageHandlers::setUserMembershipStatus(c
         co_return "Database error during membership update.";
     }
 }
+
+
 
 } // namespace server

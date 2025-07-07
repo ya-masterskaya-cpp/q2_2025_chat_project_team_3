@@ -112,6 +112,13 @@ message SendMessageResponse {
     Status status = 1;
 }
 
+message BecomeMemberRequest {
+    int32 room_id = 1;
+}
+message BecomeMemberResponse {
+    Status status = 1;
+}
+
 message JoinRoomRequest {
     int32 room_id = 1;
 }
@@ -296,5 +303,7 @@ message Envelope {
         UserTypingStopResponse user_typing_stop_response = 48;
         UserStartedTyping user_started_typing = 49;
         UserStoppedTyping user_stopped_typing = 50;
+        BecomeMemberRequest become_member_request = 51;
+        BecomeMemberResponse become_member_response = 52;
     }
 }

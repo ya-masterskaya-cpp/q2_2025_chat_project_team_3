@@ -164,6 +164,17 @@ void RoomsPanel::OnJoinRoom() {
         return;
     }
 
+    mainWin->wsClient->becomeMember(selectedRoom.room_id);
+}
+
+void RoomsPanel::OnBecameMember() {
+    auto selectedRoomOpt = GetSelectedRoom();
+    if (!selectedRoomOpt.has_value()) {
+        return;
+    }
+
+    Room selectedRoom = *selectedRoomOpt;
+
     for (unsigned int i = 0; i < m_publicRoomsList->GetCount(); ++i) {
         Room* publicRoomData = dynamic_cast<Room*>(m_publicRoomsList->GetClientObject(i));
         Room* myNewRoom = new Room(*publicRoomData);
