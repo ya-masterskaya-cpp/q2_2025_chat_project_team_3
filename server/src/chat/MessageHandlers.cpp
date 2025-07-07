@@ -879,6 +879,37 @@ drogon::Task<chat::UserTypingStopResponse> MessageHandlers::handleUserTypingStop
     co_return resp;
 }
 
+drogon::Task<chat::BecomeMemberResponse> MessageHandlers::handleBecomeMember(const WsDataPtr& wsDataGuarded, const chat::BecomeMemberRequest& req) {
+    chat::BecomeMemberResponse resp;
+    
+    auto wsData = co_await wsDataGuarded->lock_shared();
+    if (wsData->status != USER_STATUS::Authenticated) {
+        common::setStatus(resp, chat::STATUS_UNAUTHORIZED, "Not authenticated.");
+        co_return resp;
+    }
+
+    try {
+        auto room = co_await switch_to_io_loop(CoroMapper<models::Rooms>(m_dbClient)
+            .findOne(Criteria(models::Rooms::Cols::_room_id, CompareOperator::EQ, req.room_id())));
+        auto curr_membership = co_await getUserMembershipStatus(m_dbClient, wsData->user->id, req.room_id());
+
+        if(room.getValueOfIsPrivate() && !curr_membership) {
+            common::setStatus(resp, chat::STATUS_UNAUTHORIZED, "Not authorized to join this private room.");
+            co_return resp;
+        }
+
+        co_await setUserMembershipStatus(m_dbClient, wsData->user->id, req.room_id(), chat::MembershipStatus::JOINED);
+
+    } catch (const std::exception& e) {
+        LOG_ERROR << "Become member error: " << e.what();
+        common::setStatus(resp, chat::STATUS_FAILURE, std::string("Failded to become member: ") + e.what());
+        co_return resp;
+    }
+
+    common::setStatus(resp, chat::STATUS_SUCCESS);
+    co_return resp;
+}
+
 std::optional<std::string> MessageHandlers::validateUtf8String(
     const std::string_view& textToValidate,
     size_t maxLength,
@@ -974,5 +1005,7 @@ drogon::Task<ScopedTransactionResult> MessageHandlers::setUserMembershipStatus(c
         co_return "Database error during membership update.";
     }
 }
+
+
 
 } // namespace server

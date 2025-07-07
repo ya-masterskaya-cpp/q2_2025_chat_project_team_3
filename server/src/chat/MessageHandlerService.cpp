@@ -76,6 +76,10 @@ drogon::Task<chat::Envelope> MessageHandlerService::processMessage(const WsDataP
             *respEnv.mutable_user_typing_stop_response() = co_await m_handlers->handleUserTypingStop(wsData, room_service);
             break;
 		}
+        case chat::Envelope::kBecomeMemberRequest: {
+            *respEnv.mutable_become_member_response() = co_await m_handlers->handleBecomeMember(wsData, env.become_member_request());
+            break;
+		}
         default: {
             respEnv = common::makeGenericErrorEnvelope("Unknown or empty payload");
             break;

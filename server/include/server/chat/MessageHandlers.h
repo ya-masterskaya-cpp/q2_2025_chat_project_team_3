@@ -93,6 +93,9 @@ public:
 
 	/** @brief Handles a request to stop typing in the current room. */
 	drogon::Task<chat::UserTypingStopResponse> handleUserTypingStop(const WsDataPtr& wsDataGuarded, IChatRoomService& room_service) const;
+
+    drogon::Task<chat::BecomeMemberResponse> handleBecomeMember(const WsDataPtr& wsDataGuarded, const chat::BecomeMemberRequest& req);
+
 private:
     /**
      * @brief Validates a string for valid UTF-8 encoding and maximum length.

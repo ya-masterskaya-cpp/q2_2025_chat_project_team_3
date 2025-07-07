@@ -37,6 +37,7 @@ public:
     void deleteMessage(int32_t messageId);
     void sendTypingStart();
     void sendTypingStop();
+    void becomeMember(int32_t roomId);
 
     static std::string formatMessageTimestamp(int64_t timestamp);
 
@@ -61,6 +62,7 @@ private:
     void updateUserRole(int32_t userId, chat::UserRights newRole);
     void removeMessageFromView(int32_t messageId);
     void addRoom(Room* room);
+    void becameMember();
     
     MainWidget* ui;
     std::shared_ptr<drogon::WebSocketConnection> conn;

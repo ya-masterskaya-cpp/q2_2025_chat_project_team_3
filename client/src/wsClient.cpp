@@ -205,6 +205,12 @@ void WebSocketClient::sendTypingStop() {
     sendEnvelope(env);
 }
 
+void WebSocketClient::becomeMember(int32_t roomId) {
+    chat::Envelope env;
+    env.mutable_become_member_request()->set_room_id(roomId);
+    sendEnvelope(env);
+}
+
 void WebSocketClient::handleMessage(const std::string& msg) {
     chat::Envelope env;
     if(!env.ParseFromString(msg)) {
@@ -377,6 +383,9 @@ void WebSocketClient::handleMessage(const std::string& msg) {
                 const auto& curr_usr = ui->chatInterface->m_chatPanel->GetCurrentUser();
                 auto is_joined = response.owner().user_id() == curr_usr.id;
                 ui->chatInterface->m_roomsPanel->AddRoom(new Room{response.room_id(), wxString::FromUTF8(response.room_name()), is_joined});
+                if(is_joined) {
+                    joinRoom(response.room_id());
+                }
             });
             break;
         }
@@ -465,6 +474,14 @@ void WebSocketClient::handleMessage(const std::string& msg) {
                     ui->chatInterface->m_chatPanel->UserStoppedTyping(user);
                 }
                 });
+            break;
+        }
+        case chat::Envelope::kBecomeMemberResponse: {
+            if (!statusOk(env.become_member_response().status())) {
+                showError("Error when attempting to become a member: " + wxString(env.become_member_response().status().message()));
+            } else {
+                becameMember();
+            }
             break;
         }
         default: {
@@ -562,6 +579,12 @@ void WebSocketClient::removeMessageFromView(int32_t messageId) {
 void WebSocketClient::addRoom(Room* room) {
     wxTheApp->CallAfter([this, room] {
         ui->chatInterface->m_roomsPanel->AddRoom(room);
+    });
+}
+
+void WebSocketClient::becameMember() {
+    wxTheApp->CallAfter([this] {
+        ui->chatInterface->m_roomsPanel->OnBecameMember();
     });
 }
 
