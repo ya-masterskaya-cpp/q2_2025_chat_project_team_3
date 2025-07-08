@@ -910,6 +910,156 @@ drogon::Task<chat::BecomeMemberResponse> MessageHandlers::handleBecomeMember(con
     co_return resp;
 }
 
+drogon::Task<chat::ChangeUsernameResponse> MessageHandlers::handleChangeUsername(const WsDataPtr& wsDataGuarded, const chat::ChangeUsernameRequest& req, IChatRoomService& room_service) {
+    chat::ChangeUsernameResponse resp;
+
+    auto wsData = co_await wsDataGuarded->lock_unique();
+
+    if (wsData->status != USER_STATUS::Authenticated) {
+        common::setStatus(resp, chat::STATUS_UNAUTHORIZED, "Not authenticated.");
+        co_return resp;
+    }
+    if (auto error = validateUtf8String(req.new_username(), common::limits::MAX_USERNAME_LENGTH, "new username")) {
+        common::setStatus(resp, chat::STATUS_FAILURE, *error);
+        co_return resp;
+    }
+    const std::string newUsername = req.new_username();
+    try {
+        auto err = co_await WithTransaction(
+            [&](const auto& tx) -> drogon::Task<ScopedTransactionResult> {
+                try {
+                    auto existingUsers = co_await switch_to_io_loop(CoroMapper<models::Users>(tx)
+                        .findBy(Criteria(models::Users::Cols::_username, CompareOperator::EQ, newUsername)));
+                    if (!existingUsers.empty()) {
+                        co_return "This username is already taken.";
+                    }
+                    auto usersToUpdate = co_await switch_to_io_loop(CoroMapper<models::Users>(tx)
+                        .findBy(Criteria(models::Users::Cols::_user_id, CompareOperator::EQ, wsData->user->id)));
+
+                    if (usersToUpdate.empty()) {
+                        co_return "Current user not found in database.";
+                    }
+                    auto userToUpdate = usersToUpdate.front();
+                    userToUpdate.setUsername(newUsername);
+                    co_await switch_to_io_loop(CoroMapper<models::Users>(tx).update(userToUpdate));
+                    co_return std::nullopt;
+                }
+                catch (const DrogonDbException& e) {
+                    LOG_ERROR << "Username change transaction failed: " << e.base().what();
+                    co_return "Database error during username change.";
+                }
+            });
+        if (err) {
+            common::setStatus(resp, chat::STATUS_FAILURE, *err);
+            co_return resp;
+        }
+        wsData->user->name = newUsername;
+
+        chat::Envelope broadcastEnv;
+        auto* usernameChangedMsg = broadcastEnv.mutable_username_changed();
+        usernameChangedMsg->set_user_id(wsData->user->id);
+        usernameChangedMsg->set_new_username(newUsername);
+        co_await room_service.sendToAll(broadcastEnv);
+
+        common::setStatus(resp, chat::STATUS_SUCCESS);
+    }
+    catch (const std::exception& e) {
+        LOG_ERROR << "Change username error: " << e.what();
+        common::setStatus(resp, chat::STATUS_FAILURE, "An unexpected error occurred.");
+    }
+    co_return resp;
+}
+
+drogon::Task<chat::GetMySaltResponse> MessageHandlers::handleGetSalt(const WsDataPtr& wsDataGuarded) {
+    chat::GetMySaltResponse resp;
+
+    auto wsData = co_await wsDataGuarded->lock_shared();
+
+    if (wsData->status != USER_STATUS::Authenticated) {
+        common::setStatus(resp, chat::STATUS_UNAUTHORIZED, "Not authenticated.");
+        co_return resp;
+    }
+
+    try {
+        auto users = co_await switch_to_io_loop(CoroMapper<models::Users>(m_dbClient)
+            .findBy(Criteria(models::Users::Cols::_user_id, CompareOperator::EQ, wsData->user->id)));
+
+        if (users.empty()) {
+            common::setStatus(resp, chat::STATUS_NOT_FOUND, "User not found in database.");
+            co_return resp;
+        }
+
+        const auto& user = users.front();
+        if (user.getValueOfSalt().empty()) {
+            common::setStatus(resp, chat::STATUS_FAILURE, "User account is not migrated and has no salt.");
+            co_return resp;
+        }
+        resp.set_salt(user.getValueOfSalt());
+        common::setStatus(resp, chat::STATUS_SUCCESS);
+    }
+    catch (const DrogonDbException& e) {
+        LOG_ERROR << "Failed to get salt for user " << wsData->user->id << ": " << e.base().what();
+        common::setStatus(resp, chat::STATUS_FAILURE, "Database error while fetching user data.");
+    }
+    co_return resp;
+}
+
+drogon::Task<chat::ChangePasswordResponse> MessageHandlers::handleChangePassword(const WsDataPtr& wsDataGuarded, const chat::ChangePasswordRequest& req) {
+    chat::ChangePasswordResponse resp;
+
+    auto wsData = co_await wsDataGuarded->lock_shared();
+
+    if (wsData->status != USER_STATUS::Authenticated) {
+        common::setStatus(resp, chat::STATUS_UNAUTHORIZED, "Not authenticated.");
+        co_return resp;
+    }
+    if (req.old_password_hash().empty() || req.new_password_hash().empty() || req.new_salt().empty()) {
+        common::setStatus(resp, chat::STATUS_FAILURE, "Request is missing required fields.");
+        co_return resp;
+    }
+    try {
+        auto err = co_await WithTransaction(
+            [&](const auto& tx) -> drogon::Task<ScopedTransactionResult> {
+                try {
+                    auto users = co_await switch_to_io_loop(CoroMapper<models::Users>(tx)
+                        .findBy(Criteria(models::Users::Cols::_user_id, CompareOperator::EQ, wsData->user->id)));
+                    if (users.empty()) {
+                        co_return "Current user not found in database.";
+                    }
+                    auto userToUpdate = users.front();
+
+                    if (userToUpdate.getValueOfSalt().empty()) {
+                        co_return "Cannot change password for a non-migrated account.";
+                    }
+
+                    if (userToUpdate.getValueOfHashPassword() != req.old_password_hash()) {
+                        co_return "Incorrect old password.";
+                    }
+
+                    userToUpdate.setHashPassword(req.new_password_hash());
+                    userToUpdate.setSalt(req.new_salt());
+                    co_await switch_to_io_loop(CoroMapper<models::Users>(tx).update(userToUpdate));
+                    co_return std::nullopt;
+                }
+                catch (const DrogonDbException& e) {
+                    LOG_ERROR << "Password change transaction failed: " << e.base().what();
+                    co_return "Database error during password change.";
+                }
+            });
+
+        if (err) {
+            common::setStatus(resp, chat::STATUS_FAILURE, *err);
+            co_return resp;
+        }
+        common::setStatus(resp, chat::STATUS_SUCCESS);
+    }
+    catch (const std::exception& e) {
+        LOG_ERROR << "Change password error: " << e.what();
+        common::setStatus(resp, chat::STATUS_FAILURE, "An unexpected error occurred.");
+    }
+    co_return resp;
+}
+
 std::optional<std::string> MessageHandlers::validateUtf8String(
     const std::string_view& textToValidate,
     size_t maxLength,

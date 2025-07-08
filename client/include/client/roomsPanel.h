@@ -33,6 +33,7 @@ private:
     void OnJoin(wxCommandEvent&);
     void OnCreate(wxCommandEvent&);
     void OnLogout(wxCommandEvent&);
+    void OnAccount(wxCommandEvent&);
 
     MainWidget* mainWin;
     wxNotebook* m_notebook;
@@ -41,6 +42,7 @@ private:
     wxButton* m_joinButton;
     wxButton* m_createButton;
     wxButton* m_logoutButton;
+    wxButton* m_accountButton;
     wxDECLARE_EVENT_TABLE();
 };
 

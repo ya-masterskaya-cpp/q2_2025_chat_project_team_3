@@ -80,6 +80,18 @@ drogon::Task<chat::Envelope> MessageHandlerService::processMessage(const WsDataP
             *respEnv.mutable_become_member_response() = co_await m_handlers->handleBecomeMember(wsData, env.become_member_request());
             break;
 		}
+        case chat::Envelope::kChangeUsernameRequest: {
+            *respEnv.mutable_change_username_response() = co_await m_handlers->handleChangeUsername(wsData, env.change_username_request(), room_service);
+            break;
+        }
+        case chat::Envelope::kGetMySaltRequest: {
+            *respEnv.mutable_get_my_salt_response() = co_await m_handlers->handleGetSalt(wsData);
+            break;
+        }
+        case chat::Envelope::kChangePasswordRequest: {
+            *respEnv.mutable_change_password_response() = co_await m_handlers->handleChangePassword(wsData, env.change_password_request());
+            break;
+        }
         default: {
             respEnv = common::makeGenericErrorEnvelope("Unknown or empty payload");
             break;

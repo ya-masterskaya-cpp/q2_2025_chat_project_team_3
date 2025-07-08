@@ -25,7 +25,7 @@ add_executable(client_app
     src/roomSettingsPanel.cpp
     src/typingIndicatorPanel.cpp
     src/chatInterface.cpp
-    )
+    src/accountSettings.cpp)
 
 target_include_directories(client_app PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include

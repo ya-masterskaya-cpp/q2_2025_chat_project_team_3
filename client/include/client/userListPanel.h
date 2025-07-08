@@ -15,6 +15,7 @@ public:
     void RemoveUser(int32_t userId);
     void Clear();
     void UpdateUserRole(int32_t userId, chat::UserRights newRole);
+    void UpdateUsername(int32_t userId, const wxString& newUsername);
 
 private:
     void OnUserRightClick(wxMouseEvent& event);

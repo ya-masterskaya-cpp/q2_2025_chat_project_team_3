@@ -38,6 +38,9 @@ public:
     void sendTypingStart();
     void sendTypingStop();
     void becomeMember(int32_t roomId);
+    void changeUsername(const std::string& username);
+    void requestMySalt();
+    void changePassword(const std::string& old_hash, const std::string& new_hash, const std::string& new_salt);
 
     static std::string formatMessageTimestamp(int64_t timestamp);
 
@@ -63,6 +66,7 @@ private:
     void removeMessageFromView(int32_t messageId);
     void addRoom(Room* room);
     void becameMember();
+    void updateUsername(int32_t userId, const std::string& username);
     
     MainWidget* ui;
     std::shared_ptr<drogon::WebSocketConnection> conn;

@@ -283,6 +283,14 @@ void ChatPanel::UserLeft(const User& user) {
     UserStoppedTyping(user);
 }
 
+void ChatPanel::UpdateUsername(int32_t userId, const wxString& newUsername) {
+    if (m_userListPanel) {
+        m_userListPanel->UpdateUsername(userId, newUsername);
+    }
+
+    //m_messageView->Start();
+}
+
 void ChatPanel::OnRoomRename(wxCommandEvent &event) {
     if (!m_parent || !m_parent->wsClient) return;
     wxString newName = event.GetString();

@@ -96,6 +96,15 @@ public:
 
     drogon::Task<chat::BecomeMemberResponse> handleBecomeMember(const WsDataPtr& wsDataGuarded, const chat::BecomeMemberRequest& req);
 
+    /** @brief Handles a request to change username. */
+    drogon::Task<chat::ChangeUsernameResponse> handleChangeUsername(const WsDataPtr& wsDataGuarded, const chat::ChangeUsernameRequest& req, IChatRoomService& room_service);
+
+    /** @brief Handles a request to get salt when changing password. */
+    drogon::Task<chat::GetMySaltResponse> handleGetSalt(const WsDataPtr& wsDataGuarded);
+
+    /** @brief Handles a request to change password. */
+    drogon::Task<chat::ChangePasswordResponse> handleChangePassword(const WsDataPtr& wsDataGuarded, const chat::ChangePasswordRequest& req);
+
 private:
     /**
      * @brief Validates a string for valid UTF-8 encoding and maximum length.

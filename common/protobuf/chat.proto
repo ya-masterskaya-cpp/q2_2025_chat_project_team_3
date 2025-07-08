@@ -251,6 +251,34 @@ message UserStoppedTyping {
     UserInfo user = 1;
 }
 
+message ChangeUsernameRequest {
+    string new_username = 1;
+}
+message ChangeUsernameResponse {
+    Status status = 1;
+}
+
+message GetMySaltRequest {
+}
+message GetMySaltResponse {
+    Status status = 1;
+    optional string salt = 2;
+}
+
+message ChangePasswordRequest {
+    string old_password_hash = 1;
+    string new_password_hash = 2;
+    string new_salt = 3;
+}
+message ChangePasswordResponse {
+    Status status = 1;
+}
+
+message UsernameChanged {
+    int32 user_id = 1;
+    string new_username = 2;
+}
+
 message Envelope {
     oneof payload {
         ServerHello server_hello = 1;
@@ -305,5 +333,12 @@ message Envelope {
         UserStoppedTyping user_stopped_typing = 50;
         BecomeMemberRequest become_member_request = 51;
         BecomeMemberResponse become_member_response = 52;
+        ChangeUsernameRequest change_username_request = 53;
+        ChangeUsernameResponse change_username_response = 54;
+        GetMySaltRequest get_my_salt_request = 55;
+        GetMySaltResponse get_my_salt_response = 56;
+        ChangePasswordRequest change_password_request = 57;
+        ChangePasswordResponse change_password_response = 58;
+        UsernameChanged username_changed = 59;
     }
 }

@@ -3,6 +3,9 @@
 #include <client/wsClient.h>
 #include <common/utils/limits.h>
 #include <client/textUtil.h>
+#include <client/accountSettings.h>
+#include <client/chatInterface.h>
+#include <client/chatPanel.h>
 
 namespace client {
 
@@ -11,7 +14,8 @@ enum {
     ID_LIST_PUBLIC_ROOMS,
     ID_JOIN,
     ID_CREATE,
-    ID_LOGOUT
+    ID_LOGOUT,
+    ID_ACCOUNT
 };
 
 wxBEGIN_EVENT_TABLE(RoomsPanel, wxPanel)
@@ -21,7 +25,7 @@ wxBEGIN_EVENT_TABLE(RoomsPanel, wxPanel)
     EVT_LISTBOX(ID_LIST_MY_ROOMS, RoomsPanel::OnMyRoomSelected)
     EVT_LISTBOX_DCLICK(ID_LIST_MY_ROOMS, RoomsPanel::OnMyRoomSelected)
     EVT_LISTBOX(ID_LIST_PUBLIC_ROOMS, RoomsPanel::OnPublicRoomSelected)
-
+    EVT_BUTTON(ID_ACCOUNT, RoomsPanel::OnAccount)
 wxEND_EVENT_TABLE()
 
 RoomsPanel::RoomsPanel(wxWindow* parent) : wxPanel(parent), mainWin(static_cast<MainWidget*>(parent->GetParent())) {
@@ -31,6 +35,7 @@ RoomsPanel::RoomsPanel(wxWindow* parent) : wxPanel(parent), mainWin(static_cast<
     m_notebook = new wxNotebook(this, wxID_ANY);
     m_createButton = new wxButton(this, ID_CREATE, "Create");
     m_logoutButton = new wxButton(this, ID_LOGOUT, "Logout");
+    m_accountButton = new wxButton(this, ID_ACCOUNT, "My Account");
 
     // --- Create notebook pages and their sizers ---
     auto* myRoomsPage = new wxPanel(m_notebook);
@@ -55,7 +60,13 @@ RoomsPanel::RoomsPanel(wxWindow* parent) : wxPanel(parent), mainWin(static_cast<
     // --- Add items to the main sizer ---
     sizer->Add(m_notebook, 1, wxEXPAND | wxALL, FromDIP(5));
     sizer->Add(m_createButton, 0, wxALIGN_CENTER | wxALL, FromDIP(5));
-    sizer->Add(m_logoutButton, 0, wxALL | wxALIGN_CENTER, FromDIP(10));
+
+    // Accounts button move to horizontal sizer on bottom
+    auto* bottom_sizer = new wxBoxSizer(wxHORIZONTAL);
+    bottom_sizer->Add(m_accountButton, 0, wxALL | wxALIGN_CENTER, FromDIP(5));
+    bottom_sizer->Add(m_logoutButton, 0, wxALL | wxALIGN_CENTER, FromDIP(10));
+
+    sizer->Add(bottom_sizer, 0, wxEXPAND | wxALL, 5);
 
     SetSizer(sizer);
 
@@ -234,6 +245,10 @@ void RoomsPanel::OnCreate(wxCommandEvent&) {
 
 void RoomsPanel::OnLogout(wxCommandEvent &) {
     mainWin->wsClient->logout();
+}
+
+void RoomsPanel::OnAccount(wxCommandEvent&) {
+    mainWin->ShowAccountSettings(true);
 }
 
 } // namespace client
