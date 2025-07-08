@@ -46,7 +46,7 @@ AccountSettingsPanel::AccountSettingsPanel(wxWindow* parent)
     m_changeUsernameButton = new wxButton(this, ID_CHANGE_USERNAME_BTN, "Change Username");
     usernameBox->Add(m_changeUsernameButton, 0, wxALIGN_CENTER | wxLEFT | wxRIGHT | wxBOTTOM, 10);
 
-    mainSizer->Add(usernameBox, 1, wxEXPAND | wxALL, 10);
+    mainSizer->Add(usernameBox, 2, wxEXPAND | wxALL, 10);
 
     // --- Change password box ---
     auto* passwordBox = new wxStaticBoxSizer(wxVERTICAL, this, "Password");
@@ -66,7 +66,8 @@ AccountSettingsPanel::AccountSettingsPanel(wxWindow* parent)
     m_changePasswordButton = new wxButton(this, ID_CHANGE_PASSWORD_BTN, "Change Password");
     passwordBox->Add(m_changePasswordButton, 0, wxALIGN_CENTER | wxLEFT | wxRIGHT | wxBOTTOM, 10);
 
-    mainSizer->Add(passwordBox, 1, wxEXPAND | wxALL, 10);
+    mainSizer->Add(passwordBox, 3, wxEXPAND | wxALL, 10);
+    
 
     // --- Button "Back" ---
     m_backButton = new wxButton(this, ID_BACK, "Back");

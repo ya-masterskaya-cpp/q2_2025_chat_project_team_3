@@ -326,11 +326,10 @@ void MessageView::UpdateUsername(int32_t userId, const wxString& newUsername) {
                 .messageId = message->GetMessageId(),
             };
             message->Update(this, msg, m_lastKnownWrapWidth);
-            message->InvalidateCaches();
-            static_cast<wxWindow*>(message)->Update();
         }
     }
     UpdateWidgetPositions();
+    Refresh();
 }
 
 } // namespace client
