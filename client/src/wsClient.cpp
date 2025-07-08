@@ -394,6 +394,7 @@ void WebSocketClient::handleMessage(const std::string& msg) {
             std::vector<Message> messages;
             for(const auto& proto_message : env.get_messages_response().message()) {
                 messages.emplace_back(Message{wxString::FromUTF8(proto_message.from().user_name())
+                    , proto_message.from().user_id()
                     , wxString::FromUTF8(proto_message.message())
                     , proto_message.timestamp()
                     , proto_message.message_id()});
@@ -599,6 +600,7 @@ void WebSocketClient::removeUser(User user) {
 void WebSocketClient::showRoomMessage(const chat::MessageInfo& mi) {
     std::vector<Message> messages;
     messages.emplace_back(Message{wxString::FromUTF8(mi.from().user_name())
+        , mi.from().user_id()
         , wxString::FromUTF8(mi.message())
         , mi.timestamp()
         , mi.message_id()});

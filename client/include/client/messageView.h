@@ -71,6 +71,7 @@ public:
     void Clear();
     void JumpToPresent();
     void DeleteMessageById(int32_t messageId);
+    void UpdateUsername(int32_t userId, const wxString& newUsername);
 
     void InvalidateCaches();
     void UpdateWidgetPositions();

@@ -315,4 +315,22 @@ void MessageView::DeleteMessageById(int32_t messageId) {
     }
 }
 
+void MessageView::UpdateUsername(int32_t userId, const wxString& newUsername) {
+    for (auto message : m_messageWidgets) {
+        if (message->GetUserId() == userId) {
+            Message msg{
+                .user = newUsername,
+                .userId = userId,
+                .msg = message->GetMessageValue(),
+                .timestamp = message->GetTimestampValue(),
+                .messageId = message->GetMessageId(),
+            };
+            message->Update(this, msg, m_lastKnownWrapWidth);
+            message->InvalidateCaches();
+            static_cast<wxWindow*>(message)->Update();
+        }
+    }
+    UpdateWidgetPositions();
+}
+
 } // namespace client

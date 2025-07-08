@@ -287,8 +287,8 @@ void ChatPanel::UpdateUsername(int32_t userId, const wxString& newUsername) {
     if (m_userListPanel) {
         m_userListPanel->UpdateUsername(userId, newUsername);
     }
-
-    //m_messageView->Start();
+    
+    m_messageView->UpdateUsername(userId, newUsername);
 }
 
 void ChatPanel::OnRoomRename(wxCommandEvent &event) {
