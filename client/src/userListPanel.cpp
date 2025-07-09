@@ -83,7 +83,14 @@ void UserListPanel::SetUserList(std::vector<User> users) {
 }
 
 void UserListPanel::AddUser(const User& user) {
-    m_users.push_back(user);
+    auto it = std::find_if(m_users.begin(), m_users.end(), [userId = user.id](const User& u) {
+		return u.id == userId; });
+    if (it != m_users.end()) {
+        ++it->count;
+        return;
+    } else {
+		m_users.push_back(user);
+    }
     SetUserList(std::move(m_users));
 }
 
@@ -92,7 +99,11 @@ void UserListPanel::RemoveUser(int userId) {
         return u.id == userId; });
 
     if (it != m_users.end()) {
-        m_users.erase(it);
+        if (it->count > 0) {
+            --it->count;
+        } else {
+            it = m_users.erase(it);
+		}
         SetUserList(std::move(m_users));
     }
 }
