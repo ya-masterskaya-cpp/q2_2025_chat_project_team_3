@@ -8,6 +8,7 @@ class InitialPanel;
 class ServersPanel;
 class AuthPanel;
 class ChatInterface;
+class AccountSettingsPanel;
 class WebSocketClient;
 struct User;
 
@@ -21,11 +22,13 @@ public:
     void ShowAuth();
     void ShowRooms();
     void ShowChat(std::vector<User> users);
+    void ShowAccountSettings(bool show);
 
     InitialPanel* initialPanel;
     ServersPanel* serversPanel;
     AuthPanel* authPanel;
     ChatInterface* chatInterface;
+    AccountSettingsPanel* accountSettingsPanel;
     WebSocketClient* wsClient;
 
 private:

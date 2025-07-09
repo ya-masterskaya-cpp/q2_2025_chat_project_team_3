@@ -19,7 +19,7 @@ enum {
 MessageWidget::MessageWidget(wxWindow* parent,
                              const Message& msg,
                              int lastKnownWrapWidth)
-    : wxPanel(parent, wxID_ANY), m_originalMessage{msg.msg}, m_timestamp_val{msg.timestamp}, m_messageId{msg.messageId} {
+    : wxPanel(parent, wxID_ANY), m_originalMessage{ msg.msg }, m_timestamp_val{ msg.timestamp }, m_messageId{ msg.messageId }, m_userId{ msg.userId } {
     SetBackgroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW));
     SetDoubleBuffered(true);
 
@@ -91,6 +91,7 @@ void MessageWidget::Update([[maybe_unused]] wxWindow* parent, const Message& msg
     m_messageId = msg.messageId;
     m_messageStaticText->SetLabelText(TextUtil::WrapText(this, m_originalMessage, lastKnownWrapWidth - FromDIP(9), this->GetFont()));
     m_userText->SetLabelText(msg.user);
+    m_userId = msg.userId;
     m_timeText->SetLabelText(wxString::FromUTF8(WebSocketClient::formatMessageTimestamp(msg.timestamp)));
     //InvalidateBestSize();
     Layout();

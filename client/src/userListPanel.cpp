@@ -36,6 +36,16 @@ void UserListPanel::UpdateUserRole(int32_t userId, chat::UserRights newRole) {
     SetUserList(std::move(m_users));
 }
 
+void UserListPanel::UpdateUsername(int32_t userId, const wxString& newUsername) {
+    std::for_each(m_users.begin(), m_users.end(), [userId, newUsername](User& u) {
+        if (u.id == userId) {
+            u.username = newUsername;
+        }
+    });
+
+    SetUserList(std::move(m_users));
+}
+
 void UserListPanel::SetUserList(std::vector<User> users) {
     m_userContainer->Freeze();
 

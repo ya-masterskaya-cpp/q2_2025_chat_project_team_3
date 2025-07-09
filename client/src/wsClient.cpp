@@ -9,6 +9,7 @@
 #include <client/messageView.h>
 #include <client/user.h>
 #include <client/chatInterface.h>
+#include <client/accountSettings.h>
 #include <common/utils/utils.h>
 #include <common/version.h>
 #include <drogon/HttpRequest.h>
@@ -211,6 +212,28 @@ void WebSocketClient::becomeMember(int32_t roomId) {
     sendEnvelope(env);
 }
 
+void WebSocketClient::changeUsername(const std::string& username) {
+    chat::Envelope env;
+    auto* request = env.mutable_change_username_request();
+    request->set_new_username(username);
+    sendEnvelope(env);
+}
+
+void WebSocketClient::requestMySalt() {
+    chat::Envelope env;
+    env.mutable_get_my_salt_request();
+    sendEnvelope(env);
+}
+
+void WebSocketClient::changePassword(const std::string& old_hash, const std::string& new_hash, const std::string& new_salt) {
+    chat::Envelope env;
+    auto* request = env.mutable_change_password_request();
+    request->set_old_password_hash(old_hash);
+    request->set_new_password_hash(new_hash);
+    request->set_new_salt(new_salt);
+	sendEnvelope(env);
+}
+
 void WebSocketClient::handleMessage(const std::string& msg) {
     chat::Envelope env;
     if(!env.ParseFromString(msg)) {
@@ -325,6 +348,7 @@ void WebSocketClient::handleMessage(const std::string& msg) {
                 user.role = chat::UserRights::REGULAR;
                 wxTheApp->CallAfter([this, user]() {
                     ui->chatInterface->m_chatPanel->SetCurrentUser(user);
+                    ui->accountSettingsPanel->UpdateCurrentUsername(user.username);
                 });
                 updateRoomsPanel(rooms);
                 showRooms();
@@ -370,6 +394,7 @@ void WebSocketClient::handleMessage(const std::string& msg) {
             std::vector<Message> messages;
             for(const auto& proto_message : env.get_messages_response().message()) {
                 messages.emplace_back(Message{wxString::FromUTF8(proto_message.from().user_name())
+                    , proto_message.from().user_id()
                     , wxString::FromUTF8(proto_message.message())
                     , proto_message.timestamp()
                     , proto_message.message_id()});
@@ -484,6 +509,42 @@ void WebSocketClient::handleMessage(const std::string& msg) {
             }
             break;
         }
+        case chat::Envelope::kChangeUsernameResponse: {
+            if (statusOk(env.change_username_response().status())) {
+                showInfo("Username has been successfully changed!");
+            }
+            else {
+                showError("Error when attempting to change username : " + wxString(env.change_username_response().status().message()));
+            }
+            break;
+        }
+        case chat::Envelope::kUsernameChanged: {
+            updateUsername(env.username_changed().user_id(), env.username_changed().new_username());
+            break;
+        }
+        case chat::Envelope::kGetMySaltResponse: {
+            if (statusOk(env.get_my_salt_response().status())) {
+                wxTheApp->CallAfter([this, salt = env.get_my_salt_response().salt()]() {
+                    ui->accountSettingsPanel->OnPasswordChangeContinue(salt);
+                });
+            }
+            else {
+                showError("Failed to get user data for password change.");
+                wxTheApp->CallAfter([this]() {
+                    ui->accountSettingsPanel->OnPasswordChangeFailed();
+                });
+            }
+            break;
+        }
+        case chat::Envelope::kChangePasswordResponse: {
+            if (statusOk(env.change_password_response().status())) {
+                showInfo("Password has been successfully changed!");
+            }
+            else {
+                showError("Error when attempting to change password : " + wxString(env.change_password_response().status().message()));
+            }
+            break;
+        }
         default: {
             showError("Unknown message received from server!");
             break;
@@ -539,6 +600,7 @@ void WebSocketClient::removeUser(User user) {
 void WebSocketClient::showRoomMessage(const chat::MessageInfo& mi) {
     std::vector<Message> messages;
     messages.emplace_back(Message{wxString::FromUTF8(mi.from().user_name())
+        , mi.from().user_id()
         , wxString::FromUTF8(mi.message())
         , mi.timestamp()
         , mi.message_id()});
@@ -585,6 +647,24 @@ void WebSocketClient::addRoom(Room* room) {
 void WebSocketClient::becameMember() {
     wxTheApp->CallAfter([this] {
         ui->chatInterface->m_roomsPanel->OnBecameMember();
+    });
+}
+
+void WebSocketClient::updateUsername(int32_t userId, const std::string& username) {
+    wxTheApp->CallAfter([this, userId, username] {
+        wxString newUsername = wxString::FromUTF8(username);
+        const auto& currentUser = ui->chatInterface->m_chatPanel->GetCurrentUser();
+
+        if (currentUser.id == userId) {
+            User updatedUser = currentUser;
+            updatedUser.username = newUsername;
+
+            ui->chatInterface->m_chatPanel->SetCurrentUser(updatedUser);
+            ui->accountSettingsPanel->UpdateCurrentUsername(newUsername);
+        }
+        if (ui->chatInterface->m_chatPanel->IsShown()) {
+            ui->chatInterface->m_chatPanel->UpdateUsername(userId, newUsername);
+        }
     });
 }
 

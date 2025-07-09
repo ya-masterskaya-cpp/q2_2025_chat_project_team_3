@@ -37,6 +37,7 @@ public:
     void UserStoppedTyping(const User& user);
     void UserJoin(const User& user);
     void UserLeft(const User& user);
+    void UpdateUsername(int32_t userId, const wxString& newUsername);
 
     UserListPanel* m_userListPanel = nullptr;
     MessageView* m_messageView = nullptr;

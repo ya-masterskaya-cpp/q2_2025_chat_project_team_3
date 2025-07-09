@@ -23,6 +23,8 @@ public:
 
     int64_t GetTimestampValue() const { return m_timestamp_val; }
     int32_t GetMessageId() const { return m_messageId; }
+    wxString GetMessageValue() const { return m_originalMessage; }
+    uint32_t GetUserId() const { return m_userId; }
     bool m_hasBeenPositionedCorrectly = false;
 
     void Update(wxWindow* parent, const Message& msg, int lastKnownWrapWidth);
@@ -35,6 +37,7 @@ private:
     int32_t m_messageId;
     wxStaticText* m_timeText;
     CachedColorText* m_userText;
+    int32_t m_userId;
 
     void OnRightClick(wxMouseEvent& event);
     void OnMouseEnter(wxMouseEvent& event);
