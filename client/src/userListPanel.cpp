@@ -87,7 +87,6 @@ void UserListPanel::AddUser(const User& user) {
 		return u.id == userId; });
     if (it != m_users.end()) {
         ++it->count;
-        return;
     } else {
 		m_users.push_back(user);
     }

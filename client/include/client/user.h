@@ -24,12 +24,12 @@ struct User {
         if (count == 0 || other.count == 0) {
             // Current user is online and other is offline -> current should appear first
             if (count == 0 && other.count != 0) {
-                return false;
+                return true;
             }
 
             // Current user is offline and other is online -> current should appear later
             if (count != 0 && other.count == 0) {
-                return true;
+                return false;
             }
         }
         
