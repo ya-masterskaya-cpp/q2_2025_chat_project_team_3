@@ -1,0 +1,14 @@
+# Use the same base OS as the GitHub runner to guarantee compatibility
+FROM ubuntu:24.04
+
+# Create a non-root user for the application to run as.
+RUN useradd --create-home --shell /bin/bash appuser
+
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /home/appuser/app
+COPY . .
+RUN chown -R appuser:appuser /home/appuser/app
+USER appuser
+
+CMD ["./aggregator_app"]

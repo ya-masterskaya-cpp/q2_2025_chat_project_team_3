@@ -1,0 +1,192 @@
+name: build-package-cached
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    name: ${{ matrix.os }}-${{ github.workflow }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-13, windows-2025]
+
+    # Grant permissions to write to the GitHub Packages container registry
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - uses: lukka/get-cmake@latest
+        with:
+          cmakeVersion: 4.0.2
+          ninjaVersion: 1.12.1
+
+      # On Windows runners, ensure the Developer Command Prompt environment is set up.
+      - uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Bootstrap vcpkg
+        shell: bash
+        run: ./vcpkg/bootstrap-vcpkg.sh -disableMetrics
+
+      - name: Install Mono (for Linux runner)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y mono-complete doxygen graphviz clang bison flex autoconf libltdl-dev python3-jinja2 libx11-dev libxft-dev libxext-dev libxi-dev libxtst-dev libxrandr-dev
+
+      - name: Configure NuGet credentials using vcpkg's nuget.exe
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GH_PACKAGES_TOKEN }} 
+        run: |
+          # Get the path to vcpkg's managed nuget.exe. tr -d '\r' is for Windows compatibility.
+          NUGET_EXE_PATH=$(./vcpkg/vcpkg fetch nuget | tail -n 1 | tr -d '\r')
+
+          # Determine the command prefix (mono for non-windows)
+          CMD_PREFIX=""
+          if [[ "${{ runner.os }}" != "Windows" ]]; then
+            CMD_PREFIX="mono"
+          fi
+
+          echo "Configuring NuGet source..."
+          # Add the source with credentials, as per the documentation
+          $CMD_PREFIX "$NUGET_EXE_PATH" sources add \
+            -Name "github" \
+            -Source "https://nuget.pkg.github.com/cuteBoiButt/index.json" \
+            -UserName "GITHUB_TOKEN" \
+            -Password "${{ secrets.GITHUB_TOKEN }}" \
+            -StorePasswordInClearText
+
+          echo "Setting API key..."
+          # Set the API key for the source to ensure push access
+          $CMD_PREFIX "$NUGET_EXE_PATH" setapikey "${{ secrets.GITHUB_TOKEN }}" \
+            -Source "https://nuget.pkg.github.com/cuteBoiButt/index.json"
+  
+      - name: Set vcpkg binary sources environment variable
+        shell: bash
+        run: |
+          echo "VCPKG_BINARY_SOURCES=clear;nuget,https://nuget.pkg.github.com/cuteBoiButt/index.json,read" >> $GITHUB_ENV
+          
+      - name: Configure CMake
+        run: |
+          cmake --preset ninja-multi-vcpkg
+
+      - name: Build (Release configuration)
+        run: |
+          cmake --build --preset ninja-vcpkg-release
+
+      - name: Package (Release configuration)
+        run: |
+          cmake --build --preset ninja-vcpkg-release --target package
+
+      - name: Create AppImage on Linux
+        if: runner.os == 'Linux'
+        run: |
+          cd build
+          cmake --install . --config Release --component client --prefix ./AppDir/usr/bin
+
+          mkdir -p AppDir/usr/share/applications
+          cat > AppDir/usr/share/applications/client_app.desktop << EOF
+          [Desktop Entry]
+          Type=Application
+          Name=Slightly Pretty Chat
+          Exec=client_app
+          Categories=Utility;
+          Icon=appname
+          EOF
+
+          mkdir -p AppDir/usr/share/icons/hicolor/scalable/apps
+          touch AppDir/usr/share/icons/hicolor/scalable/apps/appname.svg
+
+          wget https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
+          chmod +x linuxdeploy-x86_64.AppImage
+
+          ./linuxdeploy-x86_64.AppImage --appimage-extract
+          rm linuxdeploy-x86_64.AppImage
+          ./squashfs-root/AppRun --appdir AppDir --output appimage
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-packages-${{ matrix.os }}
+          path: |
+            build/*.dmg
+            build/*.zip
+            build/*.tar.gz
+            build/*.AppImage
+
+      - name: Log in to GitHub Container Registry
+        if: runner.os == 'Linux'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Prepare Docker build contexts
+        if: runner.os == 'Linux'
+        run: |
+          echo "Preparing Docker build contexts from CPack output..."
+          SERVER_TARBALL=$(find build -name '*-server.tar.gz' | head -n 1)
+          AGGREGATOR_TARBALL=$(find build -name '*-aggregator.tar.gz' | head -n 1)
+          if [ -z "$SERVER_TARBALL" ]; then echo "::error::Server tarball not found!"; exit 1; fi
+          if [ -z "$AGGREGATOR_TARBALL" ]; then echo "::error::Aggregator tarball not found!"; exit 1; fi
+          mkdir -p docker_contexts/server docker_contexts/aggregator
+          tar -xvf "$SERVER_TARBALL" -C docker_contexts/server
+          tar -xvf "$AGGREGATOR_TARBALL" -C docker_contexts/aggregator
+
+      - name: Set repository name to lowercase
+        if: runner.os == 'Linux'
+        id: set_repo_lc
+        shell: bash
+        run: |
+          echo "repo_lc=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
+
+      - name: Build and push Server Docker image
+        if: runner.os == 'Linux'
+        uses: docker/build-push-action@v5
+        with:
+          context: docker_contexts/server
+          file: ./Dockerfile.server
+          push: true
+          tags: ghcr.io/${{ steps.set_repo_lc.outputs.repo_lc }}-server:latest
+
+      - name: Build and push Aggregator Docker image
+        if: runner.os == 'Linux'
+        uses: docker/build-push-action@v5
+        with:
+          context: docker_contexts/aggregator
+          file: ./Dockerfile.aggregator
+          push: true
+          tags: ghcr.io/${{ steps.set_repo_lc.outputs.repo_lc }}-aggregator:latest
+
+      - name: Generate Doxygen documentation
+        if: runner.os == 'Linux'
+        run: doxygen Doxyfile
+
+      - name: Upload Pages artifact
+        if: runner.os == 'Linux'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: 'docs/html'
+
+  deploy-gh-pages:
+    needs: build
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
