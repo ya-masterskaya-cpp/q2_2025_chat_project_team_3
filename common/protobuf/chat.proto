@@ -124,7 +124,8 @@ message JoinRoomRequest {
 }
 message JoinRoomResponse {
     Status status = 1;
-    repeated UserInfo users = 2;
+    repeated UserInfo all_users = 2;
+    repeated UserInfo active_users = 3;
 }
 message UserJoinedRoom {
     UserInfo user = 1;
