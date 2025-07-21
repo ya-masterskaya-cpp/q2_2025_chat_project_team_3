@@ -334,23 +334,48 @@ drogon::Task<chat::JoinRoomResponse> MessageHandlers::handleJoinRoom(const WsDat
             co_await setUserMembershipStatus(m_dbClient, wsData->user->id, req.room_id(), chat::MembershipStatus::JOINED);
         }
 
-        std::optional<chat::UserRights> role = co_await getUserRights(m_dbClient, wsData->user->id, req.room_id(), room);
+        auto memberships = co_await switch_to_io_loop(CoroMapper<models::RoomMembership>(m_dbClient)
+            .findBy(Criteria(models::RoomMembership::Cols::_room_id, CompareOperator::EQ, req.room_id())));
 
-        wsData->room = CurrentRoom{req.room_id(), role.value_or(chat::UserRights::REGULAR)};
-        
-        co_await room_service.joinRoom(*wsData);
-        auto users = co_await room_service.getUsersInRoom(req.room_id(), *wsData);
-        *resp.mutable_users() = {std::make_move_iterator(users.begin()), 
-                                  std::make_move_iterator(users.end())};
+        for (const auto& membership : memberships) {
+            auto user_model = co_await switch_to_io_loop(CoroMapper<models::Users>(m_dbClient)
+                .findOne(Criteria(models::Users::Cols::_user_id, CompareOperator::EQ, membership.getValueOfUserId())));
+            if (user_model.getUserId()) {
+                auto* user_info = resp.add_all_users();
+                user_info->set_user_id(*user_model.getUserId());
+                user_info->set_user_name(user_model.getValueOfUsername());
+
+                auto rights = co_await getUserRights(m_dbClient, *user_model.getUserId(), req.room_id(), room);
+                if (rights) {
+                    user_info->set_user_room_rights(*rights);
+                }
+            }
+        }
+
+        std::optional<chat::UserRights> role = co_await getUserRights(m_dbClient, wsData->user->id, req.room_id(), room);
+        wsData->room = CurrentRoom{ req.room_id(), role.value_or(chat::UserRights::REGULAR) };
 
         chat::Envelope user_joined_msg;
-        user_joined_msg.mutable_user_joined()->mutable_user()->set_user_id(wsData->user->id);
-        user_joined_msg.mutable_user_joined()->mutable_user()->set_user_name(wsData->user->name);
-        user_joined_msg.mutable_user_joined()->mutable_user()->set_user_room_rights(wsData->room->rights);
+        auto* joined_payload = user_joined_msg.mutable_user_joined();
+        joined_payload->mutable_user()->set_user_id(wsData->user->id);
+        joined_payload->mutable_user()->set_user_name(wsData->user->name);
+        joined_payload->mutable_user()->set_user_room_rights(wsData->room->rights);
         co_await room_service.sendToRoom(wsData->room->id, user_joined_msg);
+        
+        if(!membership_status) {
+            co_await room_service.sendToRoom(wsData->room->id, user_joined_msg);
+        }
+
+        co_await room_service.joinRoom(*wsData);
+
+        auto active_users_list = co_await room_service.getUsersInRoom(req.room_id(), *wsData);
+
+        *resp.mutable_active_users() = { std::make_move_iterator(active_users_list.begin()),
+                                        std::make_move_iterator(active_users_list.end()) };
 
         common::setStatus(resp, chat::STATUS_SUCCESS);
         co_return resp;
+
     } catch(const std::exception& e) {
         common::setStatus(resp, chat::STATUS_FAILURE, "Failed to join room: " + std::string(e.what()));
         co_return resp;

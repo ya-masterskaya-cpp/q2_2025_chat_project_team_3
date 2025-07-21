@@ -27,6 +27,10 @@ UserNameWidget::UserNameWidget(wxWindow* parent, const User& user)
             textColor = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT);
             break;
     }
+    if (user.count == 0) {
+        const unsigned char OFFLINE_ALPHA = 110;
+        textColor = wxColour(textColor.Red(), textColor.Green(), textColor.Blue(), OFFLINE_ALPHA);
+    }
     m_usernameText->SetForegroundColour(textColor);
 
     sizer->Add(m_usernameText, 0, wxALIGN_CENTER_VERTICAL | wxALL, 5);

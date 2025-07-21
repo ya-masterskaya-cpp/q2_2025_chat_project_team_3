@@ -266,15 +266,20 @@ void WebSocketClient::handleMessage(const std::string& msg) {
         }
         case chat::Envelope::kJoinRoomResponse: {
             if (statusOk(env.join_room_response().status())) {
-                std::vector<User> users;
-                for (const auto& user : env.join_room_response().users()) {
-                    users.emplace_back(user.user_id(), wxString::FromUTF8(user.user_name()), user.user_room_rights());
+                std::vector<User> all_users;
+                all_users.reserve(env.join_room_response().all_users().size());
+                
+                for (const auto& user : env.join_room_response().all_users()) {
+                    all_users.emplace_back(user.user_id(), wxString::FromUTF8(user.user_name()), user.user_room_rights());
                 }
                 wxTheApp->CallAfter([this] {
                     ui->chatInterface->m_roomsPanel->OnJoinRoom();
                 });
+                showChat(std::move(all_users));
 
-                showChat(std::move(users));
+                for (const auto& user : env.join_room_response().active_users()) {
+                    addUser({ user.user_id(), wxString::FromUTF8(user.user_name()), user.user_room_rights() });
+                }
             } else {
                 showError("Failed to join room.");
             }
