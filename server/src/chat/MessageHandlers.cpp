@@ -361,6 +361,10 @@ drogon::Task<chat::JoinRoomResponse> MessageHandlers::handleJoinRoom(const WsDat
         joined_payload->mutable_user()->set_user_name(wsData->user->name);
         joined_payload->mutable_user()->set_user_room_rights(wsData->room->rights);
         co_await room_service.sendToRoom(wsData->room->id, user_joined_msg);
+	
+	if(!membership_status) {
+            co_await room_service.sendToRoom(wsData->room->id, user_joined_msg);
+        }
 
         co_await room_service.joinRoom(*wsData);
 
