@@ -1,0 +1,25 @@
+{
+  "name": "slightly-pretty-chat",
+  "version-string": "0.0.7",
+  "dependencies": [
+    {
+      "name": "drogon",
+      "features": ["ctl","orm","postgres"]
+    },
+    "protobuf",
+    "argon2",
+    "ada-url",
+    "ada-idna"
+  ],
+  "features": {
+    "client": {
+      "description": "Dependencies for the client component",
+      "dependencies": [ {
+        "name": "wxwidgets",
+        "features": ["fonts"]
+      }
+    ]
+    }
+  },
+  "builtin-baseline": "ce613c41372b23b1f51333815feb3edd87ef8a8b"
+}

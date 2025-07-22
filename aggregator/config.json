@@ -1,0 +1,18 @@
+{
+  "listeners": [
+    {
+      "address": "0.0.0.0",
+      "port": 8848,
+      "https": false
+    }
+  ],
+  "app": {
+    "session_timeout": 0,
+    "log": {
+        "log_path": "./logs",
+        "log_level": "TRACE"
+    },
+    "run_as_daemon": false,
+    "number_of_threads": 0
+  }
+}

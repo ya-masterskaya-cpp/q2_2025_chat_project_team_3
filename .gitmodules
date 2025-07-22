@@ -1,0 +1,12 @@
+[submodule "vcpkg"]
+	path = vcpkg
+	url = https://github.com/microsoft/vcpkg.git
+	shallow = true
+[submodule "extern/utf8cpp"]
+	path = extern/utf8cpp
+	url = https://github.com/nemtrif/utfcpp.git
+	shallow = true
+[submodule "extern/doxygen-awesome-css"]
+	path = extern/doxygen-awesome-css
+	url = https://github.com/jothepro/doxygen-awesome-css.git
+	shallow = true

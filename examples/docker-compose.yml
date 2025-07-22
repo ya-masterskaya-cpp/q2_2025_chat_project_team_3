@@ -1,0 +1,234 @@
+# Define reusable configuration blocks to avoid repetition
+x-server-template: &server-defaults
+  image: ghcr.io/ya-masterskaya-cpp/q2_2025_chat_project_team_3-server:latest
+  restart: unless-stopped
+  networks:
+    - default
+  healthcheck:
+    test: ["CMD-SHELL", "curl --fail http://localhost:8849/health || exit 1"]
+    interval: 10s
+    timeout: 5s
+    retries: 5
+
+x-db-template: &db-defaults
+  image: postgres:16-alpine
+  restart: unless-stopped
+  expose:
+    - "5432"
+  environment:
+    - POSTGRES_USER=postgres
+    - POSTGRES_PASSWORD=postgres
+    - POSTGRES_DB=drogon_test
+  # This healthcheck ensures the server doesn't start until PG is truly ready
+  healthcheck:
+    test: ["CMD-SHELL", "pg_isready -U postgres -d drogon_test"]
+    interval: 10s
+    timeout: 5s
+    retries: 5
+
+services:
+  # 1. The Aggregator Service
+  aggregator:
+    image: ghcr.io/ya-masterskaya-cpp/q2_2025_chat_project_team_3-aggregator:latest
+    restart: unless-stopped
+    container_name: aggregator
+    ports:
+      - "8848:8848"
+    networks:
+      - default
+
+  # 2. The Server and Database Pairs (x6)
+
+  # --- Pair 1 ---
+  server-1:
+    <<: *server-defaults
+    container_name: server-1
+    ports:
+      - "8849:8849"
+    environment:
+      - AGGREGATOR_ADDR=ws://aggregator:8848/ws
+      - SERVER_HOST=ws://public.ip:8849
+    networks:
+      - default
+      - server-1-net
+    depends_on:
+      aggregator:
+        condition: service_started
+      db-1:
+        condition: service_healthy
+
+  db-1:
+    <<: *db-defaults
+    container_name: db-1
+    volumes:
+      - db-data-1:/var/lib/postgresql/data
+    networks:
+      server-1-net:
+        aliases:
+          - db
+
+  # --- Pair 2 ---
+  server-2:
+    <<: *server-defaults
+    container_name: server-2
+    ports:
+      - "8850:8849"
+    environment:
+      - AGGREGATOR_ADDR=ws://aggregator:8848/ws
+      - SERVER_HOST=ws://public.ip:8850
+    networks:
+      - default
+      - server-2-net
+    depends_on:
+      aggregator:
+        condition: service_started
+      db-2:
+        condition: service_healthy
+
+  db-2:
+    <<: *db-defaults
+    container_name: db-2
+    volumes:
+      - db-data-2:/var/lib/postgresql/data
+    networks:
+      server-2-net:
+        aliases:
+          - db
+
+  # --- Pair 3 ---
+  server-3:
+    <<: *server-defaults
+    container_name: server-3
+    ports:
+      - "8851:8849"
+    environment:
+      - AGGREGATOR_ADDR=ws://aggregator:8848/ws
+      - SERVER_HOST=ws://public.ip:8851
+    networks:
+      - default
+      - server-3-net
+    depends_on:
+      aggregator:
+        condition: service_started
+      db-3:
+        condition: service_healthy
+
+  db-3:
+    <<: *db-defaults
+    container_name: db-3
+    volumes:
+      - db-data-3:/var/lib/postgresql/data
+    networks:
+      server-3-net:
+        aliases:
+          - db
+
+  # --- Pair 4 ---
+  server-4:
+    <<: *server-defaults
+    container_name: server-4
+    ports:
+      - "8852:8849"
+    environment:
+      - AGGREGATOR_ADDR=ws://aggregator:8848/ws
+      - SERVER_HOST=ws://public.ip:8852
+    networks:
+      - default
+      - server-4-net
+    depends_on:
+      aggregator:
+        condition: service_started
+      db-4:
+        condition: service_healthy
+
+  db-4:
+    <<: *db-defaults
+    container_name: db-4
+    volumes:
+      - db-data-4:/var/lib/postgresql/data
+    networks:
+      server-4-net:
+        aliases:
+          - db
+
+  # --- Pair 5 ---
+  server-5:
+    <<: *server-defaults
+    container_name: server-5
+    ports:
+      - "8853:8849"
+    environment:
+      - AGGREGATOR_ADDR=ws://aggregator:8848/ws
+      - SERVER_HOST=ws://public.ip:8853
+    networks:
+      - default
+      - server-5-net
+    depends_on:
+      aggregator:
+        condition: service_started
+      db-5:
+        condition: service_healthy
+
+  db-5:
+    <<: *db-defaults
+    container_name: db-5
+    volumes:
+      - db-data-5:/var/lib/postgresql/data
+    networks:
+      server-5-net:
+        aliases:
+          - db
+
+  # --- Pair 6 ---
+  server-6:
+    <<: *server-defaults
+    container_name: server-6
+    ports:
+      - "8854:8849"
+    environment:
+      - AGGREGATOR_ADDR=ws://aggregator:8848/ws
+      - SERVER_HOST=ws://public.ip:8854
+    networks:
+      - default
+      - server-6-net
+    depends_on:
+      aggregator:
+        condition: service_started
+      db-6:
+        condition: service_healthy
+
+  db-6:
+    <<: *db-defaults
+    container_name: db-6
+    volumes:
+      - db-data-6:/var/lib/postgresql/data
+    networks:
+      server-6-net:
+        aliases:
+          - db
+
+# Define all the networks used in this compose file
+networks:
+  default:
+    driver: bridge
+  server-1-net:
+    internal: true
+  server-2-net:
+    internal: true
+  server-3-net:
+    internal: true
+  server-4-net:
+    internal: true
+  server-5-net:
+    internal: true
+  server-6-net:
+    internal: true
+
+# Define all the volumes for data persistence
+volumes:
+  db-data-1:
+  db-data-2:
+  db-data-3:
+  db-data-4:
+  db-data-5:
+  db-data-6:

@@ -1,0 +1,14 @@
+diff --git a/src/msw/graphicsd2d.cpp b/src/msw/graphicsd2d.cpp
+index 89b7410..a86e048 100644
+--- a/src/msw/graphicsd2d.cpp
++++ b/src/msw/graphicsd2d.cpp
+@@ -4767,7 +4767,8 @@ void wxD2DContext::DoDrawText(const wxString& str, wxDouble x, wxDouble y)
+     GetRenderTarget()->DrawTextLayout(
+         D2D1::Point2F(x, y),
+         textLayout,
+-        fontData->GetBrushData().GetBrush());
++        fontData->GetBrushData().GetBrush(),
++		D2D1_DRAW_TEXT_OPTIONS::D2D1_DRAW_TEXT_OPTIONS_ENABLE_COLOR_FONT);
+ }
+ 
+ void wxD2DContext::EnsureInitialized()
