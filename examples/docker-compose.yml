@@ -1,6 +1,6 @@
 # Define reusable configuration blocks to avoid repetition
 x-server-template: &server-defaults
-  image: ghcr.io/cuteboibutt/test_ci_123123-server:latest
+  image: ghcr.io/ya-masterskaya-cpp/q2_2025_chat_project_team_3-server:latest
   restart: unless-stopped
   networks:
     - default
@@ -29,7 +29,7 @@ x-db-template: &db-defaults
 services:
   # 1. The Aggregator Service
   aggregator:
-    image: ghcr.io/cuteboibutt/test_ci_123123-aggregator:latest
+    image: ghcr.io/ya-masterskaya-cpp/q2_2025_chat_project_team_3-aggregator:latest
     restart: unless-stopped
     container_name: aggregator
     ports:
