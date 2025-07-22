@@ -1,6 +1,6 @@
 # Чат-приложение
 
-[Doxygen](https://cuteboibutt.github.io/test_ci_123123/index.html)
+[Doxygen](https://ya-masterskaya-cpp.github.io/q2_2025_chat_project_team_3/index.html)
 
 ## Быстрый старт
 
