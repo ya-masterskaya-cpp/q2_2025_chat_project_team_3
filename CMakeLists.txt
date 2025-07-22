@@ -59,6 +59,16 @@ if(BUILD_CLIENT)
     add_subdirectory(client)
 endif()
 
+# Include LICENSE
+if(BUILD_CLIENT)
+    install(FILES ${CMAKE_SOURCE_DIR}/LICENSE DESTINATION . COMPONENT client)
+endif()
+
+if(BUILD_SERVER)
+    install(FILES ${CMAKE_SOURCE_DIR}/LICENSE DESTINATION . COMPONENT server)
+    install(FILES ${CMAKE_SOURCE_DIR}/LICENSE DESTINATION . COMPONENT aggregator)
+endif()
+
 # Set the generator and filename based on the platform
 if(WIN32)
     set(CPACK_GENERATOR "ZIP")
