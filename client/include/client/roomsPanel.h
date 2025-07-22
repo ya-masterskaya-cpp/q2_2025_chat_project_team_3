@@ -34,6 +34,8 @@ private:
     void OnCreate(wxCommandEvent&);
     void OnLogout(wxCommandEvent&);
     void OnAccount(wxCommandEvent&);
+    void OnPageChanging(wxNotebookEvent& event);
+    void OnPageChanged(wxNotebookEvent& event);
 
     MainWidget* mainWin;
     wxNotebook* m_notebook;
@@ -43,6 +45,7 @@ private:
     wxButton* m_createButton;
     wxButton* m_logoutButton;
     wxButton* m_accountButton;
+    bool m_isSwitchingToMyRooms = false;
     wxDECLARE_EVENT_TABLE();
 };
 
