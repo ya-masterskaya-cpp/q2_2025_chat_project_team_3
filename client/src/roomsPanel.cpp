@@ -15,7 +15,8 @@ enum {
     ID_JOIN,
     ID_CREATE,
     ID_LOGOUT,
-    ID_ACCOUNT
+    ID_ACCOUNT,
+    ID_NOTEBOOK
 };
 
 wxBEGIN_EVENT_TABLE(RoomsPanel, wxPanel)
@@ -26,13 +27,15 @@ wxBEGIN_EVENT_TABLE(RoomsPanel, wxPanel)
     EVT_LISTBOX_DCLICK(ID_LIST_MY_ROOMS, RoomsPanel::OnMyRoomSelected)
     EVT_LISTBOX(ID_LIST_PUBLIC_ROOMS, RoomsPanel::OnPublicRoomSelected)
     EVT_BUTTON(ID_ACCOUNT, RoomsPanel::OnAccount)
+    EVT_NOTEBOOK_PAGE_CHANGING(ID_NOTEBOOK, RoomsPanel::OnPageChanging)
+    EVT_NOTEBOOK_PAGE_CHANGED(ID_NOTEBOOK, RoomsPanel::OnPageChanged)
 wxEND_EVENT_TABLE()
 
 RoomsPanel::RoomsPanel(wxWindow* parent) : wxPanel(parent), mainWin(static_cast<MainWidget*>(parent->GetParent())) {
     auto* sizer = new wxBoxSizer(wxVERTICAL);
 
     // --- Create ALL widgets ---
-    m_notebook = new wxNotebook(this, wxID_ANY);
+    m_notebook = new wxNotebook(this, ID_NOTEBOOK);
     m_createButton = new wxButton(this, ID_CREATE, "Create");
     m_logoutButton = new wxButton(this, ID_LOGOUT, "Logout");
     m_accountButton = new wxButton(this, ID_ACCOUNT, "My Account");
@@ -201,6 +204,9 @@ void RoomsPanel::OnBecameMember() {
 }
 
 void RoomsPanel::OnMyRoomSelected(wxCommandEvent&) {
+    if (m_isSwitchingToMyRooms) {
+        return;
+    }
     auto selectedRoom = GetSelectedRoom();
     if (selectedRoom.has_value()) {
         mainWin->wsClient->joinRoom(selectedRoom->room_id);
@@ -249,6 +255,18 @@ void RoomsPanel::OnLogout(wxCommandEvent &) {
 
 void RoomsPanel::OnAccount(wxCommandEvent&) {
     mainWin->ShowAccountSettings(true);
+}
+
+void RoomsPanel::OnPageChanging(wxNotebookEvent& event) {
+    event.Skip();
+    if (event.GetSelection() == 0){
+        m_isSwitchingToMyRooms = true;
+    }
+}
+
+void RoomsPanel::OnPageChanged(wxNotebookEvent& event) {
+    event.Skip();
+    m_isSwitchingToMyRooms = false;
 }
 
 } // namespace client
